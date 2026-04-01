@@ -187,6 +187,7 @@ export function EncryptorTool() {
   const [passwordIsStrong, setPasswordIsStrong] = useState(false);
   const [isCryptoAvailable, setIsCryptoAvailable] = useState(true);
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
+  const [isDecryptQrModalOpen, setIsDecryptQrModalOpen] = useState(false);
   const qrCodeRef = useRef<HTMLDivElement>(null);
   const clipboardTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { toast } = useToast();
@@ -363,6 +364,7 @@ export function EncryptorTool() {
 
   // High-res QR download: renders at 900px (≈3" at 300 DPI) with quiet zone padding
   const hiResQrRef = useRef<HTMLDivElement>(null);
+  const hiResDecryptQrRef = useRef<HTMLDivElement>(null);
 
   const handleDownloadQrCode = useCallback(() => {
     if (!hiResQrRef.current) return;
@@ -394,6 +396,29 @@ export function EncryptorTool() {
     a.click();
     document.body.removeChild(a);
 
+    toast({ title: "QR Code downloaded", description: "High-resolution (300 DPI / 1020×1020px)" });
+  }, [toast]);
+
+  const handleDownloadDecryptQrCode = useCallback(() => {
+    if (!hiResDecryptQrRef.current) return;
+    const hiResCanvas = hiResDecryptQrRef.current.querySelector('canvas');
+    if (!hiResCanvas) return;
+    const PADDING = 60;
+    const exportCanvas = document.createElement('canvas');
+    const ctx = exportCanvas.getContext('2d');
+    if (!ctx) return;
+    exportCanvas.width = hiResCanvas.width + PADDING * 2;
+    exportCanvas.height = hiResCanvas.height + PADDING * 2;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+    ctx.drawImage(hiResCanvas, PADDING, PADDING);
+    const pngUrl = exportCanvas.toDataURL("image/png").replace("image/png", "image/octet-stream");
+    const a = document.createElement("a");
+    a.href = pngUrl;
+    a.download = "decrypted-qr.png";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
     toast({ title: "QR Code downloaded", description: "High-resolution (300 DPI / 1020×1020px)" });
   }, [toast]);
 
@@ -717,6 +742,42 @@ export function EncryptorTool() {
                       </DialogContent>
                     </Dialog>
                   )}
+                {mode === 'decrypt' && inputType === 'text' && showDecryptedText && (
+                  <Dialog open={isDecryptQrModalOpen} onOpenChange={setIsDecryptQrModalOpen}>
+                    <DialogTrigger asChild>
+                      <Button type="button" variant="ghost" size="icon" className="h-auto p-2">
+                        <QrCode />
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Plaintext QR Code</DialogTitle>
+                        <DialogDescription>
+                          Scan this code to transfer the decrypted text to your hardware wallet.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="flex flex-col items-center gap-4 py-4">
+                        {outputText.length <= QR_MAX_CHARS ? (
+                          <>
+                            <QRCode value={outputText} size={256} />
+                            <div ref={hiResDecryptQrRef} style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
+                              <QRCodeCanvas value={outputText} size={900} />
+                            </div>
+                            <Button onClick={handleDownloadDecryptQrCode}>
+                              <Download className="mr-2 h-4 w-4" />
+                              Download PNG (300 DPI)
+                            </Button>
+                          </>
+                        ) : (
+                          <div className="text-sm text-yellow-400 p-3 bg-yellow-900/20 rounded-md text-center">
+                            <p className="font-medium">QR code unavailable</p>
+                            <p className="mt-1">Output is {outputText.length.toLocaleString()} characters, which exceeds the QR code capacity of {QR_MAX_CHARS.toLocaleString()} characters. Use the copy button instead.</p>
+                          </div>
+                        )}
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                )}
               </div>
             </div>
           </div>
