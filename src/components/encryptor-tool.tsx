@@ -366,6 +366,7 @@ export function EncryptorTool() {
   // High-res QR download: renders at 900px (≈3" at 300 DPI) with quiet zone padding
   const hiResQrRef = useRef<HTMLDivElement>(null);
   const hiResDecryptQrRef = useRef<HTMLDivElement>(null);
+  const outputTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleDownloadQrCode = useCallback(() => {
     if (!hiResQrRef.current) return;
@@ -688,6 +689,7 @@ export function EncryptorTool() {
             <div className="relative">
               <Textarea
                 id="output-text"
+                ref={outputTextareaRef}
                 value={outputText}
                 readOnly
                 rows={5}
@@ -695,8 +697,6 @@ export function EncryptorTool() {
                   "pr-12",
                   mode === 'decrypt' && inputType === 'text' && !showDecryptedText && "blur-sm"
                 )}
-                onMouseUp={() => { const ta = document.getElementById('output-text') as HTMLTextAreaElement; if (ta) { const sel = ta.value.substring(ta.selectionStart, ta.selectionEnd); setSelectedDecryptText(sel || outputText); } }}
-                onKeyUp={() => { const ta = document.getElementById('output-text') as HTMLTextAreaElement; if (ta) { const sel = ta.value.substring(ta.selectionStart, ta.selectionEnd); setSelectedDecryptText(sel || outputText); } }}
               />
               <div className="absolute right-1 top-1 flex flex-col items-center">
                  {mode === 'decrypt' && inputType === 'text' && (
@@ -746,7 +746,14 @@ export function EncryptorTool() {
                     </Dialog>
                   )}
                 {mode === 'decrypt' && inputType === 'text' && showDecryptedText && (
-                  <Dialog open={isDecryptQrModalOpen} onOpenChange={setIsDecryptQrModalOpen}>
+                  <Dialog onOpenChange={(open) => {
+                    if (open && outputTextareaRef.current) {
+                      const ta = outputTextareaRef.current;
+                      const sel = ta.value.substring(ta.selectionStart, ta.selectionEnd);
+                      setSelectedDecryptText(sel || outputText);
+                    }
+                    setIsDecryptQrModalOpen(open);
+                  }}>
                     <DialogTrigger asChild>
                       <Button type="button" variant="ghost" size="icon" className="h-auto p-2">
                         <QrCode />
