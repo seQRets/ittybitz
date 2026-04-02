@@ -790,7 +790,6 @@ export function EncryptorTool() {
                 )}
               </div>
             </div>
-            <p style={{fontSize: '11px', color: 'red', wordBreak: 'break-all'}}>{selectedDecryptText}</p>
           </div>
         )}
 
