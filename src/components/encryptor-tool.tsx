@@ -748,7 +748,7 @@ export function EncryptorTool() {
                 {mode === 'decrypt' && inputType === 'text' && showDecryptedText && (
                   <Dialog open={isDecryptQrModalOpen} onOpenChange={setIsDecryptQrModalOpen}>
                     <DialogTrigger asChild>
-                      <Button type="button" variant="ghost" size="icon" className="h-auto p-2" onClick={() => { const ta = document.getElementById('output-text') as HTMLTextAreaElement; if (ta) { const sel = ta.value.substring(ta.selectionStart, ta.selectionEnd); setSelectedDecryptText(sel || outputText); } }}>
+                      <Button type="button" variant="ghost" size="icon" className="h-auto p-2" onMouseDown={(e) => { e.preventDefault(); const ta = document.getElementById('output-text') as HTMLTextAreaElement; if (ta) { const sel = ta.value.substring(ta.selectionStart, ta.selectionEnd); setSelectedDecryptText(sel || outputText); } }}>
                         <QrCode />
                       </Button>
                     </DialogTrigger>
