@@ -743,7 +743,19 @@ export function EncryptorTool() {
                       </DialogContent>
                     </Dialog>
                   )}
-                {mode === 'decrypt' && inputType === 'text' && showDecryptedText && (
+              </div>
+            </div>
+            {mode === 'decrypt' && inputType === 'text' && showDecryptedText && (
+              <div className="space-y-1">
+                <Label htmlFor="qr-text-input" className="text-xs text-muted-foreground">QR text (paste what you want to encode, or leave empty to use full output)</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="qr-text-input"
+                    value={selectedDecryptText}
+                    onChange={(e) => setSelectedDecryptText(e.target.value)}
+                    placeholder="Paste seed words or passphrase here..."
+                    className="text-xs"
+                  />
                   <Dialog open={isDecryptQrModalOpen} onOpenChange={setIsDecryptQrModalOpen}>
                     <DialogTrigger asChild>
                       <Button type="button" variant="ghost" size="icon" className="h-auto p-2" disabled={!selectedDecryptText}>
@@ -778,19 +790,7 @@ export function EncryptorTool() {
                       </div>
                     </DialogContent>
                   </Dialog>
-                )}
-              </div>
-            </div>
-            {mode === 'decrypt' && inputType === 'text' && showDecryptedText && (
-              <div className="space-y-1">
-                <Label htmlFor="qr-text-input" className="text-xs text-muted-foreground">QR text (paste what you want to encode, or leave empty to use full output)</Label>
-                <Input
-                  id="qr-text-input"
-                  value={selectedDecryptText}
-                  onChange={(e) => setSelectedDecryptText(e.target.value)}
-                  placeholder="Paste seed words or passphrase here..."
-                  className="text-xs"
-                />
+                </div>
               </div>
             )}
           </div>
