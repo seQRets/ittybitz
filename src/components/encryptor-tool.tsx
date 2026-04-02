@@ -189,7 +189,6 @@ export function EncryptorTool() {
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const [isDecryptQrModalOpen, setIsDecryptQrModalOpen] = useState(false);
   const [selectedDecryptText, setSelectedDecryptText] = useState('');
-  const qrCodeRef = useRef<HTMLDivElement>(null);
   const clipboardTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { toast } = useToast();
 
@@ -239,6 +238,8 @@ export function EncryptorTool() {
     setOutputText('');
     setShowDecryptedText(false);
     setInputType('file');
+    setSelectedDecryptText('');
+    setIsDecryptQrModalOpen(false);
   }, []);
 
   const handleModeChange = useCallback((newMode: string) => {
@@ -719,7 +720,7 @@ export function EncryptorTool() {
                             Scan this code to transfer the encrypted text.
                           </DialogDescription>
                         </DialogHeader>
-                        <div className="flex flex-col items-center gap-4 py-4" ref={qrCodeRef}>
+                        <div className="flex flex-col items-center gap-4 py-4">
                            {outputText.length <= QR_MAX_CHARS ? (
                              <>
                                {/* Preview QR (256px for the dialog) */}
