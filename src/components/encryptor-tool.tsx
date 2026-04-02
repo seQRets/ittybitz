@@ -762,6 +762,7 @@ export function EncryptorTool() {
                       <div className="flex flex-col items-center gap-4 py-4">
                         {selectedDecryptText.length <= QR_MAX_CHARS ? (
                           <>
+                            <p style={{wordBreak: 'break-all', fontSize: '12px', color: 'gray'}}>{selectedDecryptText}</p>
                             <QRCode value={selectedDecryptText} size={256} />
                             <div ref={hiResDecryptQrRef} style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
                               <QRCodeCanvas value={selectedDecryptText} size={900} />
