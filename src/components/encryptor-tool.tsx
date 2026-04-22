@@ -187,6 +187,7 @@ export function EncryptorTool() {
   const [outputText, setOutputText] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showTextSecret, setShowTextSecret] = useState(true);
   const [showDecryptedText, setShowDecryptedText] = useState(false);
   const [useKeyFile, setUseKeyFile] = useState(false);
   const [keyFile, setKeyFile] = useState<File | null>(null);
@@ -241,6 +242,7 @@ export function EncryptorTool() {
     setUseKeyFile(false);
     setKeyFile(null);
     setTextSecret('');
+    setShowTextSecret(true);
     setOutputText('');
     setShowDecryptedText(false);
     setInputType('file');
@@ -584,14 +586,29 @@ export function EncryptorTool() {
             <Label htmlFor="text-secret" className="text-[13px] font-medium text-muted-foreground">
               Secret text
             </Label>
-            <Textarea
-              id="text-secret"
-              value={textSecret}
-              onChange={(e) => setTextSecret(e.target.value)}
-              placeholder={`Enter text to ${currentMode}...`}
-              rows={5}
-              className="rounded-xl border-white/10 bg-white/[0.04] focus-visible:border-accent/50 focus-visible:ring-0"
-            />
+            <div className="relative">
+              <Textarea
+                id="text-secret"
+                value={textSecret}
+                onChange={(e) => setTextSecret(e.target.value)}
+                placeholder={`Enter text to ${currentMode}...`}
+                rows={5}
+                className={cn(
+                  "rounded-xl border-white/10 bg-white/[0.04] pr-12 transition-[filter] duration-150 focus-visible:border-accent/50 focus-visible:ring-0",
+                  currentMode === 'encrypt' && !showTextSecret && textSecret && "blur-sm"
+                )}
+              />
+              {currentMode === 'encrypt' && (
+                <button
+                  type="button"
+                  onClick={() => setShowTextSecret(!showTextSecret)}
+                  aria-label={showTextSecret ? "Hide secret text" : "Show secret text"}
+                  className="absolute right-2 top-2 rounded-lg border border-white/10 bg-white/[0.05] p-1.5 text-muted-foreground transition-all hover:bg-white/10 hover:text-foreground"
+                >
+                  {showTextSecret ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                </button>
+              )}
+            </div>
           </div>
         )}
 
