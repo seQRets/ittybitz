@@ -806,7 +806,21 @@ export function EncryptorTool() {
       <header className="sticky top-0 z-50 w-full border-b border-white/[0.08] bg-black/70 backdrop-blur-xl backdrop-saturate-150">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:px-6">
           <div className="flex items-center gap-2.5">
-            <img src="/logo.webp" alt="IttyBitz Logo" width={28} height={28} className="rounded-lg" />
+            <svg viewBox="0 0 512 512" width={28} height={28} aria-label="IttyBitz Logo" role="img" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="ibHdrGrad" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stopColor="#fbbf24" />
+                  <stop offset="50%" stopColor="#f59e0b" />
+                  <stop offset="100%" stopColor="#ef4444" />
+                </linearGradient>
+                <mask id="ibHdrKey">
+                  <rect width="512" height="512" fill="white" />
+                  <circle cx="256" cy="205" r="51" fill="black" />
+                  <path d="M 230 205 L 282 205 L 297 369 L 215 369 Z" fill="black" />
+                </mask>
+              </defs>
+              <rect width="512" height="512" rx="48" fill="url(#ibHdrGrad)" mask="url(#ibHdrKey)" />
+            </svg>
             <span className="text-[17px] font-semibold tracking-tight">IttyBitz</span>
           </div>
           <TabsList className="h-auto bg-white/[0.06] p-0.5">
