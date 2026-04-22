@@ -1,6 +1,6 @@
 // IttyBitz Service Worker — hand-rolled, zero dependencies
 // Cache version: bump this on every release to invalidate stale caches
-const CACHE_VERSION = 'ittybitz-v2.1.0';
+const CACHE_VERSION = 'ittybitz-v2.2.0';
 
 // App shell files to precache on install.
 // For a static Next.js export the HTML entry point and key assets are enough;
