@@ -31,7 +31,6 @@ import { encryptFile, decryptFile } from "@/lib/crypto";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { Textarea } from "@/components/ui/textarea";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -132,7 +131,10 @@ const FileSelector = memo(({
   return (
     <div>
       <div
-        className={cn("relative flex w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 bg-muted/20 p-6 text-center transition-colors duration-200 hover:border-primary/50", { 'border-primary/50 bg-primary/10': isDragging })}
+        className={cn(
+          "relative flex w-full cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-white/15 bg-white/[0.02] px-6 py-10 text-center transition-all duration-200 hover:border-accent/50 hover:bg-accent/[0.03]",
+          { 'border-accent/60 bg-accent/[0.05]': isDragging }
+        )}
         onClick={handleContainerClick}
         onDrop={handleDrop}
         onDragOver={handleDragOver}
@@ -142,17 +144,22 @@ const FileSelector = memo(({
         tabIndex={0}
         onKeyDown={(e) => e.key === "Enter" && handleContainerClick()}
       >
-        <div className="mb-2 text-primary">{icon}</div>
+        <div className="mb-3 grid h-12 w-12 place-items-center rounded-xl bg-white/5 text-accent">
+          {icon}
+        </div>
         <div className="w-full overflow-hidden">
-          <h3 className="text-md font-semibold text-foreground">{label}</h3>
-          <p className={cn("mt-1 w-full overflow-hidden truncate text-sm", selectedFile ? "text-accent font-semibold" : "text-muted-foreground")}>
+          <h3 className="text-[15px] font-medium text-foreground">{label}</h3>
+          <p className={cn(
+            "mt-1 w-full overflow-hidden truncate text-[13px]",
+            selectedFile ? "font-medium text-accent" : "text-muted-foreground"
+          )}>
             {selectedFile ? selectedFile.name : description}
           </p>
         </div>
       </div>
-       {selectedFile && (
-        <div className="text-right">
-          <Button variant="link" size="sm" onClick={onClear} className="text-destructive hover:text-destructive/80">
+      {selectedFile && (
+        <div className="mt-2 text-right">
+          <Button variant="link" size="sm" onClick={onClear} className="h-auto p-0 text-xs text-destructive hover:text-destructive/80">
             Clear
           </Button>
         </div>
@@ -537,236 +544,276 @@ export function EncryptorTool() {
     return false;
   }
 
+  const inputTypePillClasses = (active: boolean) => cn(
+    "flex-1 cursor-pointer rounded-lg px-3 py-2 text-center text-[13px] font-medium transition-all",
+    active ? "bg-white/10 text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+  );
+
   const renderContent = (currentMode: Mode) => (
-    <div className="space-y-6">
-      <div className="space-y-4">
-        <RadioGroup value={inputType} onValueChange={handleInputTypeChange} className="flex justify-center space-x-4">
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="file" id="file-option" />
-            <Label htmlFor="file-option" className="cursor-pointer">File</Label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="text" id="text-option" />
-            <Label htmlFor="text-option" className="cursor-pointer">Text</Label>
-          </div>
-        </RadioGroup>
+    <div className="space-y-5">
+      <div className="space-y-5">
+        <div className="flex gap-0.5 rounded-xl bg-white/[0.04] p-1">
+          <button
+            type="button"
+            onClick={() => handleInputTypeChange('file')}
+            className={inputTypePillClasses(inputType === 'file')}
+          >
+            File
+          </button>
+          <button
+            type="button"
+            onClick={() => handleInputTypeChange('text')}
+            className={inputTypePillClasses(inputType === 'text')}
+          >
+            Text
+          </button>
+        </div>
 
         {inputType === 'file' ? (
-           <FileSelector
+          <FileSelector
             id={`${currentMode}-file`}
             onFileChange={(e) => handleFileChange(e, setFile)}
             onClear={() => setFile(null)}
             selectedFile={file}
-            icon={<FileText size={32} />}
-            label="Select File (100MB Max)"
-            description={`Drag & drop or click to select file to ${currentMode}`}
+            icon={<FileText size={22} />}
+            label="Drop a file here"
+            description={`or click to browse · 100 MB max`}
           />
         ) : (
           <div className="space-y-2">
-            <Label htmlFor="text-secret">Secret Text</Label>
+            <Label htmlFor="text-secret" className="text-[13px] font-medium text-muted-foreground">
+              Secret text
+            </Label>
             <Textarea
               id="text-secret"
               value={textSecret}
               onChange={(e) => setTextSecret(e.target.value)}
               placeholder={`Enter text to ${currentMode}...`}
               rows={5}
+              className="rounded-xl border-white/10 bg-white/[0.04] focus-visible:border-accent/50 focus-visible:ring-0"
             />
           </div>
         )}
-        
+
         <TooltipProvider>
           <div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1">
-                <Label htmlFor="password">Password</Label>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button type="button" className="focus:outline-none">
-                      <Info className="h-4 w-4 text-orange-500" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Min 24 chars, 1 uppercase, 1 lowercase, 1 number, 1 symbol.</p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
+            <div className="mb-2 flex items-center gap-1.5">
+              <Label htmlFor="password" className="text-[13px] font-medium text-muted-foreground">
+                Password
+              </Label>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button type="button" className="focus:outline-none">
+                    <Info className="h-3.5 w-3.5 text-muted-foreground/60" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Min 24 chars, 1 uppercase, 1 lowercase, 1 number, 1 symbol.</p>
+                </TooltipContent>
+              </Tooltip>
             </div>
-            <div className="relative mt-1">
-                <Input
-                    id="password"
-                    value={password}
-                    type={showPassword ? "text" : "password"}
-                    onChange={(e) => handlePasswordChange(e.target.value)}
-                    placeholder="Enter password..."
-                    className={cn(
-                      "pr-10 transition-colors duration-300",
-                      getPasswordStrengthColor()
-                    )}
-                />
-                <Button type="button" variant="ghost" size="icon" className="absolute right-0 top-0 h-full px-3" onClick={() => setShowPassword(!showPassword)}>
-                    {showPassword ? <EyeOff /> : <Eye />}
+            <div className="relative">
+              <Input
+                id="password"
+                value={password}
+                type={showPassword ? "text" : "password"}
+                onChange={(e) => handlePasswordChange(e.target.value)}
+                placeholder="Enter a strong password"
+                className={cn(
+                  "h-11 rounded-xl border border-white/10 bg-white/[0.04] pr-[74px] text-[15px] transition-colors focus-visible:border-accent/50 focus-visible:ring-0",
+                  getPasswordStrengthColor()
+                )}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg border border-white/10 bg-white/[0.05] px-2.5 py-1 text-xs font-medium text-muted-foreground transition-all hover:bg-white/10 hover:text-foreground"
+              >
+                {showPassword ? 'Hide' : 'Show'}
+              </button>
+            </div>
+            <div className="mt-2.5 flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleCopy(password)}
+                disabled={!password}
+                className="flex-1 rounded-lg border-white/10 bg-white/[0.04] text-[13px] font-medium text-muted-foreground hover:bg-white/[0.08] hover:text-foreground"
+              >
+                <Copy className="mr-1.5 h-3.5 w-3.5" />Copy
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePasswordChange("")}
+                disabled={!password}
+                className="flex-1 rounded-lg border-white/10 bg-white/[0.04] text-[13px] font-medium text-muted-foreground hover:bg-white/[0.08] hover:text-foreground"
+              >
+                <X className="mr-1.5 h-3.5 w-3.5" />Clear
+              </Button>
+              {currentMode === 'encrypt' && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={generatePassword}
+                  className="flex-1 rounded-lg border-white/10 bg-white/[0.04] text-[13px] font-medium text-muted-foreground hover:bg-white/[0.08] hover:text-foreground"
+                >
+                  <RefreshCw className="mr-1.5 h-3.5 w-3.5" />Generate
                 </Button>
-            </div>
-            <div className="flex flex-wrap justify-center gap-2 mt-2">
-                <Button variant="outline" size="sm" onClick={() => handleCopy(password)} disabled={!password}><Copy className="mr-1 h-3 w-3" />Copy</Button>
-                <Button variant="outline" size="sm" onClick={() => handlePasswordChange("")} disabled={!password}><X className="mr-1 h-3 w-3" />Clear</Button>
-                {currentMode === 'encrypt' && <Button variant="outline" size="sm" onClick={generatePassword}><RefreshCw className="mr-1 h-3 w-3" />Generate</Button>}
+              )}
             </div>
           </div>
-          
-          <div className="flex items-center space-x-2">
-            <Switch id="use-keyfile" checked={useKeyFile} onCheckedChange={handleUseKeyFileChange} />
-             <div className="flex items-center gap-1">
-                <Label htmlFor="use-keyfile">Use Key File (Optional)</Label>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button type="button" className="focus:outline-none">
-                      <Info className="h-4 w-4 text-orange-500" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>For additional security, you can use a key file. Use the generator to create a new, highly secure key file (recommended), or select an existing file. This file will be required along with your password to decrypt data.</p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
+
+          <div className="flex items-center gap-3 py-1">
+            <Switch
+              id="use-keyfile"
+              checked={useKeyFile}
+              onCheckedChange={handleUseKeyFileChange}
+              className="data-[state=checked]:bg-success"
+            />
+            <div className="flex items-center gap-1.5">
+              <Label htmlFor="use-keyfile" className="cursor-pointer text-sm text-foreground">
+                Use key file <span className="text-muted-foreground">(optional)</span>
+              </Label>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button type="button" className="focus:outline-none">
+                    <Info className="h-3.5 w-3.5 text-muted-foreground/60" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>For additional security, you can use a key file. Use the generator to create a new, highly secure key file (recommended), or select an existing file. This file will be required along with your password to decrypt data.</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
           </div>
-        
+
           {useKeyFile && (
-            <div className="animate-in fade-in-50 space-y-2">
+            <div className="animate-in fade-in-50 space-y-3">
               <FileSelector
                 id={`${currentMode}-keyfile`}
                 onFileChange={(e) => handleFileChange(e, setKeyFile)}
                 onClear={() => setKeyFile(null)}
                 selectedFile={keyFile}
-                icon={<KeyRound size={32} />}
-                label="Select Key File"
+                icon={<KeyRound size={22} />}
+                label="Select key file"
                 description="Drag & drop or click to select an existing file"
               />
-              <div className="flex items-center gap-2">
-                <hr className="flex-grow border-t border-muted-foreground/20" />
-                <span className="text-xs text-muted-foreground">OR</span>
-                <hr className="flex-grow border-t border-muted-foreground/20" />
+              <div className="flex items-center gap-3">
+                <hr className="flex-grow border-t border-white/10" />
+                <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">or</span>
+                <hr className="flex-grow border-t border-white/10" />
               </div>
-              <Button variant="outline" className="w-full" onClick={generateKeyFile}>
+              <Button
+                variant="outline"
+                className="w-full rounded-xl border-white/10 bg-white/[0.04] py-2.5 text-sm font-medium text-foreground hover:bg-white/[0.08]"
+                onClick={generateKeyFile}
+              >
                 <Download className="mr-2 h-4 w-4" />
-                Generate & Download New Key File
+                Generate & download new key file
               </Button>
             </div>
           )}
         </TooltipProvider>
       </div>
 
-       {outputText && (
-          <div className="space-y-2 animate-in fade-in-50">
-            <Label htmlFor="output-text">Result</Label>
-            <div className="relative">
-              <Textarea
-                id="output-text"
-                value={outputText}
-                readOnly
-                rows={5}
-                className={cn(
-                  "pr-12",
-                  mode === 'decrypt' && inputType === 'text' && !showDecryptedText && "blur-sm"
-                )}
-              />
-              <div className="absolute right-1 top-1 flex flex-col items-center">
-                 {mode === 'decrypt' && inputType === 'text' && (
-                  <Button type="button" variant="ghost" size="icon" className="h-auto p-2" onClick={() => setShowDecryptedText(!showDecryptedText)}>
-                    {showDecryptedText ? <EyeOff /> : <Eye />}
-                  </Button>
-                )}
-                <Button type="button" variant="ghost" size="icon" className="h-auto p-2" onClick={() => handleCopy(outputText)}>
-                    <Copy />
+      {outputText && (
+        <div className="animate-in fade-in-50 space-y-2">
+          <Label htmlFor="output-text" className="text-[13px] font-medium text-muted-foreground">
+            Result
+          </Label>
+          <div className="relative">
+            <Textarea
+              id="output-text"
+              value={outputText}
+              readOnly
+              rows={5}
+              className={cn(
+                "rounded-xl border-white/10 bg-white/[0.04] pr-12 focus-visible:ring-0",
+                mode === 'decrypt' && inputType === 'text' && !showDecryptedText && "blur-sm"
+              )}
+            />
+            <div className="absolute right-1 top-1 flex flex-col items-center">
+              {mode === 'decrypt' && inputType === 'text' && (
+                <Button type="button" variant="ghost" size="icon" className="h-auto p-2" onClick={() => setShowDecryptedText(!showDecryptedText)}>
+                  {showDecryptedText ? <EyeOff /> : <Eye />}
                 </Button>
-                 {mode === 'encrypt' && inputType === 'text' && (
-                    <Dialog open={isQrModalOpen} onOpenChange={setIsQrModalOpen}>
-                      <DialogTrigger asChild>
-                        <Button type="button" variant="ghost" size="icon" className="h-auto p-2">
-                            <QrCode />
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Encrypted QR Code</DialogTitle>
-                          <DialogDescription>
-                            Scan this code to transfer the encrypted text.
-                          </DialogDescription>
-                        </DialogHeader>
-                        <div className="flex flex-col items-center gap-4 py-4" ref={qrCodeRef}>
-                           {outputText.length <= QR_MAX_CHARS ? (
-                             <>
-                               {/* Preview QR (256px for the dialog) */}
-                               <QRCode value={outputText} size={256} />
-                               {/* Hidden high-res QR (900px ≈ 3" at 300 DPI) for download */}
-                               <div ref={hiResQrRef} style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
-                                 <QRCodeCanvas value={outputText} size={900} />
-                               </div>
-                               <Button onClick={handleDownloadQrCode}>
-                                <Download className="mr-2 h-4 w-4" />
-                                Download PNG (300 DPI)
-                               </Button>
-                             </>
-                           ) : (
-                             <div className="text-sm text-yellow-400 p-3 bg-yellow-900/20 rounded-md text-center">
-                               <p className="font-medium">QR code unavailable</p>
-                               <p className="mt-1">Output is {outputText.length.toLocaleString()} characters, which exceeds the QR code capacity of {QR_MAX_CHARS.toLocaleString()} characters. Use the copy button instead.</p>
-                             </div>
-                           )}
+              )}
+              <Button type="button" variant="ghost" size="icon" className="h-auto p-2" onClick={() => handleCopy(outputText)}>
+                <Copy />
+              </Button>
+              {mode === 'encrypt' && inputType === 'text' && (
+                <Dialog open={isQrModalOpen} onOpenChange={setIsQrModalOpen}>
+                  <DialogTrigger asChild>
+                    <Button type="button" variant="ghost" size="icon" className="h-auto p-2">
+                      <QrCode />
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Encrypted QR Code</DialogTitle>
+                      <DialogDescription>
+                        Scan this code to transfer the encrypted text.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="flex flex-col items-center gap-4 py-4" ref={qrCodeRef}>
+                      {outputText.length <= QR_MAX_CHARS ? (
+                        <>
+                          <QRCode value={outputText} size={256} />
+                          <div ref={hiResQrRef} style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
+                            <QRCodeCanvas value={outputText} size={900} />
+                          </div>
+                          <Button onClick={handleDownloadQrCode}>
+                            <Download className="mr-2 h-4 w-4" />
+                            Download PNG (300 DPI)
+                          </Button>
+                        </>
+                      ) : (
+                        <div className="rounded-md bg-yellow-900/20 p-3 text-center text-sm text-yellow-400">
+                          <p className="font-medium">QR code unavailable</p>
+                          <p className="mt-1">Output is {outputText.length.toLocaleString()} characters, which exceeds the QR code capacity of {QR_MAX_CHARS.toLocaleString()} characters. Use the copy button instead.</p>
                         </div>
-                      </DialogContent>
-                    </Dialog>
-                  )}
-              </div>
+                      )}
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              )}
             </div>
           </div>
-        )}
+        </div>
+      )}
 
       <Button
         onClick={processData}
         disabled={isProcessButtonDisabled()}
-        className="w-full text-lg font-bold py-6 bg-gradient-to-br from-yellow-400 via-orange-500 to-red-600 text-primary-foreground hover:opacity-90 transition-all duration-300 transform hover:scale-105"
+        className="mt-2 h-auto w-full rounded-xl bg-gradient-to-br from-amber-400 via-orange-500 to-red-500 py-3.5 text-[15px] font-semibold text-black shadow-[0_8px_24px_-8px_rgba(245,158,11,0.5)] transition-all hover:-translate-y-px hover:shadow-[0_12px_32px_-8px_rgba(245,158,11,0.65)] disabled:opacity-40 disabled:hover:translate-y-0"
       >
         {isLoading ? (
-          <Loader2 className="mr-2 h-6 w-6 animate-spin" />
+          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
         ) : (
-          currentMode === 'encrypt' ? <Lock className="mr-2 h-6 w-6" /> : <Unlock className="mr-2 h-6 w-6" />
+          currentMode === 'encrypt' ? <Lock className="mr-2 h-5 w-5" /> : <Unlock className="mr-2 h-5 w-5" />
         )}
         {currentMode === 'encrypt' ? `Encrypt ${inputType === 'file' ? 'File' : 'Text'}` : `Decrypt ${inputType === 'file' ? 'File' : 'Text'}`}
       </Button>
     </div>
   );
 
-  const tabTriggerClasses = "font-semibold data-[state=active]:bg-gradient-to-br data-[state=active]:from-yellow-400 data-[state=active]:via-orange-500 data-[state=active]:to-red-600 data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg";
+  const tabTriggerClasses = "rounded-lg px-4 py-1.5 text-[13px] font-medium text-muted-foreground data-[state=active]:bg-white/10 data-[state=active]:text-foreground data-[state=active]:shadow-sm";
 
   return (
-    <Tabs value={mode} onValueChange={handleModeChange} className="flex flex-col min-h-screen">
+    <Tabs value={mode} onValueChange={handleModeChange} className="flex min-h-screen flex-col">
       {/* ---- HEADER ---- */}
-      <header className="sticky top-0 z-50 w-full border-b border-zinc-700 bg-background/80 backdrop-blur-sm">
-        <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4 sm:px-6">
-          <div className="flex items-center gap-2">
-            <img src="/logo.webp" alt="IttyBitz Logo" width={28} height={28} />
-            <span className="text-lg font-bold">IttyBitz</span>
+      <header className="sticky top-0 z-50 w-full border-b border-white/[0.08] bg-black/70 backdrop-blur-xl backdrop-saturate-150">
+        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:px-6">
+          <div className="flex items-center gap-2.5">
+            <img src="/logo.webp" alt="IttyBitz Logo" width={28} height={28} className="rounded-lg" />
+            <span className="text-[17px] font-semibold tracking-tight">IttyBitz</span>
           </div>
-          <TabsList className="hidden sm:inline-flex bg-zinc-800 p-1">
+          <TabsList className="h-auto bg-white/[0.06] p-0.5">
             <TabsTrigger value="encrypt" className={tabTriggerClasses}>
-              <Lock className="mr-2 h-4 w-4" />
               Encrypt
             </TabsTrigger>
             <TabsTrigger value="decrypt" className={tabTriggerClasses}>
-              <Unlock className="mr-2 h-4 w-4" />
-              Decrypt
-            </TabsTrigger>
-          </TabsList>
-        </div>
-        <div className="sm:hidden border-t border-zinc-800 px-4 pb-2 pt-1">
-          <TabsList className="grid w-full grid-cols-2 bg-zinc-800 p-1">
-            <TabsTrigger value="encrypt" className={tabTriggerClasses}>
-              <Lock className="mr-2 h-4 w-4" />
-              Encrypt
-            </TabsTrigger>
-            <TabsTrigger value="decrypt" className={tabTriggerClasses}>
-              <Unlock className="mr-2 h-4 w-4" />
               Decrypt
             </TabsTrigger>
           </TabsList>
@@ -774,61 +821,74 @@ export function EncryptorTool() {
       </header>
 
       {/* ---- MAIN CONTENT ---- */}
-      <div className="flex-1 w-full">
-        <div className="mx-auto max-w-2xl px-4 sm:px-6 py-6 sm:py-8">
-          {/* Desktop-only large logo + name */}
-          <div className="hidden sm:flex items-center justify-center gap-3 mb-6">
-            <img src="/logo.webp" alt="IttyBitz Logo" width={48} height={48} />
-            <span className="text-4xl font-bold text-white">IttyBitz</span>
-          </div>
-          <div className="mb-6 text-center">
-            <p className="text-lg font-semibold text-white">Secure by design. Simple by nature.</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              Secure, <a href="https://github.com/seQRets/ittybitz" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">open-source</a>, client-side encryption and decryption.
+      <div className="w-full flex-1">
+        <div className="mx-auto max-w-[680px] px-4 pb-24 pt-12 sm:px-6 sm:pt-16">
+          {/* Hero */}
+          <div className="mb-10 text-center sm:mb-14">
+            <h1 className="hero-gradient-text text-[44px] font-bold leading-[1.05] tracking-[-0.04em] sm:text-[56px]">
+              Encrypt anything.<br />Trust nothing.
+            </h1>
+            <p className="mx-auto mt-4 max-w-md text-[17px] leading-snug text-muted-foreground sm:text-[19px]">
+              Client-side encryption that never leaves your browser.{' '}
+              <a href="https://github.com/seQRets/ittybitz" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
+                Open source
+              </a>
+              . No accounts. No servers.
             </p>
           </div>
-          <TabsContent value="encrypt">
-            {renderContent("encrypt")}
-          </TabsContent>
-          <TabsContent value="decrypt">
-            {renderContent("decrypt")}
-          </TabsContent>
-          {/* Desktop-only feature highlights */}
-          <div className="hidden sm:grid grid-cols-3 gap-4 mt-8 text-left">
-            <div className="flex items-start gap-2">
-              <Shield className="h-4 w-4 mt-0.5 text-accent shrink-0" />
-              <div>
-                <p className="text-sm font-medium text-white">AES-256-GCM</p>
-                <p className="text-xs text-muted-foreground">Military-grade encryption with 1M iteration key derivation.</p>
+
+          {/* Card */}
+          <section className="glass-card rounded-[20px] p-6 sm:p-8">
+            <TabsContent value="encrypt" className="mt-0">
+              {renderContent("encrypt")}
+            </TabsContent>
+            <TabsContent value="decrypt" className="mt-0">
+              {renderContent("decrypt")}
+            </TabsContent>
+          </section>
+
+          {/* Feature cards */}
+          <div className="mt-8 grid gap-3 sm:mt-10 sm:grid-cols-3">
+            <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
+              <div className="mb-2.5 grid h-8 w-8 place-items-center rounded-lg bg-accent/10 text-accent">
+                <Shield className="h-4 w-4" />
               </div>
+              <p className="text-[14px] font-semibold">AES-256-GCM</p>
+              <p className="mt-1 text-[12px] leading-relaxed text-muted-foreground">
+                Military-grade encryption with 1M iteration key derivation.
+              </p>
             </div>
-            <div className="flex items-start gap-2">
-              <Globe className="h-4 w-4 mt-0.5 text-accent shrink-0" />
-              <div>
-                <p className="text-sm font-medium text-white">100% Client-Side</p>
-                <p className="text-xs text-muted-foreground">Nothing leaves your browser. No servers, no uploads, no tracking.</p>
+            <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
+              <div className="mb-2.5 grid h-8 w-8 place-items-center rounded-lg bg-accent/10 text-accent">
+                <Globe className="h-4 w-4" />
               </div>
+              <p className="text-[14px] font-semibold">100% Client-Side</p>
+              <p className="mt-1 text-[12px] leading-relaxed text-muted-foreground">
+                Nothing leaves your browser. No servers, no uploads, no tracking.
+              </p>
             </div>
-            <div className="flex items-start gap-2">
-              <UserX className="h-4 w-4 mt-0.5 text-accent shrink-0" />
-              <div>
-                <p className="text-sm font-medium text-white">No Accounts</p>
-                <p className="text-xs text-muted-foreground">No sign-ups or logins. Just encrypt and go.</p>
+            <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
+              <div className="mb-2.5 grid h-8 w-8 place-items-center rounded-lg bg-accent/10 text-accent">
+                <UserX className="h-4 w-4" />
               </div>
+              <p className="text-[14px] font-semibold">No Accounts</p>
+              <p className="mt-1 text-[12px] leading-relaxed text-muted-foreground">
+                No sign-ups or logins. Just encrypt and go.
+              </p>
             </div>
           </div>
         </div>
       </div>
 
       {/* ---- FOOTER ---- */}
-      <footer className="w-full border-t border-zinc-700 bg-background/80 backdrop-blur-sm">
-        <div className="mx-auto flex max-w-5xl flex-col items-center gap-2 px-4 py-4 sm:flex-row sm:justify-between text-xs text-muted-foreground">
-          <div className="flex items-center gap-1">
+      <footer className="w-full border-t border-white/[0.06]">
+        <div className="mx-auto flex max-w-5xl flex-col items-center gap-2 px-4 py-5 text-xs text-muted-foreground sm:flex-row sm:justify-between sm:px-6">
+          <div className="flex items-center gap-1.5">
             <Heart className="h-3 w-3 text-red-500" />
             <span>Enjoying IttyBitz?</span>
             <Dialog>
               <DialogTrigger asChild>
-                <Button variant="link" className="text-accent p-0 h-auto text-xs">Support this project</Button>
+                <Button variant="link" className="h-auto p-0 text-xs text-accent">Support this project</Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
@@ -848,7 +908,7 @@ export function EncryptorTool() {
           </div>
           <div className="flex items-center gap-3">
             <a href="https://github.com/seQRets/ittybitz" target="_blank" rel="noopener noreferrer" className="hover:underline">GitHub</a>
-            <span>v 2.0.0 🔑 Lockdown</span>
+            <span>v 2.1.0</span>
           </div>
         </div>
       </footer>
