@@ -635,7 +635,7 @@ export function EncryptorTool() {
                 value={password}
                 type={showPassword ? "text" : "password"}
                 onChange={(e) => handlePasswordChange(e.target.value)}
-                placeholder="Enter a strong password"
+                placeholder={currentMode === 'encrypt' ? "Enter a strong password" : "Enter decryption password"}
                 className={cn(
                   "h-11 rounded-xl border border-white/10 bg-white/[0.04] pr-[74px] text-[15px] transition-colors focus-visible:border-accent/50 focus-visible:ring-0",
                   getPasswordStrengthColor()
