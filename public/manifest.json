@@ -19,7 +19,7 @@
       "type": "image/webp"
     },
     {
-      "src": "/icon-512x512.webp",
+      "src": "/icon-512x512-maskable.webp",
       "sizes": "512x512",
       "type": "image/webp",
       "purpose": "maskable"

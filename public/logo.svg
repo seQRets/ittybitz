@@ -1,0 +1,15 @@
+<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="ibGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fbbf24"/>
+      <stop offset="50%" stop-color="#f59e0b"/>
+      <stop offset="100%" stop-color="#ef4444"/>
+    </linearGradient>
+    <mask id="ibKeyhole">
+      <rect width="512" height="512" fill="white"/>
+      <circle cx="256" cy="205" r="51" fill="black"/>
+      <path d="M 230 205 L 282 205 L 297 369 L 215 369 Z" fill="black"/>
+    </mask>
+  </defs>
+  <rect width="512" height="512" rx="123" fill="url(#ibGrad)" mask="url(#ibKeyhole)"/>
+</svg>
