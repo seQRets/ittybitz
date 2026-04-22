@@ -827,7 +827,7 @@ export function EncryptorTool() {
               <defs>
                 <linearGradient id="ibHdrGrad" x1="0" y1="0" x2="1" y2="1">
                   <stop offset="0%" stopColor="#fbbf24" />
-                  <stop offset="50%" stopColor="#f59e0b" />
+                  <stop offset="20%" stopColor="#f59e0b" />
                   <stop offset="100%" stopColor="#ef4444" />
                 </linearGradient>
                 <mask id="ibHdrKey">
