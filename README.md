@@ -21,14 +21,18 @@ Here’s what you can do with IttyBitz:
 - **Client-side encryption/decryption**: all cryptographic operations happen in your browser. Your files and secrets are never sent to a server.
 - **Password & key file protection**: secure your data with a strong password, an optional key file, or both for an added layer of security. You can use any existing file or generate a new, cryptographically secure key file directly within the app.
 - **File & text support**: encrypt and decrypt both files and text snippets.
-- **QR Code Sharing**: easily share encrypted text snippets via a downloadable QR code.
-- **No accounts required**: works entirely without user accounts or signins.
+- **QR code sharing**: easily share encrypted text snippets via a downloadable QR code.
+- **Installable PWA with full offline support**: install IttyBitz to your home screen or desktop. After the first visit it works with zero network connectivity — ideal for air-gapped machines.
+- **Privacy-focused UI**: the secret text field offers a show/hide blur toggle to prevent shoulder-surfing during input, and decrypted output is blurred by default until you tap to reveal.
+- **Clipboard auto-clear**: copied passwords and output are wiped from the clipboard after 60 seconds (best-effort; requires the tab to retain focus).
+- **Backward-compatible file format**: encrypted payloads include an `IBTZ` version header so the app can evolve without breaking old files. Anything encrypted with prior versions still decrypts identically.
+- **No accounts required**: works entirely without user accounts or sign-ins.
 
 <br/>
 
 ## 🥤 How to Use IttyBitz
 
-At the top, you’ll find two simple tabs:  **Encrypt 🔒**  and **Decrypt 🔑**
+At the top, you’ll find two simple tabs:  **Encrypt**  and **Decrypt**.
 
 - In **Encrypt** mode, you can lock away a file or a text snippet with a password, a key file, or both.
 
@@ -58,7 +62,7 @@ The security of your data is the highest priority. Here is a summary of the secu
 
 - **Client-Side operations:** all encryption and decryption processes happen entirely within your browser. Your password, key files, and secret data are **never** transmitted over the internet or stored on any server.
 
-- **Strong encryption standard:** IttyBitz uses **AES-256-GCM**, which is the standard for symmetric encryption recommended by the NSA for Top Secret information. It provides both confidentiality and data integrity.
+- **Strong encryption standard:** IttyBitz uses **AES-256-GCM**, a modern authenticated encryption cipher that provides both confidentiality and data integrity.
 - **Strong key derivation:** your password is not used directly as the encryption key. Instead, it is run through the **PBKDF2** (Password-Based Key Derivation Function 2) algorithm with **1,000,000 iterations**. This makes brute-force attacks against your password extremely slow and computationally expensive, even for weak passwords.
 - **Cryptographically secure randomness:** the application uses `window.crypto.getRandomValues()` to generate the salt for key derivation, the Initialization Vector (IV) for AES-GCM, the random characters for the password generator, and the data for the key file generator. This is a cryptographically secure pseudo-random number generator (CSPRNG) that is suitable for security-sensitive applications.
 - **Password strength indicator:** to encourage strong security practices, the UI provides real-time feedback, guiding users to create passwords that are at least 24 characters long and contain a mix of character types.
@@ -97,7 +101,7 @@ You are free to use, modify, and distribute this software. Any derivative works 
 For maximum security when handling sensitive data like seed phrases, you can run ittybitz locally on your own machine.
 
 ### Prerequisites
-- Node.js 18+ (Download from [nodejs.org](https://nodejs.org))
+- Node.js 18.18+ or 20+ (download from [nodejs.org](https://nodejs.org))
 
 ### Quick Setup
 
@@ -143,6 +147,6 @@ For maximum security when handling sensitive data like seed phrases, you can run
 ### Troubleshooting
 
 If you encounter issues:
-1. Ensure Node.js 18+ is installed: `node --version`
+1. Ensure Node.js 18.18+ or 20+ is installed: `node --version`
 2. Clear dependencies and reinstall: `rm -rf node_modules && npm install`
 3. Check that no other services are using port 3000
