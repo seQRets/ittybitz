@@ -130,7 +130,9 @@ async function deriveKey(password: string, salt: Uint8Array, keyFileData: ArrayB
  * Encrypts a file buffer using a password and an optional key file.
  * @param dataBuffer The content of the file or text to encrypt.
  * @param password The password for encryption. Must not be empty.
- * @param keyFileBuffer Optional buffer from a key file.
+ * @param keyFileBuffer Optional buffer from a key file. NOTE: the caller's
+ *   buffer is zeroed in-place after use as part of secure cleanup. Do not
+ *   reuse it after calling this function; clone beforehand if you need to.
  * @returns A promise that resolves with the encrypted data as an ArrayBuffer.
  */
 export async function encryptFile(dataBuffer: ArrayBuffer, password: string, keyFileBuffer: ArrayBuffer | null): Promise<ArrayBuffer> {
@@ -190,7 +192,9 @@ export async function encryptFile(dataBuffer: ArrayBuffer, password: string, key
  * Decrypts an encrypted file buffer using a password and an optional key file.
  * @param encryptedBuffer The content of the encrypted file (salt + IV + ciphertext).
  * @param password The password for decryption.
- * @param keyFileBuffer Optional buffer from a key file.
+ * @param keyFileBuffer Optional buffer from a key file. NOTE: the caller's
+ *   buffer is zeroed in-place after use as part of secure cleanup. Do not
+ *   reuse it after calling this function; clone beforehand if you need to.
  * @returns A promise that resolves with the decrypted data as an ArrayBuffer.
  * @throws Will throw an error if decryption fails.
  */

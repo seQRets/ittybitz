@@ -44,15 +44,7 @@ PBKDF2-HMAC-SHA-256 at 1,000,000 iterations is acceptable and meets current OWAS
 
 **Recommendation:** Consider migrating to Argon2id when browser support allows (a WebAssembly Argon2 implementation is feasible today but adds bundle size). If staying on PBKDF2, document the rationale.
 
-### 2. Side-effect mutation of caller's `keyFileBuffer`
-
-**Location:** `src/lib/crypto.ts`, in the `finally` blocks of `encryptFile` and `decryptFile`
-
-Both functions call `secureErase(keyFileBuffer)` on the caller-owned buffer. Currently the UI does not reuse the buffer, so this is theoretical, but it violates principle of least surprise and could silently break future batch-mode features.
-
-**Recommendation:** Either document this behavior explicitly in a doc comment on the function, or clone the buffer internally before erasing.
-
-### 3. `secureErase` is best-effort, not a guarantee
+### 2. `secureErase` is best-effort, not a guarantee
 
 **Location:** `src/lib/crypto.ts`, `secureErase()`
 
@@ -64,11 +56,34 @@ JavaScript's garbage collector can copy buffer contents to new memory locations 
 
 ## Informational
 
-### 4. Content Security Policy must be set at the hosting layer
+### 3. Content Security Policy — shipped via meta tag (production-only)
 
-Because the app is a static export, a strict CSP (no inline scripts beyond the required SW registration, `connect-src 'none'`, `font-src 'self'`, `img-src 'self' data:`, `frame-ancestors 'none'`) must be enforced by the host (e.g., `ittybitz.app`). The codebase itself cannot configure response headers.
+A strict CSP is now emitted via a `<meta http-equiv="Content-Security-Policy">` tag in `src/app/layout.tsx`, gated on `process.env.NODE_ENV === 'production'` so React's dev-mode `eval()` usage is unaffected.
 
-### 5. Subresource integrity for any future CDN assets
+Shipped policy:
+
+```
+default-src 'none';
+script-src 'self' 'unsafe-inline';
+style-src 'self' 'unsafe-inline';
+img-src 'self' data:;
+font-src 'self';
+connect-src 'self';
+worker-src 'self';
+manifest-src 'self';
+object-src 'none';
+base-uri 'self';
+form-action 'none'
+```
+
+Notes on the tradeoffs:
+
+- `'unsafe-inline'` in `script-src` is required because Next.js emits several inline hydration scripts per page whose content changes every build, making nonces/hashes impractical for a static export. The exposure is small given the app renders no user-controlled HTML.
+- `'unsafe-inline'` in `style-src` is required because React and Tailwind emit `style="..."` attributes.
+- `frame-ancestors` is **not** enforceable via meta — CSP L3 restricts it to real headers. Since the app is hosted on GitHub Pages (no custom header support), the only way to add clickjacking protection would be to front the site with a CDN like Cloudflare that can inject headers via a Transform Rule. Not currently in scope.
+- Report-only reporting (`report-uri` / `report-to`) is also meta-ineligible; violations won't phone home, which is consistent with the app's no-network-egress posture anyway.
+
+### 4. Subresource integrity for any future CDN assets
 
 The app currently loads **no** external resources, which is ideal. If any CDN dependency is ever added, it should use SRI hashes.
 
@@ -86,10 +101,10 @@ For continuity, every finding from the previous audit has been addressed:
 | 4 | No format version identifier in encrypted output | **Fixed** | Output now begins with `IBTZ\x01` magic + version byte. Decryption is backward-compatible with v0 blobs. |
 | 5 | PBKDF2 instead of memory-hard KDF | **Open (Low)** | Re-logged as Low-severity item above. |
 | 6 | Clipboard auto-clear overstated | **Fixed** | Toast copy softened to reflect best-effort behavior ("may not work if tab loses focus"). |
-| 7 | `secureErase` mutates caller's buffer | **Open (Low)** | Re-logged as Low-severity item above. |
+| 7 | `secureErase` mutates caller's buffer | **Fixed (documented)** | JSDoc on `encryptFile` / `decryptFile` now explicitly warns the caller's `keyFileBuffer` is zeroed in-place. Behavior unchanged — the erase is intentional for secure cleanup. |
 | 8 | Version mismatch between `package.json` and UI | **Fixed** | Both report `2.2.0`. |
 | 9 | Error message sanitization fragile | **Fixed** | Allow-list of known-safe messages with generic fallback in `encryptor-tool.tsx`. |
-| 10 | No CSP | **Informational** | Re-logged in Informational above — must be set at the hosting layer. |
+| 10 | No CSP | **Fixed (meta tag)** | Strict CSP now emitted from `src/app/layout.tsx` in production builds. See Informational #3 for policy details and `frame-ancestors` caveat. |
 | 11 | Unused `placehold.co` remote image pattern | **Fixed** | `next.config.js` no longer configures `images.remotePatterns`. |
 | 12 | "No External Dependencies" claim imprecise | **Fixed** | Claim is now accurate — app makes zero external network requests. |
 
