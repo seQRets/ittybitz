@@ -1,6 +1,6 @@
 // IttyBitz Service Worker — hand-rolled, zero dependencies
 // Cache version: bump this on every release to invalidate stale caches
-const CACHE_VERSION = 'ittybitz-v2.2.1-icons';
+const CACHE_VERSION = 'ittybitz-v2.2.2-icons';
 
 // App shell files to precache on install.
 // For a static Next.js export the HTML entry point and key assets are enough;
@@ -8,9 +8,12 @@ const CACHE_VERSION = 'ittybitz-v2.2.1-icons';
 const APP_SHELL = [
   '/',
   '/index.html',
-  '/logo.webp',
+  '/logo.svg',
   '/favicon.ico',
   '/manifest.json',
+  '/apple-touch-icon.png',
+  '/icon-192x192.png',
+  '/icon-512x512.png',
 ];
 
 // ---- Install: precache the app shell ----
