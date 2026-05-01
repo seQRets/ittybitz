@@ -28,6 +28,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { encryptFile, decryptFile } from "@/lib/crypto";
+import { validateBip39, toStandardSeedQR } from "@/lib/bip39";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { Textarea } from "@/components/ui/textarea";
@@ -197,6 +198,18 @@ export function EncryptorTool() {
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const qrCodeRef = useRef<HTMLDivElement>(null);
   const clipboardTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Decrypted-result QR modal state. This is purely a display-side concern —
+  // the QR is generated from the already-decrypted `outputText`. It does not
+  // touch the cryptography or the encrypted file format.
+  type DecryptedQrStatus =
+    | { kind: "idle" }
+    | { kind: "plain" }
+    | { kind: "seed"; words: string[]; payload: string };
+  const [isDecryptedQrModalOpen, setIsDecryptedQrModalOpen] = useState(false);
+  const [decryptedQrStatus, setDecryptedQrStatus] = useState<DecryptedQrStatus>({
+    kind: "idle",
+  });
   const { toast } = useToast();
 
   // Clean up clipboard auto-clear timer on unmount
@@ -219,6 +232,45 @@ export function EncryptorTool() {
       });
     }
   }, [toast]);
+
+  // Detect whether the just-decrypted text is a valid BIP-39 mnemonic.
+  // Runs only when we are showing decrypted text output — never on encrypt
+  // input or on ciphertext. Has no effect on the decryption itself; only
+  // updates UI state used to label the "Show QR" button.
+  useEffect(() => {
+    let cancelled = false;
+
+    if (
+      mode !== "decrypt" ||
+      inputType !== "text" ||
+      !outputText
+    ) {
+      setDecryptedQrStatus({ kind: "idle" });
+      return;
+    }
+
+    (async () => {
+      try {
+        const result = await validateBip39(outputText);
+        if (cancelled) return;
+        if (result.valid) {
+          setDecryptedQrStatus({
+            kind: "seed",
+            words: result.words,
+            payload: toStandardSeedQR(result.words),
+          });
+        } else {
+          setDecryptedQrStatus({ kind: "plain" });
+        }
+      } catch {
+        if (!cancelled) setDecryptedQrStatus({ kind: "plain" });
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [outputText, mode, inputType]);
 
   const checkIsPasswordStrong = useCallback((pwd: string) => {
     const hasUpperCase = /[A-Z]/.test(pwd);
@@ -246,6 +298,8 @@ export function EncryptorTool() {
     setOutputText('');
     setShowDecryptedText(false);
     setInputType('file');
+    setIsDecryptedQrModalOpen(false);
+    setDecryptedQrStatus({ kind: "idle" });
   }, []);
 
   const handleModeChange = useCallback((newMode: string) => {
@@ -795,6 +849,67 @@ export function EncryptorTool() {
                   </DialogContent>
                 </Dialog>
               )}
+              {mode === 'decrypt' && inputType === 'text' && decryptedQrStatus.kind !== 'idle' && (
+                <Dialog open={isDecryptedQrModalOpen} onOpenChange={setIsDecryptedQrModalOpen}>
+                  <DialogTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-auto p-2"
+                      title={decryptedQrStatus.kind === 'seed' ? 'Show SeedQR' : 'Show QR'}
+                    >
+                      <QrCode />
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>
+                        {decryptedQrStatus.kind === 'seed' ? 'Standard SeedQR' : 'QR Code'}
+                      </DialogTitle>
+                      <DialogDescription>
+                        {decryptedQrStatus.kind === 'seed'
+                          ? `BIP-39 ${decryptedQrStatus.words.length}-word seed phrase, encoded for hardware wallet import (Coldcard, SeedSigner, Sparrow, Specter, Krux, Keystone, Jade).`
+                          : 'Scannable QR of the decrypted text. Nothing is downloaded or saved.'}
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="flex flex-col items-center gap-4 py-4">
+                      {decryptedQrStatus.kind === 'seed' ? (
+                        <>
+                          <div className="rounded-lg bg-white p-4">
+                            <QRCode value={decryptedQrStatus.payload} size={256} includeMargin={false} />
+                          </div>
+                          <p className="text-center text-xs text-muted-foreground">
+                            Standard SeedQR · {decryptedQrStatus.words.length} words ·{' '}
+                            {decryptedQrStatus.payload.length} digits
+                          </p>
+                          <p className="rounded-md bg-yellow-900/20 px-3 py-2 text-center text-xs text-yellow-400">
+                            Anyone who scans this QR can recover your seed. Show only on a trusted device and screen.
+                          </p>
+                        </>
+                      ) : outputText.length <= QR_MAX_CHARS ? (
+                        <>
+                          <div className="rounded-lg bg-white p-4">
+                            <QRCode value={outputText} size={256} includeMargin={false} />
+                          </div>
+                          <p className="rounded-md bg-yellow-900/20 px-3 py-2 text-center text-xs text-yellow-400">
+                            This QR contains your decrypted text. Show only on a trusted device and screen.
+                          </p>
+                        </>
+                      ) : (
+                        <div className="rounded-md bg-yellow-900/20 p-3 text-center text-sm text-yellow-400">
+                          <p className="font-medium">QR code unavailable</p>
+                          <p className="mt-1">
+                            Decrypted text is {outputText.length.toLocaleString()} characters,
+                            which exceeds the QR code capacity of {QR_MAX_CHARS.toLocaleString()}{' '}
+                            characters.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              )}
             </div>
           </div>
         </div>
@@ -939,7 +1054,7 @@ export function EncryptorTool() {
           </div>
           <div className="flex items-center gap-3">
             <a href="https://github.com/seQRets/ittybitz" target="_blank" rel="noopener noreferrer" className="hover:underline">GitHub</a>
-            <span>v 2.2.0</span>
+            <span>v 2.3.0</span>
           </div>
         </div>
       </footer>
