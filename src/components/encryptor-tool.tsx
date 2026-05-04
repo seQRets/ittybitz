@@ -1044,7 +1044,9 @@ export function EncryptorTool() {
                   </DialogDescription>
                 </DialogHeader>
                 <div className="flex flex-col items-center gap-4 py-4">
-                  <QRCode value="https://coinos.io/svrn_money" size={128} />
+                  <div className="rounded-lg bg-white p-4">
+                    <QRCode value="https://coinos.io/svrn_money" size={128} />
+                  </div>
                   <a href="https://coinos.io/svrn_money" target="_blank" rel="noopener noreferrer" className="text-sm text-accent hover:underline break-all">
                     https://coinos.io/svrn_money
                   </a>
