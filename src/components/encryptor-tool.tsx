@@ -207,6 +207,10 @@ export function EncryptorTool() {
     | { kind: "plain" }
     | { kind: "seed"; words: string[]; payload: string };
   const [isDecryptedQrModalOpen, setIsDecryptedQrModalOpen] = useState(false);
+  // Default to blurred whenever the modal opens. Same shoulder-surfing
+  // protection as the decrypted-text Textarea — the user must deliberately
+  // click to reveal the QR before scanning.
+  const [isDecryptedQrRevealed, setIsDecryptedQrRevealed] = useState(false);
   const [decryptedQrStatus, setDecryptedQrStatus] = useState<DecryptedQrStatus>({
     kind: "idle",
   });
@@ -299,6 +303,7 @@ export function EncryptorTool() {
     setShowDecryptedText(false);
     setInputType('file');
     setIsDecryptedQrModalOpen(false);
+    setIsDecryptedQrRevealed(false);
     setDecryptedQrStatus({ kind: "idle" });
   }, []);
 
@@ -850,7 +855,16 @@ export function EncryptorTool() {
                 </Dialog>
               )}
               {mode === 'decrypt' && inputType === 'text' && decryptedQrStatus.kind !== 'idle' && (
-                <Dialog open={isDecryptedQrModalOpen} onOpenChange={setIsDecryptedQrModalOpen}>
+                <Dialog
+                  open={isDecryptedQrModalOpen}
+                  onOpenChange={(open) => {
+                    setIsDecryptedQrModalOpen(open);
+                    // Reset to blurred whenever the modal opens or closes, so the
+                    // user always has to deliberately click to reveal.
+                    if (!open) setIsDecryptedQrRevealed(false);
+                    if (open) setIsDecryptedQrRevealed(false);
+                  }}
+                >
                   <DialogTrigger asChild>
                     <Button
                       type="button"
@@ -876,7 +890,12 @@ export function EncryptorTool() {
                     <div className="flex flex-col items-center gap-4 py-4">
                       {decryptedQrStatus.kind === 'seed' ? (
                         <>
-                          <div className="rounded-lg bg-white p-4">
+                          <div
+                            className={cn(
+                              "rounded-lg bg-white p-4 transition",
+                              !isDecryptedQrRevealed && "blur-md"
+                            )}
+                          >
                             <QRCode value={decryptedQrStatus.payload} size={256} includeMargin={false} />
                           </div>
                           <p className="text-center text-xs text-muted-foreground">
@@ -886,15 +905,40 @@ export function EncryptorTool() {
                           <p className="rounded-md bg-yellow-900/20 px-3 py-2 text-center text-xs text-yellow-400">
                             Anyone who scans this QR can recover your seed. Show only on a trusted device and screen.
                           </p>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setIsDecryptedQrRevealed((v) => !v)}
+                            className="text-muted-foreground hover:text-foreground"
+                          >
+                            {isDecryptedQrRevealed ? <EyeOff className="mr-2 h-3.5 w-3.5" /> : <Eye className="mr-2 h-3.5 w-3.5" />}
+                            {isDecryptedQrRevealed ? 'Hide QR' : 'Reveal QR'}
+                          </Button>
                         </>
                       ) : outputText.length <= QR_MAX_CHARS ? (
                         <>
-                          <div className="rounded-lg bg-white p-4">
+                          <div
+                            className={cn(
+                              "rounded-lg bg-white p-4 transition",
+                              !isDecryptedQrRevealed && "blur-md"
+                            )}
+                          >
                             <QRCode value={outputText} size={256} includeMargin={false} />
                           </div>
                           <p className="rounded-md bg-yellow-900/20 px-3 py-2 text-center text-xs text-yellow-400">
                             This QR contains your decrypted text. Show only on a trusted device and screen.
                           </p>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setIsDecryptedQrRevealed((v) => !v)}
+                            className="text-muted-foreground hover:text-foreground"
+                          >
+                            {isDecryptedQrRevealed ? <EyeOff className="mr-2 h-3.5 w-3.5" /> : <Eye className="mr-2 h-3.5 w-3.5" />}
+                            {isDecryptedQrRevealed ? 'Hide QR' : 'Reveal QR'}
+                          </Button>
                         </>
                       ) : (
                         <div className="rounded-md bg-yellow-900/20 p-3 text-center text-sm text-yellow-400">
