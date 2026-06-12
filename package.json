@@ -1,11 +1,10 @@
 {
   "name": "ittybitz",
-  "version": "2.4.0",
+  "version": "2.5.0",
   "private": true,
   "scripts": {
     "dev": "next dev -p 9002",
-    "build": "next build",
-    "start": "next start",
+    "build": "next build && node scripts/apply-csp-hashes.mjs",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "analyze": "ANALYZE=true next build --webpack"
@@ -13,7 +12,6 @@
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.1",
     "@radix-ui/react-label": "^2.1.0",
-    "@radix-ui/react-radio-group": "^1.2.0",
     "@radix-ui/react-slot": "^1.1.0",
     "@radix-ui/react-switch": "^1.1.0",
     "@radix-ui/react-tabs": "^1.1.0",
@@ -32,7 +30,6 @@
   "devDependencies": {
     "@next/bundle-analyzer": "^14.2.5",
     "@types/node": "^20.15.7",
-    "@types/qrcode.react": "^1.0.5",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "postcss": "^8.5.13",

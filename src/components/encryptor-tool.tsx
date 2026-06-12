@@ -62,17 +62,25 @@ function base64ToUint8Array(base64: string): Uint8Array {
 }
 
 const validateAndSanitizeFile = (file: File) => {
-  if (file.name.includes('..') || 
-      file.name.includes('/') || 
+  if (file.name.includes('..') ||
+      file.name.includes('/') ||
       file.name.includes('\\') ||
       file.name.length > 255) {
     throw new Error('Invalid filename. It may contain invalid characters or be too long.');
   }
-  
+
   if (file.name.includes('\0')) {
     throw new Error('Invalid filename. It contains null bytes.');
   }
-  
+
+  // Reject C0 control characters and Unicode bidi-override characters
+  // (U+202A–U+202E, U+2066–U+2069). A bidi override in a filename can
+  // visually disguise the real extension of the decrypted download
+  // (RTLO extension spoofing).
+  if (/[\u0000-\u001f\u202a-\u202e\u2066-\u2069]/.test(file.name)) {
+    throw new Error('Invalid filename. It contains control or bidirectional-override characters.');
+  }
+
   return true;
 };
 
@@ -178,7 +186,11 @@ const FileSelector = memo(({
 FileSelector.displayName = "FileSelector";
 
 const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100 MB
-const QR_MAX_CHARS = 2_953; // QR version 40, error correction M, byte mode
+// QR version 40, error-correction level L, byte mode. All <QRCode> instances
+// below pin level="L" explicitly — raising the ECC level without lowering
+// this limit would make qrcode.react throw for inputs above the new capacity
+// (level M tops out at 2,331 bytes).
+const QR_MAX_CHARS = 2_953;
 
 export function EncryptorTool() {
   const [mode, setMode] = useState<Mode>("encrypt");
@@ -196,16 +208,18 @@ export function EncryptorTool() {
   const [passwordIsStrong, setPasswordIsStrong] = useState(false);
   const [isCryptoAvailable, setIsCryptoAvailable] = useState(true);
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
-  const qrCodeRef = useRef<HTMLDivElement>(null);
   const clipboardTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Decrypted-result QR modal state. This is purely a display-side concern —
   // the QR is generated from the already-decrypted `outputText`. It does not
   // touch the cryptography or the encrypted file format.
+  // The SeedQR payload is intentionally NOT stored in state — it is derived
+  // from `words` at render time, and only while the QR is revealed, to keep
+  // the encoded secret out of long-lived component state.
   type DecryptedQrStatus =
     | { kind: "idle" }
     | { kind: "plain" }
-    | { kind: "seed"; words: string[]; payload: string };
+    | { kind: "seed"; words: string[] };
   const [isDecryptedQrModalOpen, setIsDecryptedQrModalOpen] = useState(false);
   // Default to blurred whenever the modal opens. Same shoulder-surfing
   // protection as the decrypted-text Textarea — the user must deliberately
@@ -258,11 +272,7 @@ export function EncryptorTool() {
         const result = await validateBip39(outputText);
         if (cancelled) return;
         if (result.valid) {
-          setDecryptedQrStatus({
-            kind: "seed",
-            words: result.words,
-            payload: toStandardSeedQR(result.words),
-          });
+          setDecryptedQrStatus({ kind: "seed", words: result.words });
         } else {
           setDecryptedQrStatus({ kind: "plain" });
         }
@@ -314,6 +324,15 @@ export function EncryptorTool() {
   
   const handleInputTypeChange = useCallback((newType: string) => {
       setInputType(newType as InputType);
+      // Clear any previous result when the input type changes. The blur and
+      // reveal controls on the decrypted output are scoped to text mode, so
+      // carrying outputText across the switch would render a decrypted
+      // secret fully visible with no way to re-hide it.
+      setOutputText('');
+      setShowDecryptedText(false);
+      setIsDecryptedQrModalOpen(false);
+      setIsDecryptedQrRevealed(false);
+      setDecryptedQrStatus({ kind: "idle" });
   }, []);
 
   const handleFileChange = useCallback((
@@ -464,6 +483,46 @@ export function EncryptorTool() {
 
     toast({ title: "QR Code downloaded", description: "High-resolution (300 DPI / 1020×1020px)" });
   }, [toast]);
+
+  // Decrypted-QR download: exports a 1024×1024 PNG from a hidden hi-res
+  // canvas. The hidden canvas is only mounted while the QR is revealed, and
+  // it bakes in a spec-compliant 4-module quiet zone via includeMargin.
+  const decryptedQrHiResRef = useRef<HTMLDivElement>(null);
+
+  const handleDownloadDecryptedQr = useCallback(() => {
+    const srcCanvas = decryptedQrHiResRef.current?.querySelector('canvas');
+    if (!srcCanvas) return;
+
+    // qrcode.react scales its canvas by devicePixelRatio, so the physical
+    // pixel size varies by display. Normalize to exactly 1024×1024 by
+    // drawing onto a fixed-size export canvas (integer downscale of a
+    // binary image stays crisp).
+    const exportCanvas = document.createElement('canvas');
+    exportCanvas.width = 1024;
+    exportCanvas.height = 1024;
+    const ctx = exportCanvas.getContext('2d');
+    if (!ctx) return;
+    ctx.imageSmoothingEnabled = false;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, 1024, 1024);
+    ctx.drawImage(srcCanvas, 0, 0, 1024, 1024);
+
+    const isSeed = decryptedQrStatus.kind === 'seed';
+    const pngUrl = exportCanvas
+      .toDataURL('image/png')
+      .replace('image/png', 'image/octet-stream');
+    const a = document.createElement('a');
+    a.href = pngUrl;
+    a.download = isSeed ? 'ittybitz-seedqr.png' : 'ittybitz-qr.png';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+
+    toast({
+      title: isSeed ? 'SeedQR downloaded' : 'QR Code downloaded',
+      description: '1024×1024 PNG. It encodes your decrypted secret — store it as carefully as the secret itself.',
+    });
+  }, [toast, decryptedQrStatus.kind]);
 
   const processData = useCallback(async () => {
     let mutablePassword = password;
@@ -832,12 +891,14 @@ export function EncryptorTool() {
                         Scan this code to transfer the encrypted text.
                       </DialogDescription>
                     </DialogHeader>
-                    <div className="flex flex-col items-center gap-4 py-4" ref={qrCodeRef}>
+                    <div className="flex flex-col items-center gap-4 py-4">
                       {outputText.length <= QR_MAX_CHARS ? (
                         <>
-                          <QRCode value={outputText} size={256} />
+                          <div className="rounded-lg bg-white p-4">
+                            <QRCode value={outputText} size={256} level="L" includeMargin={false} />
+                          </div>
                           <div ref={hiResQrRef} style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
-                            <QRCodeCanvas value={outputText} size={900} />
+                            <QRCodeCanvas value={outputText} size={900} level="L" />
                           </div>
                           <Button onClick={handleDownloadQrCode}>
                             <Download className="mr-2 h-4 w-4" />
@@ -884,61 +945,104 @@ export function EncryptorTool() {
                       <DialogDescription>
                         {decryptedQrStatus.kind === 'seed'
                           ? `BIP-39 ${decryptedQrStatus.words.length}-word seed phrase, encoded for hardware wallet import (Coldcard, SeedSigner, Sparrow, Specter, Krux, Keystone, Jade).`
-                          : 'Scannable QR of the decrypted text. Nothing is downloaded or saved.'}
+                          : 'Scannable QR of the decrypted text. Nothing ever leaves your device.'}
                       </DialogDescription>
                     </DialogHeader>
                     <div className="flex flex-col items-center gap-4 py-4">
                       {decryptedQrStatus.kind === 'seed' ? (
                         <>
-                          <div
-                            className={cn(
-                              "rounded-lg bg-white p-4 transition",
-                              !isDecryptedQrRevealed && "blur-md"
-                            )}
-                          >
-                            <QRCode value={decryptedQrStatus.payload} size={256} includeMargin={false} />
-                          </div>
+                          {/* The QR canvas is only mounted while revealed — a CSS
+                              blur alone would leave the sharp QR readable in the
+                              DOM (devtools, extensions, canvas.toDataURL). The
+                              SeedQR payload is derived here at render time, not
+                              stored in state. */}
+                          {isDecryptedQrRevealed ? (
+                            <>
+                              <div className="rounded-lg bg-white p-4">
+                                <QRCode value={toStandardSeedQR(decryptedQrStatus.words)} size={256} level="L" includeMargin={false} />
+                              </div>
+                              <div ref={decryptedQrHiResRef} style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
+                                <QRCodeCanvas value={toStandardSeedQR(decryptedQrStatus.words)} size={1024} level="L" includeMargin={true} />
+                              </div>
+                            </>
+                          ) : (
+                            <div className="flex h-[288px] w-[288px] items-center justify-center rounded-lg bg-white/[0.06]">
+                              <QrCode className="h-16 w-16 text-muted-foreground/40" />
+                            </div>
+                          )}
                           <p className="text-center text-xs text-muted-foreground">
                             Standard SeedQR · {decryptedQrStatus.words.length} words ·{' '}
-                            {decryptedQrStatus.payload.length} digits
+                            {decryptedQrStatus.words.length * 4} digits
                           </p>
                           <p className="rounded-md bg-yellow-900/20 px-3 py-2 text-center text-xs text-yellow-400">
                             Anyone who scans this QR can recover your seed. Show only on a trusted device and screen.
                           </p>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setIsDecryptedQrRevealed((v) => !v)}
-                            className="text-muted-foreground hover:text-foreground"
-                          >
-                            {isDecryptedQrRevealed ? <EyeOff className="mr-2 h-3.5 w-3.5" /> : <Eye className="mr-2 h-3.5 w-3.5" />}
-                            {isDecryptedQrRevealed ? 'Hide QR' : 'Reveal QR'}
-                          </Button>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setIsDecryptedQrRevealed((v) => !v)}
+                              className="w-32 text-muted-foreground hover:text-foreground"
+                            >
+                              {isDecryptedQrRevealed ? <EyeOff className="mr-2 h-3.5 w-3.5" /> : <Eye className="mr-2 h-3.5 w-3.5" />}
+                              {isDecryptedQrRevealed ? 'Hide QR' : 'Reveal QR'}
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              disabled={!isDecryptedQrRevealed}
+                              onClick={handleDownloadDecryptedQr}
+                              className="w-32 text-muted-foreground hover:text-foreground"
+                            >
+                              <Download className="mr-2 h-3.5 w-3.5" />
+                              Download PNG
+                            </Button>
+                          </div>
                         </>
                       ) : outputText.length <= QR_MAX_CHARS ? (
                         <>
-                          <div
-                            className={cn(
-                              "rounded-lg bg-white p-4 transition",
-                              !isDecryptedQrRevealed && "blur-md"
-                            )}
-                          >
-                            <QRCode value={outputText} size={256} includeMargin={false} />
-                          </div>
+                          {isDecryptedQrRevealed ? (
+                            <>
+                              <div className="rounded-lg bg-white p-4">
+                                <QRCode value={outputText} size={256} level="L" includeMargin={false} />
+                              </div>
+                              <div ref={decryptedQrHiResRef} style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
+                                <QRCodeCanvas value={outputText} size={1024} level="L" includeMargin={true} />
+                              </div>
+                            </>
+                          ) : (
+                            <div className="flex h-[288px] w-[288px] items-center justify-center rounded-lg bg-white/[0.06]">
+                              <QrCode className="h-16 w-16 text-muted-foreground/40" />
+                            </div>
+                          )}
                           <p className="rounded-md bg-yellow-900/20 px-3 py-2 text-center text-xs text-yellow-400">
                             This QR contains your decrypted text. Show only on a trusted device and screen.
                           </p>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setIsDecryptedQrRevealed((v) => !v)}
-                            className="text-muted-foreground hover:text-foreground"
-                          >
-                            {isDecryptedQrRevealed ? <EyeOff className="mr-2 h-3.5 w-3.5" /> : <Eye className="mr-2 h-3.5 w-3.5" />}
-                            {isDecryptedQrRevealed ? 'Hide QR' : 'Reveal QR'}
-                          </Button>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setIsDecryptedQrRevealed((v) => !v)}
+                              className="w-32 text-muted-foreground hover:text-foreground"
+                            >
+                              {isDecryptedQrRevealed ? <EyeOff className="mr-2 h-3.5 w-3.5" /> : <Eye className="mr-2 h-3.5 w-3.5" />}
+                              {isDecryptedQrRevealed ? 'Hide QR' : 'Reveal QR'}
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              disabled={!isDecryptedQrRevealed}
+                              onClick={handleDownloadDecryptedQr}
+                              className="w-32 text-muted-foreground hover:text-foreground"
+                            >
+                              <Download className="mr-2 h-3.5 w-3.5" />
+                              Download PNG
+                            </Button>
+                          </div>
                         </>
                       ) : (
                         <div className="rounded-md bg-yellow-900/20 p-3 text-center text-sm text-yellow-400">
@@ -1100,7 +1204,7 @@ export function EncryptorTool() {
           </div>
           <div className="flex items-center gap-3">
             <a href="https://github.com/seQRets/ittybitz" target="_blank" rel="noopener noreferrer" className="hover:underline">GitHub</a>
-            <span>v 2.4.0</span>
+            <span>v 2.5.0</span>
           </div>
         </div>
       </footer>

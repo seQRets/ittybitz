@@ -1,6 +1,6 @@
 // IttyBitz Service Worker — hand-rolled, zero dependencies
 // Cache version: bump this on every release to invalidate stale caches
-const CACHE_VERSION = 'ittybitz-v2.4.0';
+const CACHE_VERSION = 'ittybitz-v2.5.0';
 
 // App shell files to precache on install.
 // For a static Next.js export the HTML entry point and key assets are enough;
@@ -49,7 +49,14 @@ self.addEventListener('activate', (event) => {
   });
 });
 
-// ---- Fetch: cache-first for same-origin, skip cross-origin entirely ----
+// ---- Fetch strategies ----
+// Navigations (the app shell) are network-first: users always get the
+// newest deployed bundle when online, and the cache only serves as an
+// offline fallback. Without this, cache-first on '/' could pin returning
+// users to a stale bundle — including one with since-fixed security bugs —
+// whenever a release forgets to bump CACHE_VERSION.
+// Hashed static assets (/_next/static/*) are immutable by construction,
+// so cache-first remains correct and fast for them.
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
@@ -60,24 +67,41 @@ self.addEventListener('fetch', (event) => {
   // Only handle GET requests
   if (event.request.method !== 'GET') return;
 
+  const cacheResponse = (request, response) => {
+    // Don't cache error responses or opaque responses
+    if (!response || response.status !== 200 || response.type !== 'basic') {
+      return response;
+    }
+    // Clone the response — one copy goes to cache, one to the browser
+    const toCache = response.clone();
+    caches.open(CACHE_VERSION).then((cache) => {
+      cache.put(request, toCache);
+    });
+    return response;
+  };
+
+  const isNavigation =
+    event.request.mode === 'navigate' ||
+    url.pathname === '/' ||
+    url.pathname === '/index.html';
+
+  if (isNavigation) {
+    // Network-first with cache fallback (offline support)
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => cacheResponse(event.request, response))
+        .catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
+  // Cache-first for everything else (content-hashed assets, icons, manifest)
   event.respondWith(
     caches.match(event.request).then((cached) => {
       if (cached) return cached;
-
-      return fetch(event.request).then((response) => {
-        // Don't cache error responses or opaque responses
-        if (!response || response.status !== 200 || response.type !== 'basic') {
-          return response;
-        }
-
-        // Clone the response — one copy goes to cache, one to the browser
-        const toCache = response.clone();
-        caches.open(CACHE_VERSION).then((cache) => {
-          cache.put(event.request, toCache);
-        });
-
-        return response;
-      });
+      return fetch(event.request).then((response) =>
+        cacheResponse(event.request, response)
+      );
     })
   );
 });
