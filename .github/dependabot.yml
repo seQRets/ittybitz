@@ -1,0 +1,15 @@
+version: 2
+updates:
+  # Keep npm dependencies patched (this was previously implicit via repo
+  # settings; making it explicit alongside the github-actions ecosystem).
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+
+  # Keep the SHA-pinned GitHub Actions current. Dependabot updates both the
+  # pinned commit SHA and the trailing version comment.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

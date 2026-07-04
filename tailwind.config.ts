@@ -10,21 +10,10 @@ export default {
     extend: {
       fontFamily: {
         body: ['system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
-        headline: ['system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
-        code: ['monospace'],
       },
       colors: {
-        white: '#ffffff',
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',
-        card: {
-          DEFAULT: 'hsl(var(--card))',
-          foreground: 'hsl(var(--card-foreground))',
-        },
-        popover: {
-          DEFAULT: 'hsl(var(--popover))',
-          foreground: 'hsl(var(--popover-foreground))',
-        },
         primary: {
           DEFAULT: 'hsl(var(--primary))',
           foreground: 'hsl(var(--primary-foreground))',

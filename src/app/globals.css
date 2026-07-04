@@ -6,10 +6,6 @@
   :root {
     --background: 0 0% 100%;
     --foreground: 240 10% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
     --primary: 0 0% 9%;
     --primary-foreground: 0 0% 98%;
     --secondary: 0 0% 96.1%;
@@ -30,10 +26,6 @@
   .dark {
     --background: 0 0% 0%;
     --foreground: 240 5% 96%;
-    --card: 240 6% 6%;
-    --card-foreground: 240 5% 96%;
-    --popover: 240 6% 6%;
-    --popover-foreground: 240 5% 96%;
     --primary: 0 0% 98%;
     --primary-foreground: 0 0% 9%;
     --secondary: 240 4% 12%;
@@ -70,11 +62,6 @@
       radial-gradient(ellipse 60% 50% at 100% 100%, rgba(239, 68, 68, 0.06), transparent 60%);
     background-attachment: fixed;
     min-height: 100vh;
-  }
-  .dark body {
-    background-image:
-      radial-gradient(ellipse 80% 60% at 50% -10%, rgba(245, 158, 11, 0.12), transparent 60%),
-      radial-gradient(ellipse 60% 50% at 100% 100%, rgba(239, 68, 68, 0.06), transparent 60%);
   }
   h1, h2, h3, h4 {
     letter-spacing: -0.025em;

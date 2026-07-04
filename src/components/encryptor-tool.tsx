@@ -1,8 +1,8 @@
 
 "use client";
 
-import { useState, useRef, type ChangeEvent, type DragEvent, memo, useCallback, useEffect } from "react";
-import QRCode, { QRCodeCanvas } from "qrcode.react";
+import { useState, useRef, type ChangeEvent, type DragEvent, type RefObject, type ReactNode, useCallback, useEffect } from "react";
+import { QRCodeCanvas } from "qrcode.react";
 import {
   KeyRound,
   Lock,
@@ -61,6 +61,49 @@ function base64ToUint8Array(base64: string): Uint8Array {
   return bytes;
 }
 
+// Offscreen positioning for the hidden hi-res QR canvases used only as a
+// source for PNG export. Hoisted so the object identity is stable across
+// renders instead of allocating a fresh style object each time.
+const OFFSCREEN_STYLE = { position: 'absolute', left: '-9999px', top: '-9999px' } as const;
+
+// Password strength gate. The symbol class is kept in sync with the
+// generatePassword charset so a generated password can never be rejected by
+// this check (and manual passwords using any of those symbols are accepted).
+function isPasswordStrong(pwd: string): boolean {
+  const hasUpperCase = /[A-Z]/.test(pwd);
+  const hasLowerCase = /[a-z]/.test(pwd);
+  const hasNumbers = /\d/.test(pwd);
+  const hasSpecialChars = /[!@#$%^&*()_+~`|}{[\]:;?><,.\/=-]/.test(pwd);
+  const hasMinLength = pwd.length >= 24;
+  return hasMinLength && hasUpperCase && hasLowerCase && hasNumbers && hasSpecialChars;
+}
+
+// Shared download plumbing. Creating/clicking/removing a transient anchor is
+// identical across every download path (key file, ciphertext, plaintext, QR
+// PNGs), so it lives in one place.
+function clickDownloadLink(href: string, filename: string) {
+  const a = document.createElement("a");
+  a.href = href;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+function triggerDownload(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  clickDownloadLink(url, filename);
+  URL.revokeObjectURL(url);
+}
+
+// Export a canvas as a downloaded PNG. octet-stream forces a download rather
+// than in-page navigation. .replace() only hits the MIME header, never the
+// base64 body.
+function exportCanvasPng(canvas: HTMLCanvasElement, filename: string) {
+  const url = canvas.toDataURL("image/png").replace("image/png", "image/octet-stream");
+  clickDownloadLink(url, filename);
+}
+
 const validateAndSanitizeFile = (file: File) => {
   if (file.name.includes('..') ||
       file.name.includes('/') ||
@@ -94,7 +137,9 @@ interface FileSelectorProps {
   description: string;
 }
 
-const FileSelector = memo(({
+// Not memoized: callers pass fresh inline callbacks/icon each render, so
+// React.memo could never bail out — it would only add a comparison cost.
+const FileSelector = ({
   id,
   onFileChange,
   onClear,
@@ -182,13 +227,96 @@ const FileSelector = memo(({
       />
     </div>
   );
-});
+};
 FileSelector.displayName = "FileSelector";
 
-const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100 MB
-// QR version 40, error-correction level L, byte mode. All <QRCode> instances
-// below pin level="L" explicitly — raising the ECC level without lowering
-// this limit would make qrcode.react throw for inputs above the new capacity
+// Blurred-by-default QR with a reveal gate and PNG download, shared by the
+// decrypted-secret modal's seed and plain-text branches so the reveal/blur
+// security behavior has a single source of truth.
+//
+// Security-relevant invariants (must not regress):
+//  - The live QR canvas is only MOUNTED while revealed. A CSS blur alone
+//    would leave the sharp QR in the DOM (devtools, extensions,
+//    canvas.toDataURL). While hidden, only a neutral placeholder renders.
+//  - `getValue` is invoked only inside the revealed branch, so the encoded
+//    secret is never computed (or held) while the QR is hidden.
+//  - Download is disabled until revealed.
+interface RevealableQrProps {
+  getValue: () => string;
+  revealed: boolean;
+  onToggleReveal: () => void;
+  onDownload: () => void;
+  hiResRef: RefObject<HTMLDivElement>;
+  warning: string;
+  caption?: ReactNode;
+}
+
+function RevealableQr({
+  getValue,
+  revealed,
+  onToggleReveal,
+  onDownload,
+  hiResRef,
+  warning,
+  caption,
+}: RevealableQrProps) {
+  return (
+    <>
+      {revealed ? (
+        <>
+          <div className="rounded-lg bg-white p-4">
+            <QRCodeCanvas value={getValue()} size={256} level="L" includeMargin={false} />
+          </div>
+          <div ref={hiResRef} style={OFFSCREEN_STYLE}>
+            <QRCodeCanvas value={getValue()} size={1024} level="L" includeMargin={true} />
+          </div>
+        </>
+      ) : (
+        <div className="flex h-[288px] w-[288px] items-center justify-center rounded-lg bg-white/[0.06]">
+          <QrCode className="h-16 w-16 text-muted-foreground/40" />
+        </div>
+      )}
+      {caption && (
+        <p className="text-center text-xs text-muted-foreground">{caption}</p>
+      )}
+      <p className="rounded-md bg-yellow-900/20 px-3 py-2 text-center text-xs text-yellow-400">
+        {warning}
+      </p>
+      <div className="flex items-center gap-2">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={onToggleReveal}
+          className="w-32 text-muted-foreground hover:text-foreground"
+        >
+          {revealed ? <EyeOff className="mr-2 h-3.5 w-3.5" /> : <Eye className="mr-2 h-3.5 w-3.5" />}
+          {revealed ? 'Hide QR' : 'Reveal QR'}
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          disabled={!revealed}
+          onClick={onDownload}
+          className="w-32 text-muted-foreground hover:text-foreground"
+        >
+          <Download className="mr-2 h-3.5 w-3.5" />
+          Download PNG
+        </Button>
+      </div>
+    </>
+  );
+}
+
+// 100 MB. Note: encrypting a file of this size transiently holds several full
+// copies in memory (the read ArrayBuffer, the Web Crypto ciphertext output,
+// and the Blob for download), so peak usage is a multiple of this limit —
+// the practical ceiling on low-RAM mobile devices.
+const MAX_FILE_SIZE = 100 * 1024 * 1024;
+// QR version 40, error-correction level L, byte mode. Every QRCodeCanvas below
+// pins level="L" explicitly — raising the ECC level without lowering this
+// limit would make qrcode.react throw for inputs above the new capacity
 // (level M tops out at 2,331 bytes).
 const QR_MAX_CHARS = 2_953;
 
@@ -205,7 +333,6 @@ export function EncryptorTool() {
   const [useKeyFile, setUseKeyFile] = useState(false);
   const [keyFile, setKeyFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [passwordIsStrong, setPasswordIsStrong] = useState(false);
   const [isCryptoAvailable, setIsCryptoAvailable] = useState(true);
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const clipboardTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -229,6 +356,10 @@ export function EncryptorTool() {
     kind: "idle",
   });
   const { toast } = useToast();
+
+  // Derived, not stored — cheap (5 regex tests) and always consistent with
+  // `password`, removing a state variable and its sync points.
+  const passwordIsStrong = isPasswordStrong(password);
 
   // Clean up clipboard auto-clear timer on unmount
   useEffect(() => {
@@ -286,24 +417,13 @@ export function EncryptorTool() {
     };
   }, [outputText, mode, inputType]);
 
-  const checkIsPasswordStrong = useCallback((pwd: string) => {
-    const hasUpperCase = /[A-Z]/.test(pwd);
-    const hasLowerCase = /[a-z]/.test(pwd);
-    const hasNumbers = /\d/.test(pwd);
-    const hasSpecialChars = /[!@#$%^&*(),.?":{}|<>]/.test(pwd);
-    const hasMinLength = pwd.length >= 24;
-    return hasMinLength && hasUpperCase && hasLowerCase && hasNumbers && hasSpecialChars;
-  }, []);
-
   const handlePasswordChange = useCallback((pwd: string) => {
     setPassword(pwd);
-    setPasswordIsStrong(checkIsPasswordStrong(pwd));
-  }, [checkIsPasswordStrong]);
+  }, []);
 
   const resetState = useCallback(() => {
     setFile(null);
     setPassword('');
-    setPasswordIsStrong(false);
     setShowPassword(false);
     setUseKeyFile(false);
     setKeyFile(null);
@@ -429,17 +549,6 @@ export function EncryptorTool() {
     });
   }, [toast]);
 
-  const triggerDownload = (blob: Blob, filename: string) => {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-  
   const generateKeyFile = useCallback(() => {
     const keyData = new Uint8Array(64);
     window.crypto.getRandomValues(keyData);
@@ -470,16 +579,7 @@ export function EncryptorTool() {
     ctx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
     ctx.drawImage(hiResCanvas, PADDING, PADDING);
 
-    const pngUrl = exportCanvas
-      .toDataURL("image/png")
-      .replace("image/png", "image/octet-stream");
-
-    const a = document.createElement("a");
-    a.href = pngUrl;
-    a.download = "encrypted-qr.png";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    exportCanvasPng(exportCanvas, "encrypted-qr.png");
 
     toast({ title: "QR Code downloaded", description: "High-resolution (300 DPI / 1020×1020px)" });
   }, [toast]);
@@ -508,15 +608,7 @@ export function EncryptorTool() {
     ctx.drawImage(srcCanvas, 0, 0, 1024, 1024);
 
     const isSeed = decryptedQrStatus.kind === 'seed';
-    const pngUrl = exportCanvas
-      .toDataURL('image/png')
-      .replace('image/png', 'image/octet-stream');
-    const a = document.createElement('a');
-    a.href = pngUrl;
-    a.download = isSeed ? 'ittybitz-seedqr.png' : 'ittybitz-qr.png';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    exportCanvasPng(exportCanvas, isSeed ? 'ittybitz-seedqr.png' : 'ittybitz-qr.png');
 
     toast({
       title: isSeed ? 'SeedQR downloaded' : 'QR Code downloaded',
@@ -545,7 +637,7 @@ export function EncryptorTool() {
         return;
     }
     
-    if (mode === "encrypt" && !checkIsPasswordStrong(mutablePassword)) {
+    if (mode === "encrypt" && !isPasswordStrong(mutablePassword)) {
         toast({
           title: "Weak Password",
           description: "Please use a password that is at least 24 characters and includes uppercase, lowercase, numbers, and symbols.",
@@ -631,12 +723,10 @@ export function EncryptorTool() {
         });
     } finally {
       // Clear sensitive data
-      mutablePassword = ''; 
       setPassword('');
-      setPasswordIsStrong(false);
       setIsLoading(false);
     }
-  }, [file, mode, keyFile, toast, inputType, textSecret, checkIsPasswordStrong, password]);
+  }, [file, mode, keyFile, toast, inputType, textSecret, password]);
   
   const handleUseKeyFileChange = useCallback((checked: boolean) => {
       setUseKeyFile(checked);
@@ -647,9 +737,9 @@ export function EncryptorTool() {
 
   const getPasswordStrengthColor = useCallback(() => {
     if (!password) return "border-input";
-    if (checkIsPasswordStrong(password)) return "border-success";
+    if (isPasswordStrong(password)) return "border-success";
     return "border-destructive";
-  }, [checkIsPasswordStrong, password]);
+  }, [password]);
 
   const isProcessButtonDisabled = () => {
     if (isLoading || !isCryptoAvailable) return true;
@@ -895,9 +985,9 @@ export function EncryptorTool() {
                       {outputText.length <= QR_MAX_CHARS ? (
                         <>
                           <div className="rounded-lg bg-white p-4">
-                            <QRCode value={outputText} size={256} level="L" includeMargin={false} />
+                            <QRCodeCanvas value={outputText} size={256} level="L" includeMargin={false} />
                           </div>
-                          <div ref={hiResQrRef} style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
+                          <div ref={hiResQrRef} style={OFFSCREEN_STYLE}>
                             <QRCodeCanvas value={outputText} size={900} level="L" />
                           </div>
                           <Button onClick={handleDownloadQrCode}>
@@ -922,8 +1012,7 @@ export function EncryptorTool() {
                     setIsDecryptedQrModalOpen(open);
                     // Reset to blurred whenever the modal opens or closes, so the
                     // user always has to deliberately click to reveal.
-                    if (!open) setIsDecryptedQrRevealed(false);
-                    if (open) setIsDecryptedQrRevealed(false);
+                    setIsDecryptedQrRevealed(false);
                   }}
                 >
                   <DialogTrigger asChild>
@@ -950,100 +1039,24 @@ export function EncryptorTool() {
                     </DialogHeader>
                     <div className="flex flex-col items-center gap-4 py-4">
                       {decryptedQrStatus.kind === 'seed' ? (
-                        <>
-                          {/* The QR canvas is only mounted while revealed — a CSS
-                              blur alone would leave the sharp QR readable in the
-                              DOM (devtools, extensions, canvas.toDataURL). The
-                              SeedQR payload is derived here at render time, not
-                              stored in state. */}
-                          {isDecryptedQrRevealed ? (
-                            <>
-                              <div className="rounded-lg bg-white p-4">
-                                <QRCode value={toStandardSeedQR(decryptedQrStatus.words)} size={256} level="L" includeMargin={false} />
-                              </div>
-                              <div ref={decryptedQrHiResRef} style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
-                                <QRCodeCanvas value={toStandardSeedQR(decryptedQrStatus.words)} size={1024} level="L" includeMargin={true} />
-                              </div>
-                            </>
-                          ) : (
-                            <div className="flex h-[288px] w-[288px] items-center justify-center rounded-lg bg-white/[0.06]">
-                              <QrCode className="h-16 w-16 text-muted-foreground/40" />
-                            </div>
-                          )}
-                          <p className="text-center text-xs text-muted-foreground">
-                            Standard SeedQR · {decryptedQrStatus.words.length} words ·{' '}
-                            {decryptedQrStatus.words.length * 4} digits
-                          </p>
-                          <p className="rounded-md bg-yellow-900/20 px-3 py-2 text-center text-xs text-yellow-400">
-                            Anyone who scans this QR can recover your seed. Show only on a trusted device and screen.
-                          </p>
-                          <div className="flex items-center gap-2">
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setIsDecryptedQrRevealed((v) => !v)}
-                              className="w-32 text-muted-foreground hover:text-foreground"
-                            >
-                              {isDecryptedQrRevealed ? <EyeOff className="mr-2 h-3.5 w-3.5" /> : <Eye className="mr-2 h-3.5 w-3.5" />}
-                              {isDecryptedQrRevealed ? 'Hide QR' : 'Reveal QR'}
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              disabled={!isDecryptedQrRevealed}
-                              onClick={handleDownloadDecryptedQr}
-                              className="w-32 text-muted-foreground hover:text-foreground"
-                            >
-                              <Download className="mr-2 h-3.5 w-3.5" />
-                              Download PNG
-                            </Button>
-                          </div>
-                        </>
+                        <RevealableQr
+                          getValue={() => toStandardSeedQR(decryptedQrStatus.words)}
+                          revealed={isDecryptedQrRevealed}
+                          onToggleReveal={() => setIsDecryptedQrRevealed((v) => !v)}
+                          onDownload={handleDownloadDecryptedQr}
+                          hiResRef={decryptedQrHiResRef}
+                          warning="Anyone who scans this QR can recover your seed. Show only on a trusted device and screen."
+                          caption={`Standard SeedQR · ${decryptedQrStatus.words.length} words · ${decryptedQrStatus.words.length * 4} digits`}
+                        />
                       ) : outputText.length <= QR_MAX_CHARS ? (
-                        <>
-                          {isDecryptedQrRevealed ? (
-                            <>
-                              <div className="rounded-lg bg-white p-4">
-                                <QRCode value={outputText} size={256} level="L" includeMargin={false} />
-                              </div>
-                              <div ref={decryptedQrHiResRef} style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
-                                <QRCodeCanvas value={outputText} size={1024} level="L" includeMargin={true} />
-                              </div>
-                            </>
-                          ) : (
-                            <div className="flex h-[288px] w-[288px] items-center justify-center rounded-lg bg-white/[0.06]">
-                              <QrCode className="h-16 w-16 text-muted-foreground/40" />
-                            </div>
-                          )}
-                          <p className="rounded-md bg-yellow-900/20 px-3 py-2 text-center text-xs text-yellow-400">
-                            This QR contains your decrypted text. Show only on a trusted device and screen.
-                          </p>
-                          <div className="flex items-center gap-2">
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setIsDecryptedQrRevealed((v) => !v)}
-                              className="w-32 text-muted-foreground hover:text-foreground"
-                            >
-                              {isDecryptedQrRevealed ? <EyeOff className="mr-2 h-3.5 w-3.5" /> : <Eye className="mr-2 h-3.5 w-3.5" />}
-                              {isDecryptedQrRevealed ? 'Hide QR' : 'Reveal QR'}
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              disabled={!isDecryptedQrRevealed}
-                              onClick={handleDownloadDecryptedQr}
-                              className="w-32 text-muted-foreground hover:text-foreground"
-                            >
-                              <Download className="mr-2 h-3.5 w-3.5" />
-                              Download PNG
-                            </Button>
-                          </div>
-                        </>
+                        <RevealableQr
+                          getValue={() => outputText}
+                          revealed={isDecryptedQrRevealed}
+                          onToggleReveal={() => setIsDecryptedQrRevealed((v) => !v)}
+                          onDownload={handleDownloadDecryptedQr}
+                          hiResRef={decryptedQrHiResRef}
+                          warning="This QR contains your decrypted text. Show only on a trusted device and screen."
+                        />
                       ) : (
                         <div className="rounded-md bg-yellow-900/20 p-3 text-center text-sm text-yellow-400">
                           <p className="font-medium">QR code unavailable</p>
@@ -1193,7 +1206,7 @@ export function EncryptorTool() {
                 </DialogHeader>
                 <div className="flex flex-col items-center gap-4 py-4">
                   <div className="rounded-lg bg-white p-4">
-                    <QRCode value="https://coinos.io/svrn_money" size={128} />
+                    <QRCodeCanvas value="https://coinos.io/svrn_money" size={128} />
                   </div>
                   <a href="https://coinos.io/svrn_money" target="_blank" rel="noopener noreferrer" className="text-sm text-accent hover:underline break-all">
                     https://coinos.io/svrn_money
@@ -1204,7 +1217,7 @@ export function EncryptorTool() {
           </div>
           <div className="flex items-center gap-3">
             <a href="https://github.com/seQRets/ittybitz" target="_blank" rel="noopener noreferrer" className="hover:underline">GitHub</a>
-            <span>v2.5.0 🦖 T-Rex</span>
+            <span>v2.6.0 🦕 Ankylosaurus</span>
           </div>
         </div>
       </footer>

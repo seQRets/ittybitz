@@ -59,12 +59,13 @@ function inlineScriptHashes(html) {
 let processed = 0;
 let skipped = 0;
 
+// The CSP meta content is HTML-entity-escaped by React (' → &#x27;).
+const metaRe =
+  /(<meta\s+http-equiv="Content-Security-Policy"\s+content=")([^"]*)("\s*\/?>)/i;
+
 for (const file of htmlFiles(OUT_DIR)) {
   let html = readFileSync(file, 'utf8');
 
-  // The CSP meta content is HTML-entity-escaped by React (' → &#x27;).
-  const metaRe =
-    /(<meta\s+http-equiv="Content-Security-Policy"\s+content=")([^"]*)("\s*\/?>)/i;
   const metaMatch = html.match(metaRe);
   if (!metaMatch) {
     skipped++;
@@ -118,4 +119,31 @@ if (processed === 0) {
   process.exit(1);
 }
 
-console.log(`csp-hashes: done (${processed} file(s) tightened, ${skipped} skipped)`);
+// Fail-closed verification: after processing, NO built HTML file may still
+// carry 'unsafe-inline' in a script-src directive. This catches a file the
+// main loop skipped (e.g. a future page whose meta tag didn't match the
+// regex) instead of silently shipping a loose policy for it.
+const leaked = [];
+for (const file of htmlFiles(OUT_DIR)) {
+  const html = readFileSync(file, 'utf8');
+  const metaMatch = html.match(metaRe);
+  if (!metaMatch) continue; // a page with no CSP meta is a separate concern
+  const policy = metaMatch[2]
+    .replace(/&#x27;/gi, "'")
+    .replace(/&quot;/gi, '"')
+    .replace(/&amp;/gi, '&');
+  const scriptSrc = policy.split(';').find((d) => /^\s*script-src\b/.test(d)) || '';
+  if (scriptSrc.includes("'unsafe-inline'")) {
+    leaked.push(file.replace(OUT_DIR + '/', ''));
+  }
+}
+
+if (leaked.length > 0) {
+  console.error(
+    `csp-hashes: ERROR — script-src still contains 'unsafe-inline' after processing in: ${leaked.join(', ')}. ` +
+      'Refusing to ship a loose CSP.'
+  );
+  process.exit(1);
+}
+
+console.log(`csp-hashes: done (${processed} file(s) tightened, ${skipped} skipped, 0 with residual unsafe-inline)`);
