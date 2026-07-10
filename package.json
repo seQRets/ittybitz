@@ -27,7 +27,7 @@
     "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {
-    "@next/bundle-analyzer": "^14.2.5",
+    "@next/bundle-analyzer": "^16.2.10",
     "@types/node": "^20.15.7",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
@@ -36,6 +36,7 @@
     "typescript": "^5.5.4"
   },
   "overrides": {
-    "postcss": "^8.5.13"
+    "postcss": "^8.5.13",
+    "ws": "^8.18.3"
   }
 }
