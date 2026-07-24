@@ -40,7 +40,11 @@ if (BIP39_WORDLIST.length !== 2048) {
 
 type Bip39ValidationResult =
   | { valid: true; words: string[]; entropyBits: number }
-  | { valid: false; reason: Bip39FailureReason };
+  // `seedShaped` distinguishes "probably a seed phrase with a mistake"
+  // (valid word count, at most one unrecognized word) from ordinary text
+  // that merely failed validation. The UI uses it to warn about likely
+  // transcription errors without nagging on plain-text input.
+  | { valid: false; reason: Bip39FailureReason; seedShaped: boolean };
 
 type Bip39FailureReason =
   | "wrong-word-count"
@@ -65,16 +69,21 @@ export async function validateBip39(input: string): Promise<Bip39ValidationResul
     .filter(Boolean);
 
   if (!VALID_WORD_COUNTS.has(words.length)) {
-    return { valid: false, reason: "wrong-word-count" };
+    return { valid: false, reason: "wrong-word-count", seedShaped: false };
   }
 
   const indices: number[] = [];
+  let unknownCount = 0;
   for (const w of words) {
     const idx = WORD_INDEX.get(w);
     if (idx === undefined) {
-      return { valid: false, reason: "unknown-word" };
+      unknownCount++;
+      continue;
     }
     indices.push(idx);
+  }
+  if (unknownCount > 0) {
+    return { valid: false, reason: "unknown-word", seedShaped: unknownCount <= 1 };
   }
 
   // Pack the 11-bit-per-word indices into a contiguous bit array.
@@ -117,7 +126,7 @@ export async function validateBip39(input: string): Promise<Bip39ValidationResul
   const expectedChecksum = digest[0]! >> (8 - checksumBits);
 
   if (givenChecksum !== expectedChecksum) {
-    return { valid: false, reason: "checksum-mismatch" };
+    return { valid: false, reason: "checksum-mismatch", seedShaped: true };
   }
 
   return { valid: true, words, entropyBits };

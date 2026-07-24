@@ -380,7 +380,10 @@ export function EncryptorTool() {
   // the encoded secret out of long-lived component state.
   type DecryptedQrStatus =
     | { kind: "idle" }
-    | { kind: "plain" }
+    // seedShaped: the decrypted text failed BIP-39 validation but looks like
+    // a seed phrase (valid word count, ≤1 unknown word) — the stored backup
+    // itself likely contains a transcription error. Surfaced as a red border.
+    | { kind: "plain"; seedShaped: boolean }
     | { kind: "seed"; words: string[] };
   const [isDecryptedQrModalOpen, setIsDecryptedQrModalOpen] = useState(false);
   // Default to blurred whenever the modal opens. Same shoulder-surfing
@@ -390,6 +393,12 @@ export function EncryptorTool() {
   const [decryptedQrStatus, setDecryptedQrStatus] = useState<DecryptedQrStatus>({
     kind: "idle",
   });
+  // Encrypt-side seed check for the subtle border tint on the secret text
+  // field: 'valid' → green, 'invalid' → red (seed-shaped but failing
+  // validation, i.e. a likely typo), 'none' → neutral (ordinary text).
+  const [textSecretSeedStatus, setTextSecretSeedStatus] = useState<
+    "none" | "valid" | "invalid"
+  >("none");
   const { toast } = useToast();
 
   // Derived, not stored — cheap (5 regex tests) and always consistent with
@@ -425,6 +434,34 @@ export function EncryptorTool() {
       // Ignored — processData retries the import and degrades gracefully.
     });
   }, []);
+
+  // Debounced BIP-39 check on the encrypt-side secret text, so a typo'd
+  // seed phrase is caught BEFORE it gets encrypted into a long-term backup.
+  // Deliberately color-only (border tint) — no text badge that would tell a
+  // shoulder-surfer the blurred field holds a seed phrase.
+  useEffect(() => {
+    if (mode !== "encrypt" || inputType !== "text" || !textSecret.trim()) {
+      setTextSecretSeedStatus("none");
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      try {
+        const { validateBip39 } = await loadBip39();
+        const result = await validateBip39(textSecret);
+        if (cancelled) return;
+        setTextSecretSeedStatus(
+          result.valid ? "valid" : result.seedShaped ? "invalid" : "none"
+        );
+      } catch {
+        if (!cancelled) setTextSecretSeedStatus("none");
+      }
+    }, 300);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [textSecret, mode, inputType]);
 
   const handlePasswordChange = useCallback((pwd: string) => {
     setPassword(pwd);
@@ -713,10 +750,10 @@ export function EncryptorTool() {
               setDecryptedQrStatus(
                 result.valid
                   ? { kind: "seed", words: result.words }
-                  : { kind: "plain" }
+                  : { kind: "plain", seedShaped: result.seedShaped }
               );
             } catch {
-              setDecryptedQrStatus({ kind: "plain" });
+              setDecryptedQrStatus({ kind: "plain", seedShaped: false });
             }
         }
       }
@@ -837,7 +874,13 @@ export function EncryptorTool() {
                 rows={5}
                 className={cn(
                   "rounded-xl border-white/10 bg-white/[0.04] pr-12 transition-[filter] duration-150 focus-visible:border-accent/50 focus-visible:ring-0",
-                  currentMode === 'encrypt' && !showTextSecret && textSecret && "blur-sm"
+                  currentMode === 'encrypt' && !showTextSecret && textSecret && "blur-sm",
+                  // Subtle seed-phrase feedback: green border = valid BIP-39
+                  // seed, red = seed-shaped but invalid (likely typo). The
+                  // border also overrides the focus tint so the signal stays
+                  // visible while typing.
+                  currentMode === 'encrypt' && textSecretSeedStatus === 'valid' && "border-success focus-visible:border-success",
+                  currentMode === 'encrypt' && textSecretSeedStatus === 'invalid' && "border-destructive focus-visible:border-destructive"
                 )}
               />
               {currentMode === 'encrypt' && (
@@ -989,7 +1032,13 @@ export function EncryptorTool() {
               rows={5}
               className={cn(
                 "rounded-xl border-white/10 bg-white/[0.04] pr-12 focus-visible:ring-0",
-                currentMode === 'decrypt' && inputType === 'text' && !showDecryptedText && "blur-sm"
+                currentMode === 'decrypt' && inputType === 'text' && !showDecryptedText && "blur-sm",
+                // Same border language as the encrypt-side secret field:
+                // green = decrypted text is a valid BIP-39 seed, red = it is
+                // seed-shaped but fails validation (the stored backup itself
+                // likely holds a transcription error).
+                currentMode === 'decrypt' && decryptedQrStatus.kind === 'seed' && "border-success",
+                currentMode === 'decrypt' && decryptedQrStatus.kind === 'plain' && decryptedQrStatus.seedShaped && "border-destructive"
               )}
             />
             <div className="absolute right-1 top-1 flex flex-col items-center">
@@ -1237,7 +1286,7 @@ export function EncryptorTool() {
           </div>
           <div className="flex items-center gap-3">
             <a href="https://github.com/seQRets/ittybitz" target="_blank" rel="noopener noreferrer" className="hover:underline">GitHub</a>
-            <span>v2.7.0 🦖 Velociraptor</span>
+            <span>v2.7.1 🦖 Velociraptor</span>
           </div>
         </div>
       </footer>
