@@ -87,6 +87,16 @@ Notes on the tradeoffs:
 
 The app currently loads **no** external resources, which is ideal. If any CDN dependency is ever added, it should use SRI hashes.
 
+### 5. Legacy (v0) ciphertext / `IBTZ` magic collision — accepted, documented only
+
+The v1 container format is detected by a 4-byte magic prefix (`IBTZ`, bytes `49 42 54 5A`) followed by a version byte. Legacy v0 ciphertexts are headerless and begin directly with the random 16-byte PBKDF2 salt. If a v0 blob's salt happens to start with those same 4 bytes (probability 2⁻³² per ciphertext), the decoder misparses it as a versioned container:
+
+- If the 5th byte is `0x01`, it is parsed as v1 with wrong offsets; AES-GCM authentication then fails and the user gets the generic "Decryption failed" error.
+- If the 5th byte is greater than `0x01`, the user gets a misleading "encrypted with a newer version" error.
+- (If the 5th byte is `0x00`, the version resolves to 0 and the blob still parses correctly.)
+
+Impact is availability only for the affected blob — no key or plaintext exposure — and the workaround is trivial (any hex editor can confirm the blob is v0). At p≈2⁻³² this will essentially never occur in practice, and fixing it would require changing `src/lib/crypto.ts`, which is frozen for backward compatibility with long-horizon ciphertexts. Accepted as a documented non-issue.
+
 ---
 
 ## Remediation History (from the v1.3.0 audit, March 2026)

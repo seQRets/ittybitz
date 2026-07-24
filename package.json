@@ -1,6 +1,6 @@
 {
   "name": "ittybitz",
-  "version": "2.6.0",
+  "version": "2.7.0",
   "private": true,
   "scripts": {
     "dev": "next dev -p 9002",
@@ -37,6 +37,7 @@
   },
   "overrides": {
     "postcss": "^8.5.13",
+    "sharp": "^0.35.0",
     "ws": "^8.18.3"
   }
 }

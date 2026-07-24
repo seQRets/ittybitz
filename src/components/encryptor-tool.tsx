@@ -28,7 +28,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { encryptFile, decryptFile } from "@/lib/crypto";
-import { validateBip39, toStandardSeedQR } from "@/lib/bip39";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { Textarea } from "@/components/ui/textarea";
@@ -38,6 +37,24 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 
 type Mode = "encrypt" | "decrypt";
 type InputType = "file" | "text";
+
+// The BIP-39 module embeds the full English wordlist (~13 KB), so it is
+// loaded lazily to keep it out of the initial bundle. It is warmed in the
+// background right after mount (see the effect in EncryptorTool) so the
+// service worker caches the chunk for offline use, and awaited on the
+// decrypt path before seed detection. `bip39Module` is the synchronous
+// handle for render-time use; it is guaranteed non-null once any
+// `loadBip39()` call has resolved.
+type Bip39Module = typeof import("@/lib/bip39");
+let bip39Module: Bip39Module | null = null;
+let bip39ModulePromise: Promise<Bip39Module> | null = null;
+function loadBip39(): Promise<Bip39Module> {
+  bip39ModulePromise ??= import("@/lib/bip39").then((m) => {
+    bip39Module = m;
+    return m;
+  });
+  return bip39ModulePromise;
+}
 
 // Chunked base64 encode/decode to avoid stack overflow on large buffers.
 // The spread operator in btoa(String.fromCharCode(...arr)) exceeds the
@@ -320,6 +337,24 @@ const MAX_FILE_SIZE = 100 * 1024 * 1024;
 // (level M tops out at 2,331 bytes).
 const QR_MAX_CHARS = 2_953;
 
+const FEATURE_CARDS = [
+  {
+    icon: Shield,
+    title: "AES-256-GCM",
+    description: "Military-grade encryption with 1M iteration key derivation.",
+  },
+  {
+    icon: Globe,
+    title: "100% Client-Side",
+    description: "Nothing leaves your browser. No servers, no uploads, no tracking.",
+  },
+  {
+    icon: UserX,
+    title: "No Accounts",
+    description: "No sign-ups or logins. Just encrypt and go.",
+  },
+] as const;
+
 export function EncryptorTool() {
   const [mode, setMode] = useState<Mode>("encrypt");
   const [inputType, setInputType] = useState<InputType>('file');
@@ -382,40 +417,14 @@ export function EncryptorTool() {
     }
   }, [toast]);
 
-  // Detect whether the just-decrypted text is a valid BIP-39 mnemonic.
-  // Runs only when we are showing decrypted text output — never on encrypt
-  // input or on ciphertext. Has no effect on the decryption itself; only
-  // updates UI state used to label the "Show QR" button.
+  // Warm the lazy BIP-39 chunk right after mount: it stays out of the
+  // initial bundle, but fetching it now means the service worker caches it
+  // while the user is still online, so offline seed detection keeps working.
   useEffect(() => {
-    let cancelled = false;
-
-    if (
-      mode !== "decrypt" ||
-      inputType !== "text" ||
-      !outputText
-    ) {
-      setDecryptedQrStatus({ kind: "idle" });
-      return;
-    }
-
-    (async () => {
-      try {
-        const result = await validateBip39(outputText);
-        if (cancelled) return;
-        if (result.valid) {
-          setDecryptedQrStatus({ kind: "seed", words: result.words });
-        } else {
-          setDecryptedQrStatus({ kind: "plain" });
-        }
-      } catch {
-        if (!cancelled) setDecryptedQrStatus({ kind: "plain" });
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [outputText, mode, inputType]);
+    loadBip39().catch(() => {
+      // Ignored — processData retries the import and degrades gracefully.
+    });
+  }, []);
 
   const handlePasswordChange = useCallback((pwd: string) => {
     setPassword(pwd);
@@ -649,6 +658,7 @@ export function EncryptorTool() {
     setIsLoading(true);
     setOutputText('');
     setShowDecryptedText(false);
+    setDecryptedQrStatus({ kind: "idle" });
 
     try {
       const keyFileBuffer = keyFile ? await keyFile.arrayBuffer() : null;
@@ -689,9 +699,33 @@ export function EncryptorTool() {
             triggerDownload(blob, resultFilename);
         } else {
             const decoder = new TextDecoder();
-            setOutputText(decoder.decode(resultBuffer));
+            const decryptedText = decoder.decode(resultBuffer);
+            setOutputText(decryptedText);
+
+            // Detect whether the decrypted text is a valid BIP-39 mnemonic —
+            // this only labels the QR button and picks the SeedQR encoding.
+            // Best-effort: if the lazy module can't load (e.g. offline before
+            // the chunk was cached), treat the output as plain text rather
+            // than failing the decryption.
+            try {
+              const { validateBip39 } = await loadBip39();
+              const result = await validateBip39(decryptedText);
+              setDecryptedQrStatus(
+                result.valid
+                  ? { kind: "seed", words: result.words }
+                  : { kind: "plain" }
+              );
+            } catch {
+              setDecryptedQrStatus({ kind: "plain" });
+            }
         }
       }
+
+      // Best-effort erase of the result buffer now that its contents have
+      // been handed off (Blob construction copies the bytes; the decoded
+      // string and base64 output are separate allocations). Matters most on
+      // decrypt, where this buffer held the plaintext.
+      new Uint8Array(resultBuffer).fill(0);
 
       toast({
         title: "Success!",
@@ -955,11 +989,11 @@ export function EncryptorTool() {
               rows={5}
               className={cn(
                 "rounded-xl border-white/10 bg-white/[0.04] pr-12 focus-visible:ring-0",
-                mode === 'decrypt' && inputType === 'text' && !showDecryptedText && "blur-sm"
+                currentMode === 'decrypt' && inputType === 'text' && !showDecryptedText && "blur-sm"
               )}
             />
             <div className="absolute right-1 top-1 flex flex-col items-center">
-              {mode === 'decrypt' && inputType === 'text' && (
+              {currentMode === 'decrypt' && inputType === 'text' && (
                 <Button type="button" variant="ghost" size="icon" className="h-auto p-2" onClick={() => setShowDecryptedText(!showDecryptedText)}>
                   {showDecryptedText ? <EyeOff /> : <Eye />}
                 </Button>
@@ -967,7 +1001,7 @@ export function EncryptorTool() {
               <Button type="button" variant="ghost" size="icon" className="h-auto p-2" onClick={() => handleCopy(outputText)}>
                 <Copy />
               </Button>
-              {mode === 'encrypt' && inputType === 'text' && (
+              {currentMode === 'encrypt' && inputType === 'text' && (
                 <Dialog open={isQrModalOpen} onOpenChange={setIsQrModalOpen}>
                   <DialogTrigger asChild>
                     <Button type="button" variant="ghost" size="icon" className="h-auto p-2">
@@ -1005,7 +1039,7 @@ export function EncryptorTool() {
                   </DialogContent>
                 </Dialog>
               )}
-              {mode === 'decrypt' && inputType === 'text' && decryptedQrStatus.kind !== 'idle' && (
+              {currentMode === 'decrypt' && inputType === 'text' && decryptedQrStatus.kind !== 'idle' && (
                 <Dialog
                   open={isDecryptedQrModalOpen}
                   onOpenChange={(open) => {
@@ -1040,7 +1074,9 @@ export function EncryptorTool() {
                     <div className="flex flex-col items-center gap-4 py-4">
                       {decryptedQrStatus.kind === 'seed' ? (
                         <RevealableQr
-                          getValue={() => toStandardSeedQR(decryptedQrStatus.words)}
+                          // status can only be 'seed' after loadBip39()
+                          // resolved in processData, so the sync handle is set.
+                          getValue={() => bip39Module!.toStandardSeedQR(decryptedQrStatus.words)}
                           revealed={isDecryptedQrRevealed}
                           onToggleReveal={() => setIsDecryptedQrRevealed((v) => !v)}
                           onDownload={handleDownloadDecryptedQr}
@@ -1156,33 +1192,17 @@ export function EncryptorTool() {
 
           {/* Feature cards */}
           <div className="mt-8 grid gap-3 sm:mt-10 sm:grid-cols-3">
-            <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
-              <div className="mb-2.5 grid h-8 w-8 place-items-center rounded-lg bg-accent/10 text-accent">
-                <Shield className="h-4 w-4" />
+            {FEATURE_CARDS.map(({ icon: Icon, title, description }) => (
+              <div key={title} className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
+                <div className="mb-2.5 grid h-8 w-8 place-items-center rounded-lg bg-accent/10 text-accent">
+                  <Icon className="h-4 w-4" />
+                </div>
+                <p className="text-[14px] font-semibold">{title}</p>
+                <p className="mt-1 text-[12px] leading-relaxed text-muted-foreground">
+                  {description}
+                </p>
               </div>
-              <p className="text-[14px] font-semibold">AES-256-GCM</p>
-              <p className="mt-1 text-[12px] leading-relaxed text-muted-foreground">
-                Military-grade encryption with 1M iteration key derivation.
-              </p>
-            </div>
-            <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
-              <div className="mb-2.5 grid h-8 w-8 place-items-center rounded-lg bg-accent/10 text-accent">
-                <Globe className="h-4 w-4" />
-              </div>
-              <p className="text-[14px] font-semibold">100% Client-Side</p>
-              <p className="mt-1 text-[12px] leading-relaxed text-muted-foreground">
-                Nothing leaves your browser. No servers, no uploads, no tracking.
-              </p>
-            </div>
-            <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
-              <div className="mb-2.5 grid h-8 w-8 place-items-center rounded-lg bg-accent/10 text-accent">
-                <UserX className="h-4 w-4" />
-              </div>
-              <p className="text-[14px] font-semibold">No Accounts</p>
-              <p className="mt-1 text-[12px] leading-relaxed text-muted-foreground">
-                No sign-ups or logins. Just encrypt and go.
-              </p>
-            </div>
+            ))}
           </div>
         </div>
       </div>
@@ -1217,7 +1237,7 @@ export function EncryptorTool() {
           </div>
           <div className="flex items-center gap-3">
             <a href="https://github.com/seQRets/ittybitz" target="_blank" rel="noopener noreferrer" className="hover:underline">GitHub</a>
-            <span>v2.6.0 🦕 Ankylosaurus</span>
+            <span>v2.7.0 🦖 Velociraptor</span>
           </div>
         </div>
       </footer>

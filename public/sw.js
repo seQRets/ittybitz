@@ -1,13 +1,12 @@
 // IttyBitz Service Worker — hand-rolled, zero dependencies
 // Cache version: bump this on every release to invalidate stale caches
-const CACHE_VERSION = 'ittybitz-v2.6.0';
+const CACHE_VERSION = 'ittybitz-v2.7.0';
 
 // App shell files to precache on install.
 // For a static Next.js export the HTML entry point and key assets are enough;
 // the rest (JS chunks, CSS) are picked up at runtime via the fetch handler.
 const APP_SHELL = [
   '/',
-  '/index.html',
   '/logo.svg',
   '/favicon.ico',
   '/manifest.json',
@@ -86,11 +85,15 @@ self.addEventListener('fetch', (event) => {
     url.pathname === '/index.html';
 
   if (isNavigation) {
-    // Network-first with cache fallback (offline support)
+    // Network-first with cache fallback (offline support). Only '/' is
+    // precached; any other navigation path (e.g. '/index.html') falls back
+    // to the precached app shell when there is no exact cache match.
     event.respondWith(
       fetch(event.request)
         .then((response) => cacheResponse(event.request, response))
-        .catch(() => caches.match(event.request))
+        .catch(() =>
+          caches.match(event.request).then((cached) => cached || caches.match('/'))
+        )
     );
     return;
   }
