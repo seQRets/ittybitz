@@ -1226,10 +1226,10 @@ export function EncryptorTool() {
                 </DialogHeader>
                 <div className="flex flex-col items-center gap-4 py-4">
                   <div className="rounded-lg bg-white p-4">
-                    <QRCodeCanvas value="https://coinos.io/svrn_money" size={128} />
+                    <QRCodeCanvas value="https://coinos.io/seQRets/receive" size={128} />
                   </div>
-                  <a href="https://coinos.io/svrn_money" target="_blank" rel="noopener noreferrer" className="text-sm text-accent hover:underline break-all">
-                    https://coinos.io/svrn_money
+                  <a href="https://coinos.io/seQRets/receive" target="_blank" rel="noopener noreferrer" className="text-sm text-accent hover:underline break-all">
+                    https://coinos.io/seQRets/receive
                   </a>
                 </div>
               </DialogContent>

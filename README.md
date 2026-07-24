@@ -22,6 +22,7 @@ Here’s what you can do with IttyBitz:
 - **Password & key file protection**: secure your data with a strong password, an optional key file, or both for an added layer of security. You can use any existing file or generate a new, cryptographically secure key file directly within the app.
 - **File & text support**: encrypt and decrypt both files and text snippets.
 - **QR code sharing**: easily share encrypted text snippets via a downloadable QR code.
+- **Hardware-wallet SeedQR export**: when decrypted text is a valid BIP-39 seed phrase, IttyBitz auto-detects it and can display a **Standard SeedQR** for direct import into hardware wallets (Coldcard, SeedSigner, Sparrow, Specter, Krux, Keystone, Jade). Any other decrypted text can be shown as a plain QR. Both are blurred until you deliberately reveal them.
 - **Installable PWA with full offline support**: install IttyBitz to your home screen or desktop. After the first visit it works with zero network connectivity — ideal for air-gapped machines.
 - **Privacy-focused UI**: the secret text field offers a show/hide blur toggle to prevent shoulder-surfing during input, and decrypted output is blurred by default until you tap to reveal.
 - **Clipboard auto-clear**: copied passwords and output are wiped from the clipboard after 60 seconds (best-effort; requires the tab to retain focus).
@@ -76,6 +77,8 @@ The security of your data is the highest priority. Here is a summary of the secu
 ### **Independent security review**
 This application has undergone a detailed security analysis. You can view the full report here: [Security analysis report](https://claude.ai/public/artifacts/f4bb6437-1130-4fd3-bc56-74b2399274f9) 🔗
 
+The current audit findings and accepted tradeoffs are tracked in-repo: [SECURITY-AUDIT.md](SECURITY-AUDIT.md)
+
 ### **Open source advantage**
 - **Transparent code**: every line of security code is publicly auditable
 - **Community verified**: security experts worldwide can review our implementation
@@ -101,7 +104,7 @@ You are free to use, modify, and distribute this software. Any derivative works 
 For maximum security when handling sensitive data like seed phrases, you can run ittybitz locally on your own machine.
 
 ### Prerequisites
-- Node.js 18.18+ or 20+ (download from [nodejs.org](https://nodejs.org))
+- Node.js 20.9+ (download from [nodejs.org](https://nodejs.org))
 
 ### Quick Setup
 
@@ -116,21 +119,28 @@ For maximum security when handling sensitive data like seed phrases, you can run
    npm install
    ```
 
-3. **Build and run the application**
+3. **Build the application**
    ```bash
    npm run build
-   npm start
    ```
-   To run on a different port (e.g., 4000), use:
-   ```bash
-   npm start -- -p 4000
-   ```
-   
-4. **Open your browser**
-   - Navigate to: `http://localhost:3000` (or your chosen port)
+   This produces a fully static site in the `out/` directory (IttyBitz is a static export — there is no application server).
 
-5. **To Stop the App**
+4. **Serve the static build**
+   ```bash
+   npx serve out
+   ```
+   Or with Python, if you prefer not to fetch another npm package:
+   ```bash
+   python3 -m http.server 3000 -d out
+   ```
+
+5. **Open your browser**
+   - Navigate to: `http://localhost:3000`
+
+6. **To Stop the App**
    - When you're done using IttyBitz, return to your terminal and press Ctrl+C to stop the server.
+
+> **Note:** the production build is the recommended way to run locally — the Content-Security-Policy is only applied to production builds. `npm run dev` (port 9002) is for development only.
 
 ### Security Notes
 
@@ -147,6 +157,14 @@ For maximum security when handling sensitive data like seed phrases, you can run
 ### Troubleshooting
 
 If you encounter issues:
-1. Ensure Node.js 18.18+ or 20+ is installed: `node --version`
+1. Ensure Node.js 20.9+ is installed: `node --version`
 2. Clear dependencies and reinstall: `rm -rf node_modules && npm install`
 3. Check that no other services are using port 3000
+
+<br/>
+
+## ❤️ Support this project
+
+If you find IttyBitz useful, please consider supporting its development. Your donation helps keep the project alive and ad-free.
+
+**Donate:** [https://coinos.io/seQRets/receive](https://coinos.io/seQRets/receive)
