@@ -1218,7 +1218,7 @@ export function EncryptorTool() {
           {/* Hero */}
           <div className="mb-10 text-center sm:mb-14">
             <h1 className="hero-gradient-text text-[44px] font-bold leading-[1.05] tracking-[-0.04em] sm:text-[56px]">
-              Encrypt anything.<br />Trust nothing.
+              Encrypt everything.<br />Trust nothing.
             </h1>
             <p className="mx-auto mt-4 max-w-md text-[17px] leading-snug text-muted-foreground sm:text-[19px]">
               Client-side encryption that never leaves your browser.{' '}
