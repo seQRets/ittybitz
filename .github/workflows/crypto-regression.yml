@@ -1,0 +1,36 @@
+name: Crypto regression
+
+# src/lib/crypto.ts is frozen — people hold long-horizon secrets encrypted
+# with it. This runs the fixture-based regression suite (real ciphertexts
+# from earlier releases) on every push and PR, so a dependency bump or
+# toolchain change can never silently break decryption of existing files.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# No workflow-level permissions; the single job requests only what it needs.
+permissions: {}
+
+jobs:
+  crypto-regression:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Node 22.6+ is required: the suite is TypeScript run directly via
+      # native type stripping, which avoids adding a transpiler dependency.
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+
+      # No `npm ci` — the suite imports src/lib/crypto.ts directly and that
+      # module has zero dependencies, so nothing needs installing. This also
+      # means no untrusted install scripts run in this job.
+      - run: npm run test:crypto
