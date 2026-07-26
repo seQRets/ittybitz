@@ -282,10 +282,13 @@ function RevealableQr({
       {revealed ? (
         <>
           <div className="rounded-lg bg-white p-4">
-            <QRCodeCanvas value={getValue()} size={256} level="L" includeMargin={false} />
+            <QRCodeCanvas value={getValue()} size={256} level="L" marginSize={0} />
           </div>
           <div ref={hiResRef} style={OFFSCREEN_STYLE}>
-            <QRCodeCanvas value={getValue()} size={1024} level="L" includeMargin={true} />
+            {/* marginSize={4} is the QR-spec quiet zone. Do not lower it —
+                the exported PNG is printed as a seed backup, and scanners
+                need the full 4-module margin to acquire the code. */}
+            <QRCodeCanvas value={getValue()} size={1024} level="L" marginSize={4} />
           </div>
         </>
       ) : (
@@ -632,7 +635,7 @@ export function EncryptorTool() {
 
   // Decrypted-QR download: exports a 1024×1024 PNG from a hidden hi-res
   // canvas. The hidden canvas is only mounted while the QR is revealed, and
-  // it bakes in a spec-compliant 4-module quiet zone via includeMargin.
+  // it bakes in a spec-compliant 4-module quiet zone via marginSize={4}.
   const decryptedQrHiResRef = useRef<HTMLDivElement>(null);
 
   const handleDownloadDecryptedQr = useCallback(() => {
@@ -1068,7 +1071,7 @@ export function EncryptorTool() {
                       {outputText.length <= QR_MAX_CHARS ? (
                         <>
                           <div className="rounded-lg bg-white p-4">
-                            <QRCodeCanvas value={outputText} size={256} level="L" includeMargin={false} />
+                            <QRCodeCanvas value={outputText} size={256} level="L" marginSize={0} />
                           </div>
                           <div ref={hiResQrRef} style={OFFSCREEN_STYLE}>
                             <QRCodeCanvas value={outputText} size={900} level="L" />
