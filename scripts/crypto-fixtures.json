@@ -1,0 +1,273 @@
+{
+  "_comment": [
+    "Ciphertexts produced by the REAL src/lib/crypto.ts from each tagged release,",
+    "extracted from git history and run directly. Every entry must decrypt with the",
+    "current implementation, forever. Append new entries; never modify or remove old ones.",
+    "The password and key file here are TEST-ONLY and published — treat as compromised."
+  ],
+  "password": "Test-Password-For-Verification-Only-2026!",
+  "keyFileHex": "8f2a1c9d4e7b60358f2a1c9d4e7b60358f2a1c9d4e7b60358f2a1c9d4e7b60351122334455667788112233445566778811223344556677881122334455667788",
+  "independent": {
+    "_comment": "Built from raw Web Crypto primitives, deliberately NOT via src/lib/crypto.ts, so it validates the v0 layout independently of this repo's own code.",
+    "base64": "AEqF+xtkNZjrvhJ39wwUOAv+3mUV7X62jQ5XLXD5D00qg3OZKX5HELU/W6nrtLOpsbOj7Rxl2mAVkKiJ7xNvE1hjJmrFVaPk5Wi9pk44opKBcTgvdVBFWD2t7/wcqSc2+A==",
+    "plaintext": "legacy v0 headerless fixture — must decrypt forever"
+  },
+  "fixtures": [
+    {
+      "version": "v1.0",
+      "format": "v0",
+      "payload": "seed12",
+      "keyFile": false,
+      "plaintext": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about",
+      "base64": "oj53MWXE7bhOhjgHoCfKXPC7797LDp5po3PFhwR6dWaDXTQWhoVrvliP+pNzJ7o2ddtvqnEP4eovmig8/pX/0NWGs0/FhSbgu338of+w8g4li8MI3BXtNy2Bp1s3CjyOykWR2VYg+8778cMkYZr3fj/W4MWOERVUOH5m+dSFKPwU9tzfSLr8Q1s="
+    },
+    {
+      "version": "v1.0",
+      "format": "v0",
+      "payload": "seed12",
+      "keyFile": true,
+      "plaintext": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about",
+      "base64": "ArQHLs3VJeAGpwpd4ukxzkjK5Mns1FXfhuknFCtIdf2OXCdTgtxJ9SZCWSh/X9O8N1Tj01ZCmFwcLNx2wErQpWtEVblUXHcROXRjaB/htwxX5LhRNS8lhSdLeK6B3nyDi4w3xQtvZceB34PesPTe5mso6tUvYzIo3KIH0AYcgjrXb0gJJ0IXfzc="
+    },
+    {
+      "version": "v1.0",
+      "format": "v0",
+      "payload": "seed24",
+      "keyFile": false,
+      "plaintext": "zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo vote",
+      "base64": "bKYLPJxdjV5vUYwmekK1i5MZbeG6oNOFp25KU73QKwCNUfHep9S9rCd/hqSYiXOgtudUBhPK8rAc631wc0rnWvtPeus8ej8KErlzReIWQ3p2FAFCDITpAgopoluU9ai9+ntLcWoNzN9SDfzGTaeRPmQmA6ruRK8yVe70ot7GhBXacnwKP6GIr2VtOU4="
+    },
+    {
+      "version": "v1.0",
+      "format": "v0",
+      "payload": "seed24",
+      "keyFile": true,
+      "plaintext": "zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo vote",
+      "base64": "gcEqMMX5pHUn7czz7YHZEy/lPgWI1omhC3LJR/HWERKv/kJe5pG2dPDBmc6wvatq7B/kg7+0Qmc1IGRBc179i/vfJYycNRUUvqig9GXVyp7jzAqSBVPeaZWuxopZTZo2yWl+IuTnJGtXWqCw6s/vSgMldJqh7R0WkvdvpnPkK9iX1p+209kX9EOkQR0="
+    },
+    {
+      "version": "v1.0",
+      "format": "v0",
+      "payload": "unicode",
+      "keyFile": false,
+      "plaintext": "秘密 · émoji 🔐🦖 · Ω≈ç√ · naïve café — “quoted” • ünïcödé",
+      "base64": "Gx+VVlW1DOvehQ9Xtd7b+je/BK1hGR5ySk9nGaWCEZN2f9OuA4boYXlsHlO361Wyku3sPGKSe6dOSmwxJNrnLm7iJJzKx9/19ga0i6h4k4mCG7gn9CIi2KzSzMrgDE8GEgto8c15OzeTTXSedpybwgA1dC/x2i5RTA47/eaJabTyvQoK"
+    },
+    {
+      "version": "v1.0",
+      "format": "v0",
+      "payload": "unicode",
+      "keyFile": true,
+      "plaintext": "秘密 · émoji 🔐🦖 · Ω≈ç√ · naïve café — “quoted” • ünïcödé",
+      "base64": "d2OkHsR+bpN1SCS4xScuLPwGA6KtH5W/qX7QjMlTHg0RrU7vWSwPU/lb5rK97WWHvNEJZNGUJjel6jhfPYHim08nVHgopyKOk5GyE8yoKBlgb8/JJOwWD/cr7wDwZHYo279SQtzpsq2yzn8ejD2DBbvqTUHdU7KVQM1mb9JdiMfAHx6D"
+    },
+    {
+      "version": "v1.0",
+      "format": "v0",
+      "payload": "ascii",
+      "keyFile": false,
+      "plaintext": "The quick brown fox jumps over the lazy dog 0123456789",
+      "base64": "YTxC/LAM4qWUOUzmyWVZ/dYD3sxS22Dr2XRbnCfq4GnsiP26lBSaOoVCb3nVBo0iXuriOV4HJGItc9PGnRVhWlTvEhx4p7OHnKGMO4oTZ/O/n8NIO57LzUctBTwzyCYlTEw="
+    },
+    {
+      "version": "v1.0",
+      "format": "v0",
+      "payload": "ascii",
+      "keyFile": true,
+      "plaintext": "The quick brown fox jumps over the lazy dog 0123456789",
+      "base64": "177m429EcJYYL0rrKPzCRs7GW5AohizzVb0CCaEKZfzTi2eINV79eafQ3eE0CARnQt6Uk4to0ZxBBQbyY1uvH1MHtqIQl0J98d0D22oParPkT5onIsEph04zfANYgwm1g9I="
+    },
+    {
+      "version": "v1.4.0",
+      "format": "v0",
+      "payload": "seed12",
+      "keyFile": false,
+      "plaintext": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about",
+      "base64": "7l5XDJ6fLoPQFqXZrQKtxYMEgb1Db2wW/wbJ0GmvA5wYOJkSLFaL220Qfjo/LdYe8mELFaavHkb3aXoIGcjQtJJEvjELzG6fO/1cwd4eDkO7aqs7ipEn3kpWPFq8+wvM6/vCJmleCsR1DHkcoFEM6nJVcqX+CQg96UwCw1ljZ+OkKSrXpjOjlLs="
+    },
+    {
+      "version": "v1.4.0",
+      "format": "v0",
+      "payload": "seed12",
+      "keyFile": true,
+      "plaintext": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about",
+      "base64": "jLJyGJSuGEH+12c8mhuBlchJ+hycgBUxUFnNNLRd18O82dbA61Joj1daUkjzy9wmCad5/SurXWzcj0oDWrknWe8VAf0rU6C4lNm6ilQQiDMbU2ey9USLsPz9iFt7AJ3cibOQbAuL8v6q7wsUehYXBgvyIq7K983KvmODkPD6VXxrc+lv87MK/zQ="
+    },
+    {
+      "version": "v1.4.0",
+      "format": "v0",
+      "payload": "seed24",
+      "keyFile": false,
+      "plaintext": "zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo vote",
+      "base64": "EE/6ac0uNMsL7WJqKaZlVIRKJaLW6THcRnqlGYverFYDNcqUcDqQpJXWqgGx5t3S5EregNjwj12w5Di0/Xi5fGBgmJNjtqKAYb+6JFWVJ20tC68OwHnql1EkeKHxTZU1VXNahJUN8tn0wNdN6Jp9IzpEbQpB7X63WoxiFovOdkRRJuLyAkdQWa95FOo="
+    },
+    {
+      "version": "v1.4.0",
+      "format": "v0",
+      "payload": "seed24",
+      "keyFile": true,
+      "plaintext": "zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo vote",
+      "base64": "QfckxoopxuQqQ7hGO5XbVvM9nm9Hf1pIiFnPU5jBcfvaBs8S1ewubWWNkOrghL8XyZVvZz4LujsUWsUjGzj416yiJpJNXAo/brQgd0Wxc58NOi24t3KSqiGW2H96YKXjTzUFMrcgH/9KcOYs6c/XfVBH+qNWl7aI7I5xdwJ72liwQWPHtWSoHXjCAt0="
+    },
+    {
+      "version": "v1.4.0",
+      "format": "v0",
+      "payload": "unicode",
+      "keyFile": false,
+      "plaintext": "秘密 · émoji 🔐🦖 · Ω≈ç√ · naïve café — “quoted” • ünïcödé",
+      "base64": "etSo21L+YsNeUxKAmd0gfsUARzXlNrJtrl4unrXhEIsBS8NUVQGWD7UvCG0lKBWKL5/waaFLgwwFoOxlVyrdQf4TbdNCYfwfh25wDVCZhNQadsjZvk4J3+4TOxWyUboPjTA2Wkhb8DJALfJmcRnRGSKtfOPL7mTxn4Sw1HW+KCbipc4c"
+    },
+    {
+      "version": "v1.4.0",
+      "format": "v0",
+      "payload": "unicode",
+      "keyFile": true,
+      "plaintext": "秘密 · émoji 🔐🦖 · Ω≈ç√ · naïve café — “quoted” • ünïcödé",
+      "base64": "RT+Z6DDhOpNZw/X8Mig7gGcL3pTuRuZhUJQ1cmd+8k5mF28Z5iwZOpoqHfh4i8BsLSRaDofUd4/hYlHm+PftFBCOSwQv63+p19q7Rvkd57BIfsWtH8bSwwDndfxrjFDZt0N4D8jOkz9E9uSQyRkA9IfTPOJAS2MA/RP8eRhAxvW1LplQ"
+    },
+    {
+      "version": "v1.4.0",
+      "format": "v0",
+      "payload": "ascii",
+      "keyFile": false,
+      "plaintext": "The quick brown fox jumps over the lazy dog 0123456789",
+      "base64": "0VDf8iw9yB4dSmLJBLq7qdyDsGZUAJomF1vdEjDPVa3viLLNMLl05CosWgk7Q6nxYCaG74fhA70k+QKUEgZciPh4Cb4DLmPcPL+ouKv2OvlEBZQqujQVcj9zJAhFwMm/QQ8="
+    },
+    {
+      "version": "v1.4.0",
+      "format": "v0",
+      "payload": "ascii",
+      "keyFile": true,
+      "plaintext": "The quick brown fox jumps over the lazy dog 0123456789",
+      "base64": "6lj6YLSxbA9AJAHhSrGE9301aumzwG2Abf4BpgPWTfByTDzqR0aK2U9+eg5I5Gh5IbxEhjpGyXYZlJ886waRv0R2kHGH1Ls86In7Nvl/l71b6IGtbAnhfva56AmplYgrHMM="
+    },
+    {
+      "version": "v2.0.0",
+      "format": "v1",
+      "payload": "seed12",
+      "keyFile": false,
+      "plaintext": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about",
+      "base64": "SUJUWgHgP+YcEjiArEjhjkpTgeVALs+P06DISR4DtO/CKL9GB2Qtpk28V458o1GVDalL9U6XKWqXanDHwjbvFZQnkgsVKRsPYCVqyV3nk14QgJZFFtNbWI5/511jh8SRBxDn5YD6TFhSIPwAhg5Zl+50RIaZe9uSZKljBMAfv6yal6NmvUkH88UMcI3iXg=="
+    },
+    {
+      "version": "v2.0.0",
+      "format": "v1",
+      "payload": "seed12",
+      "keyFile": true,
+      "plaintext": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about",
+      "base64": "SUJUWgFlEAcRmbgkTCWOv36A7Qxhii2uDzPhRhjTSiPylMlRjb8ZUXRekW8yjXAIRdmnZFjYRXh8Xo45TKkvyyuuaaj85q2350IjfYItKFslvz9qM0O5i8I7nqT7KAXNvs0B6/FtfaySXGzbeYSCQ0NeaoocTJYmUoc61c/WpYeMXuKfQrTa1nlZ93M9Ow=="
+    },
+    {
+      "version": "v2.0.0",
+      "format": "v1",
+      "payload": "seed24",
+      "keyFile": false,
+      "plaintext": "zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo vote",
+      "base64": "SUJUWgE6B7SuYsZRYso+Iix+YpUaVqJ3KP3clrFnIKJxTJ+otvqh2b4U/lfMvw0RxLWErZBSWy2Lbv/v3UVkfW8zcjc3V7zAv0AXSpESYQK3tO3PEpQeXFnDVfwTH4vvmnzcviWEGOGKfLNIIwqMY86kcCxqmssaxCAbKSIImE50zceyMrnYaJL8cT1SnLgFag=="
+    },
+    {
+      "version": "v2.0.0",
+      "format": "v1",
+      "payload": "seed24",
+      "keyFile": true,
+      "plaintext": "zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo vote",
+      "base64": "SUJUWgHDxFwXIqnGjfD/uEfWdYukYNy6ol0a9LJtolcrWjW36Xha3tsuoMCajlI+YkPiurZ/WECrJMaiL1nrCDHqHvrDGW3Jz4srDnVlP1QmU8n/IRu8Hifpb3B4ivguAYieHx+D8ONV1tl/dZOnDObMAGXS6NXa9BOqO6fnLsvq2hriGNfDTODjEObg7t+sKQ=="
+    },
+    {
+      "version": "v2.0.0",
+      "format": "v1",
+      "payload": "unicode",
+      "keyFile": false,
+      "plaintext": "秘密 · émoji 🔐🦖 · Ω≈ç√ · naïve café — “quoted” • ünïcödé",
+      "base64": "SUJUWgF9Q6T1chDZB5ng6GuDOT7RuckFJeuPq8HDcEqHDFV6haX7AhpCY7dWD2UYppN3TqKZWb822keyJjZaNl4k72DMuu6kiI9925NGmSJf1p5pMz67BjYhwMKBFZWWfvNqguqZklyMJIRn9QpdRySh24q1lM495QMJXyaCyljlqwZIgVIIBNI="
+    },
+    {
+      "version": "v2.0.0",
+      "format": "v1",
+      "payload": "unicode",
+      "keyFile": true,
+      "plaintext": "秘密 · émoji 🔐🦖 · Ω≈ç√ · naïve café — “quoted” • ünïcödé",
+      "base64": "SUJUWgGmKBInBjs1dw7xjBcksZSovAkZdbf8pngQlST1aw00JvQ7ikDCvA2n3y8rvMrINrdqpwOBLQmWm41qfEdfCdG1LSArBCw9ZT/RsgRaObUKlhz4Ii+b8EHCyY8jFxlIEKcSao9sYFtJJyg0nEoigomDxlC+30G8LFRiKtSFiO5g5V5U/OE="
+    },
+    {
+      "version": "v2.0.0",
+      "format": "v1",
+      "payload": "ascii",
+      "keyFile": false,
+      "plaintext": "The quick brown fox jumps over the lazy dog 0123456789",
+      "base64": "SUJUWgEhQr+kLRFssfIDRZQZMCgK/mhU2Fgs+a0tYxX9qio7Q0FBld1QTK7mfqQ22bXiVdv/GPS3FUEj803rwoxEYOkveKGOvXiHVfgblCztz+aA5psg329Z6lCT4c10hAVgW+fuAw=="
+    },
+    {
+      "version": "v2.0.0",
+      "format": "v1",
+      "payload": "ascii",
+      "keyFile": true,
+      "plaintext": "The quick brown fox jumps over the lazy dog 0123456789",
+      "base64": "SUJUWgEJNyIISWTLhTI5PjVhE1BCawHmwDT3k4bj/T9VV0NrRtoP3iAh3j90T/TduCQ0043lANre4KtXqGwFI/OzTqkkFffG9FBIlCknV23LX+pOR0xoR2eNovIXlxcZ0YlSH+aTeA=="
+    },
+    {
+      "version": "v2.7.3",
+      "format": "v1",
+      "payload": "seed12",
+      "keyFile": false,
+      "plaintext": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about",
+      "base64": "SUJUWgGMJbfhtFotZLyjJwdEoYcE/2rMh+qC6bUTuh4zh6JH23V3TPbtO42XbGN+8RAPb+CfkBL0ZYIXc0jtR4EJnS22G3oCHZevyDIiagsg1mgoMZ3ATEo8b4F0qqA23JGmqUp14gaifhFu5yzRJ4l5nDAHyl8+reQb4ZvB8DOpspQK+Uvb9iOGXEHHrA=="
+    },
+    {
+      "version": "v2.7.3",
+      "format": "v1",
+      "payload": "seed12",
+      "keyFile": true,
+      "plaintext": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about",
+      "base64": "SUJUWgHOwqVzyIQzlp4mOtlthDH4HZdBrSSklsdZpJKlCDBsL10UePJqibLiWX5op/WzmJpWAtNfLhOobyuJ2GQhlEQEdf2OPug9uqG2AFzFLeiChlF0EO66/vrJg1sKsBUNDSs0sBwi/44Yjv8FasSjU/PQxxnnkz4pCJ2cDuqAQ9BuMkt4rhBsSRE9UQ=="
+    },
+    {
+      "version": "v2.7.3",
+      "format": "v1",
+      "payload": "seed24",
+      "keyFile": false,
+      "plaintext": "zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo vote",
+      "base64": "SUJUWgEiGDaNdefCutoZ4Y8rK/SBIfup3aRU0vfUBBu2YaYPpuU6U9bVkEQv3AB08dcYIerH1FqjNbZOzsGPViNiKxfcT71TvOK+4ne5LcwolbFivgH7iFcvOwLCUdUlfAr3GeYyxSpaYZ7uC5OIqPht+B19P2oOZgP9GLoYeRTKCXtfqjrZS9irdlkn6uKO7Q=="
+    },
+    {
+      "version": "v2.7.3",
+      "format": "v1",
+      "payload": "seed24",
+      "keyFile": true,
+      "plaintext": "zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo vote",
+      "base64": "SUJUWgHUd8tf1Z1yjiC84YtWzWpuiSclwFYUVg5U+5GaKMTFMWn88rkRhAQgJCFrMelltKLSTDbd5ssO0HusoEV1Kj5uZBJYPIverGKPixoVQkIt8B4Bc1OHyWWlbmxsI3RoxtrzQgwY/OPa9JdiexT+gJJL9RJlIqNoyL3E57UY8TBuH28IJu2VHFtQ9rn6rA=="
+    },
+    {
+      "version": "v2.7.3",
+      "format": "v1",
+      "payload": "unicode",
+      "keyFile": false,
+      "plaintext": "秘密 · émoji 🔐🦖 · Ω≈ç√ · naïve café — “quoted” • ünïcödé",
+      "base64": "SUJUWgE4z4WCOa6QoJKnnrw9ZZWSHZYGL6ytrnvB/yvA9OM9/LtMIFAA5I9Gsh8rOhaio55yPBxb9VWflnwTfaQ1E9bhCgIpSt3BCCTJGdUyJgXEt31/BR6DATlOGxvL5Qucj4Mn67F7S4fL190q1zVpJi4u4iPZ5YBMcyxAF8HIOTCRri+xY/4="
+    },
+    {
+      "version": "v2.7.3",
+      "format": "v1",
+      "payload": "unicode",
+      "keyFile": true,
+      "plaintext": "秘密 · émoji 🔐🦖 · Ω≈ç√ · naïve café — “quoted” • ünïcödé",
+      "base64": "SUJUWgE7uY3yrbgR9KnNyoaoM/PMyxqNB2XmzQPzsF5E3NdDN+ZHNTgd5lb1QAXVNzM0BOO+Pyq5BVmHukSwsvrQe4avlRRjbyosiiUt21km/fRmwHHHiv6XexBQ91u85oL9QuwarVgjduomhL9dj4ZqYSXK0w9wuxNWxydazhEQtvFTAKYyOQI="
+    },
+    {
+      "version": "v2.7.3",
+      "format": "v1",
+      "payload": "ascii",
+      "keyFile": false,
+      "plaintext": "The quick brown fox jumps over the lazy dog 0123456789",
+      "base64": "SUJUWgG67FmH5YqcPi74eh1op2ttg5KOWmfy3XmGtP/zl0QWWrHmMn8ZalCLeqUSWw834H9HRvaX2tuDMzmqH0WvloEPfwssCqeKJL8ufY1G/CHYMGN7zDjMl2kJ9E9mCz/115RcLw=="
+    },
+    {
+      "version": "v2.7.3",
+      "format": "v1",
+      "payload": "ascii",
+      "keyFile": true,
+      "plaintext": "The quick brown fox jumps over the lazy dog 0123456789",
+      "base64": "SUJUWgHoZ9qGEYZvupvMx/Hv5jo2vP5ONAhqWJPUutBlDl2scTsTbRJnOz9pJx9krC/O0DtWcClBWDP+NI4Id5ZSWYS4mMsGJmfld21u+r44K7EvqUhMZpxD52wWXVU8huqEv2MdjQ=="
+    }
+  ]
+}
