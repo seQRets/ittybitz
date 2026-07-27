@@ -263,7 +263,10 @@ interface RevealableQrProps {
   revealed: boolean;
   onToggleReveal: () => void;
   onDownload: () => void;
-  hiResRef: RefObject<HTMLDivElement>;
+  // Nullable element type: React 19's `useRef<T>(null)` yields
+  // RefObject<T | null>. Written this way it type-checks under both the
+  // React 18 and 19 type definitions.
+  hiResRef: RefObject<HTMLDivElement | null>;
   warning: string;
   caption?: ReactNode;
 }
