@@ -203,8 +203,8 @@ const FileSelector = ({
     <div>
       <div
         className={cn(
-          "relative flex w-full cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-white/15 bg-white/[0.02] px-6 py-10 text-center transition-all duration-200 hover:border-accent/50 hover:bg-accent/[0.03]",
-          { 'border-accent/60 bg-accent/[0.05]': isDragging }
+          "relative flex w-full cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-white/15 bg-white/2 px-6 py-10 text-center transition-all duration-200 hover:border-accent/50 hover:bg-accent/3",
+          { 'border-accent/60 bg-accent/5': isDragging }
         )}
         onClick={handleContainerClick}
         onDrop={handleDrop}
@@ -295,7 +295,7 @@ function RevealableQr({
           </div>
         </>
       ) : (
-        <div className="flex h-[288px] w-[288px] items-center justify-center rounded-lg bg-white/[0.06]">
+        <div className="flex h-[288px] w-[288px] items-center justify-center rounded-lg bg-white/6">
           <QrCode className="h-16 w-16 text-muted-foreground/40" />
         </div>
       )}
@@ -833,13 +833,13 @@ export function EncryptorTool() {
 
   const inputTypePillClasses = (active: boolean) => cn(
     "flex-1 cursor-pointer rounded-lg px-3 py-2 text-center text-[13px] font-medium transition-all",
-    active ? "bg-white/10 text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+    active ? "bg-white/10 text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
   );
 
   const renderContent = (currentMode: Mode) => (
     <div className="space-y-5">
       <div className="space-y-5">
-        <div className="flex gap-0.5 rounded-xl bg-white/[0.04] p-1">
+        <div className="flex gap-0.5 rounded-xl bg-white/4 p-1">
           <button
             type="button"
             onClick={() => handleInputTypeChange('file')}
@@ -879,8 +879,8 @@ export function EncryptorTool() {
                 placeholder={`Enter text to ${currentMode}...`}
                 rows={5}
                 className={cn(
-                  "rounded-xl border-white/10 bg-white/[0.04] pr-12 transition-[filter] duration-150 focus-visible:border-accent/50 focus-visible:ring-0",
-                  currentMode === 'encrypt' && !showTextSecret && textSecret && "blur-sm",
+                  "rounded-xl border-white/10 bg-white/4 pr-12 transition-[filter] duration-150 focus-visible:border-accent/50 focus-visible:ring-0",
+                  currentMode === 'encrypt' && !showTextSecret && textSecret && "blur-xs",
                   // Subtle seed-phrase feedback: green border = valid BIP-39
                   // seed, red = seed-shaped but invalid (likely typo). The
                   // border also overrides the focus tint so the signal stays
@@ -894,7 +894,7 @@ export function EncryptorTool() {
                   type="button"
                   onClick={() => setShowTextSecret(!showTextSecret)}
                   aria-label={showTextSecret ? "Hide secret text" : "Show secret text"}
-                  className="absolute right-2 top-2 rounded-lg border border-white/10 bg-white/[0.05] p-1.5 text-muted-foreground transition-all hover:bg-white/10 hover:text-foreground"
+                  className="absolute right-2 top-2 rounded-lg border border-white/10 bg-white/5 p-1.5 text-muted-foreground transition-all hover:bg-white/10 hover:text-foreground"
                 >
                   {showTextSecret ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
                 </button>
@@ -911,7 +911,7 @@ export function EncryptorTool() {
               </Label>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button type="button" className="focus:outline-none">
+                  <button type="button" className="focus:outline-hidden">
                     <Info className="h-3.5 w-3.5 text-muted-foreground/60" />
                   </button>
                 </TooltipTrigger>
@@ -928,14 +928,14 @@ export function EncryptorTool() {
                 onChange={(e) => handlePasswordChange(e.target.value)}
                 placeholder={currentMode === 'encrypt' ? "Enter a strong password" : "Enter decryption password"}
                 className={cn(
-                  "h-11 rounded-xl border border-white/10 bg-white/[0.04] pr-[74px] text-[15px] transition-colors focus-visible:border-accent/50 focus-visible:ring-0",
+                  "h-11 rounded-xl border border-white/10 bg-white/4 pr-[74px] text-[15px] transition-colors focus-visible:border-accent/50 focus-visible:ring-0",
                   getPasswordStrengthColor()
                 )}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg border border-white/10 bg-white/[0.05] px-2.5 py-1 text-xs font-medium text-muted-foreground transition-all hover:bg-white/10 hover:text-foreground"
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-medium text-muted-foreground transition-all hover:bg-white/10 hover:text-foreground"
               >
                 {showPassword ? 'Hide' : 'Show'}
               </button>
@@ -946,7 +946,7 @@ export function EncryptorTool() {
                 size="sm"
                 onClick={() => handleCopy(password)}
                 disabled={!password}
-                className="flex-1 rounded-lg border-white/10 bg-white/[0.04] text-[13px] font-medium text-muted-foreground hover:bg-white/[0.08] hover:text-foreground"
+                className="flex-1 rounded-lg border-white/10 bg-white/4 text-[13px] font-medium text-muted-foreground hover:bg-white/8 hover:text-foreground"
               >
                 <Copy className="mr-1.5 h-3.5 w-3.5" />Copy
               </Button>
@@ -955,7 +955,7 @@ export function EncryptorTool() {
                 size="sm"
                 onClick={() => handlePasswordChange("")}
                 disabled={!password}
-                className="flex-1 rounded-lg border-white/10 bg-white/[0.04] text-[13px] font-medium text-muted-foreground hover:bg-white/[0.08] hover:text-foreground"
+                className="flex-1 rounded-lg border-white/10 bg-white/4 text-[13px] font-medium text-muted-foreground hover:bg-white/8 hover:text-foreground"
               >
                 <X className="mr-1.5 h-3.5 w-3.5" />Clear
               </Button>
@@ -964,7 +964,7 @@ export function EncryptorTool() {
                   variant="outline"
                   size="sm"
                   onClick={generatePassword}
-                  className="flex-1 rounded-lg border-white/10 bg-white/[0.04] text-[13px] font-medium text-muted-foreground hover:bg-white/[0.08] hover:text-foreground"
+                  className="flex-1 rounded-lg border-white/10 bg-white/4 text-[13px] font-medium text-muted-foreground hover:bg-white/8 hover:text-foreground"
                 >
                   <RefreshCw className="mr-1.5 h-3.5 w-3.5" />Generate
                 </Button>
@@ -985,7 +985,7 @@ export function EncryptorTool() {
               </Label>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button type="button" className="focus:outline-none">
+                  <button type="button" className="focus:outline-hidden">
                     <Info className="h-3.5 w-3.5 text-muted-foreground/60" />
                   </button>
                 </TooltipTrigger>
@@ -1008,13 +1008,13 @@ export function EncryptorTool() {
                 description="Drag & drop or click to select an existing file"
               />
               <div className="flex items-center gap-3">
-                <hr className="flex-grow border-t border-white/10" />
+                <hr className="grow border-t border-white/10" />
                 <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">or</span>
-                <hr className="flex-grow border-t border-white/10" />
+                <hr className="grow border-t border-white/10" />
               </div>
               <Button
                 variant="outline"
-                className="w-full rounded-xl border-white/10 bg-white/[0.04] py-2.5 text-sm font-medium text-foreground hover:bg-white/[0.08]"
+                className="w-full rounded-xl border-white/10 bg-white/4 py-2.5 text-sm font-medium text-foreground hover:bg-white/8"
                 onClick={generateKeyFile}
               >
                 <Download className="mr-2 h-4 w-4" />
@@ -1037,8 +1037,8 @@ export function EncryptorTool() {
               readOnly
               rows={5}
               className={cn(
-                "rounded-xl border-white/10 bg-white/[0.04] pr-12 focus-visible:ring-0",
-                currentMode === 'decrypt' && inputType === 'text' && !showDecryptedText && "blur-sm",
+                "rounded-xl border-white/10 bg-white/4 pr-12 focus-visible:ring-0",
+                currentMode === 'decrypt' && inputType === 'text' && !showDecryptedText && "blur-xs",
                 // Same border language as the encrypt-side secret field:
                 // green = decrypted text is a valid BIP-39 seed, red = it is
                 // seed-shaped but fails validation (the stored backup itself
@@ -1170,7 +1170,7 @@ export function EncryptorTool() {
       <Button
         onClick={processData}
         disabled={isProcessButtonDisabled()}
-        className="mt-2 h-auto w-full rounded-xl bg-gradient-to-br from-amber-400 via-orange-500 to-red-500 py-3.5 text-[15px] font-semibold text-black shadow-[0_8px_24px_-8px_rgba(245,158,11,0.5)] transition-all hover:-translate-y-px hover:shadow-[0_12px_32px_-8px_rgba(245,158,11,0.65)] disabled:opacity-40 disabled:hover:translate-y-0"
+        className="mt-2 h-auto w-full rounded-xl bg-linear-to-br from-amber-400 via-orange-500 to-red-500 py-3.5 text-[15px] font-semibold text-black shadow-[0_8px_24px_-8px_rgba(245,158,11,0.5)] transition-all hover:-translate-y-px hover:shadow-[0_12px_32px_-8px_rgba(245,158,11,0.65)] disabled:opacity-40 disabled:hover:translate-y-0"
       >
         {isLoading ? (
           <Loader2 className="mr-2 h-5 w-5 animate-spin" />
@@ -1182,12 +1182,12 @@ export function EncryptorTool() {
     </div>
   );
 
-  const tabTriggerClasses = "rounded-lg px-4 py-1.5 text-[13px] font-medium text-muted-foreground data-[state=active]:bg-white/10 data-[state=active]:text-foreground data-[state=active]:shadow-sm";
+  const tabTriggerClasses = "rounded-lg px-4 py-1.5 text-[13px] font-medium text-muted-foreground data-[state=active]:bg-white/10 data-[state=active]:text-foreground data-[state=active]:shadow-xs";
 
   return (
     <Tabs value={mode} onValueChange={handleModeChange} className="flex min-h-screen flex-col">
       {/* ---- HEADER ---- */}
-      <header className="sticky top-0 z-50 w-full border-b border-white/[0.08] bg-black/70 backdrop-blur-xl backdrop-saturate-150">
+      <header className="sticky top-0 z-50 w-full border-b border-white/8 bg-black/70 backdrop-blur-xl backdrop-saturate-150">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:px-6">
           <div className="flex items-center gap-2.5">
             <svg viewBox="0 0 512 512" width={28} height={28} aria-label="IttyBitz Logo" role="img" xmlns="http://www.w3.org/2000/svg">
@@ -1207,7 +1207,7 @@ export function EncryptorTool() {
             </svg>
             <span className="text-[17px] font-semibold tracking-tight">IttyBitz</span>
           </div>
-          <TabsList className="h-auto bg-white/[0.06] p-0.5">
+          <TabsList className="h-auto bg-white/6 p-0.5">
             <TabsTrigger value="encrypt" className={tabTriggerClasses}>
               Encrypt
             </TabsTrigger>
@@ -1248,7 +1248,7 @@ export function EncryptorTool() {
           {/* Feature cards */}
           <div className="mt-8 grid gap-3 sm:mt-10 sm:grid-cols-3">
             {FEATURE_CARDS.map(({ icon: Icon, title, description }) => (
-              <div key={title} className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
+              <div key={title} className="rounded-2xl border border-white/6 bg-white/2 p-5">
                 <div className="mb-2.5 grid h-8 w-8 place-items-center rounded-lg bg-accent/10 text-accent">
                   <Icon className="h-4 w-4" />
                 </div>
@@ -1263,7 +1263,7 @@ export function EncryptorTool() {
       </div>
 
       {/* ---- FOOTER ---- */}
-      <footer className="w-full border-t border-white/[0.06]">
+      <footer className="w-full border-t border-white/6">
         <div className="mx-auto flex max-w-5xl flex-col items-center gap-2 px-4 py-5 text-xs text-muted-foreground sm:flex-row sm:justify-between sm:px-6">
           <div className="flex items-center gap-1.5">
             <Heart className="h-3 w-3 text-red-500" />
