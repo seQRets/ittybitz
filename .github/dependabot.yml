@@ -6,6 +6,15 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    ignore:
+      # TypeScript 7 is the native (tsgo) port and drops the JS compiler API
+      # that `next build` requires, so it cannot be adopted while Next.js
+      # depends on it (see PR #22, closed 2026-07-26; PR #28 re-proposed the
+      # identical version because the base moved 5.9.3 -> 6.0.3). Minor and
+      # patch updates within TypeScript 6 still come through normally.
+      # Remove this once Next.js supports the TS 7 compiler API.
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
 
   # Keep the SHA-pinned GitHub Actions current. Dependabot updates both the
   # pinned commit SHA and the trailing version comment.
