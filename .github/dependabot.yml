@@ -6,6 +6,28 @@ updates:
     directory: /
     schedule:
       interval: weekly
+
+    # Routine minor/patch updates arrive as ONE consolidated PR per week
+    # rather than one PR per package. Without this, the default open-PR
+    # limit of 5 turns a backlog into a queue that refills the moment it is
+    # cleared: emptying five PRs on 2026-08-11 caused Dependabot to open the
+    # next five two minutes later, with six more still waiting behind those.
+    #
+    # Majors are deliberately left ungrouped so each one gets its own PR and
+    # its own review — that is where breaking changes live (see the TS 7 and
+    # tailwind-merge 3 history below).
+    groups:
+      npm-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+
+    # Raised from the default 5 so an ungrouped major never gets starved out
+    # by the grouped PR occupying a slot.
+    open-pull-requests-limit: 10
+
     ignore:
       # TypeScript 7 is the native (tsgo) port and drops the JS compiler API
       # that `next build` requires, so it cannot be adopted while Next.js
@@ -22,3 +44,7 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    groups:
+      github-actions:
+        patterns:
+          - "*"
