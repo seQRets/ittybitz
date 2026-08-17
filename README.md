@@ -91,6 +91,14 @@ The current audit findings and accepted tradeoffs are tracked in-repo: [SECURITY
 
 <br/>
 
+## 📋 Release history
+
+Every version, with what changed in each, is listed in the [**changelog**](CHANGELOG.md). Full notes per release live in [`docs/releases/`](docs/releases/).
+
+Cryptography has never changed across any release — anything encrypted with any version of IttyBitz still decrypts today, and that guarantee is enforced automatically in CI against real ciphertexts from every prior release.
+
+<br/>
+
 ## 📜 Licensing
 
 IttyBitz is free software released under the [**GNU General Public License v3.0**](LICENSE).
