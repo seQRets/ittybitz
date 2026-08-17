@@ -9,8 +9,8 @@
     },
     {
       "name": "ittybitz-prod",
-      "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "9004", "--directory", "out"],
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["--yes", "serve", "out", "-l", "9004"],
       "port": 9004
     }
   ]
