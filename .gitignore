@@ -22,3 +22,11 @@ yarn-error.log*
 # local env files
 .env
 .env*.local
+
+# local working notes (not part of the project)
+memory.md
+
+# Claude Code: share the dev-server launch config, keep machine-specific
+# settings (absolute paths, permission allowlists) local
+.claude/*
+!.claude/launch.json

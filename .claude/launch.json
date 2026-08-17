@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "ittybitz-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 9002
+    },
+    {
+      "name": "ittybitz-prod",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "9004", "--directory", "out"],
+      "port": 9004
+    }
+  ]
+}
