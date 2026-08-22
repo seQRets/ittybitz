@@ -84,8 +84,10 @@ function base64ToUint8Array(base64: string): Uint8Array {
 const OFFSCREEN_STYLE = { position: 'absolute', left: '-9999px', top: '-9999px' } as const;
 
 // Password strength gate. The symbol class is kept in sync with the
-// generatePassword charset so a generated password can never be rejected by
-// this check (and manual passwords using any of those symbols are accepted).
+// generatePassword charset, so manual passwords using any of those symbols
+// are accepted. Charset overlap alone does NOT guarantee a generated
+// password passes — a random draw can miss a whole class — so
+// generatePassword resamples against this function until it does.
 function isPasswordStrong(pwd: string): boolean {
   const hasUpperCase = /[A-Z]/.test(pwd);
   const hasLowerCase = /[a-z]/.test(pwd);
@@ -559,16 +561,25 @@ export function EncryptorTool() {
     // Rejection sampling: discard values that would cause modulo bias.
     // limit is the largest multiple of charsetLength that fits in a Uint32.
     const limit = Math.floor(0x100000000 / charsetLength) * charsetLength;
+    // Regenerate until the draw satisfies isPasswordStrong. A 32-char draw
+    // from this charset misses the digit class ~2.4% of the time
+    // ((81/91)^32), and processData's strength gate would then reject a
+    // password this very button produced. Resampling the whole password
+    // keeps the distribution uniform over strong passwords, which patching
+    // a digit into a fixed position would not.
     let newPassword = "";
-    while (newPassword.length < passwordLength) {
-      const array = new Uint32Array(passwordLength - newPassword.length);
-      window.crypto.getRandomValues(array);
-      for (let i = 0; i < array.length && newPassword.length < passwordLength; i++) {
-        if (array[i]! < limit) {
-          newPassword += charset.charAt(array[i]! % charsetLength);
+    do {
+      newPassword = "";
+      while (newPassword.length < passwordLength) {
+        const array = new Uint32Array(passwordLength - newPassword.length);
+        window.crypto.getRandomValues(array);
+        for (let i = 0; i < array.length && newPassword.length < passwordLength; i++) {
+          if (array[i]! < limit) {
+            newPassword += charset.charAt(array[i]! % charsetLength);
+          }
         }
       }
-    }
+    } while (!isPasswordStrong(newPassword));
     handlePasswordChange(newPassword);
     toast({ title: "Password Generated", description: "A new secure password has been generated." });
   }, [toast, handlePasswordChange]);
