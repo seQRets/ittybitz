@@ -28,12 +28,17 @@
  *
  * The password and key file in the fixtures are TEST-ONLY and published in
  * this repo. Treat them as compromised; never use them for real data.
+ *
+ * Section 5 covers src/lib/bip39.ts. It is not part of the frozen core, but
+ * a wrong word index yields a SeedQR that scans cleanly into the WRONG
+ * wallet — silent and unrecoverable — so it is gated here too.
  */
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { webcrypto } from "node:crypto";
 import { encryptFile, decryptFile } from "../src/lib/crypto.ts";
+import { validateBip39, toStandardSeedQR } from "../src/lib/bip39.ts";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const FIXTURES = JSON.parse(readFileSync(join(HERE, "crypto-fixtures.json"), "utf8"));
@@ -178,6 +183,80 @@ async function main() {
   });
   await rejects("truncated input rejected", () =>
     decryptFile(ct.slice(0, 20), FIXTURES.password, null)
+  );
+
+  // ---- 5. BIP-39 / SeedQR ----
+  // Not part of the frozen crypto core, but a wrong word index produces a
+  // QR that scans cleanly into the WRONG wallet, which is silent and
+  // unrecoverable. Vectors are the canonical BIP-39 English test mnemonics;
+  // the SeedQR digit strings follow the SeedSigner Standard SeedQR spec
+  // (each index zero-padded to 4 decimal digits).
+  console.log("\nBIP-39 validation and Standard SeedQR:");
+
+  const A12 =
+    "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+  const A24 =
+    "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon " +
+    "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon art";
+  const V18 =
+    "gravity machine north sort system female filter attitude volume fold club stay " +
+    "feature office ecology stable narrow fog";
+
+  const seedVectors: Array<[string, string, number, string]> = [
+    ["12-word", A12, 128, "0".repeat(44) + "0003"],
+    ["24-word", A24, 256, "0".repeat(92) + "0102"],
+    [
+      "18-word",
+      V18,
+      192,
+      "081610681202166017660679069101171966072403531703067312280560169411760722",
+    ],
+  ];
+
+  for (const [label, mnemonic, bits, seedQr] of seedVectors) {
+    const r = await validateBip39(mnemonic);
+    check(r.valid, `${label} mnemonic validates`);
+    if (!r.valid) continue;
+    check(r.entropyBits === bits, `${label} entropy is ${bits} bits`);
+    const digits = toStandardSeedQR(r.words);
+    check(digits === seedQr, `${label} SeedQR digits match spec`);
+    if (digits !== seedQr) {
+      console.error(`        expected: ${seedQr}`);
+      console.error(`        actual:   ${digits}`);
+    }
+    check(
+      digits.length === r.words.length * 4,
+      `${label} SeedQR is ${mnemonic.split(" ").length * 4} digits`
+    );
+  }
+
+  // Case and whitespace are normalized before lookup.
+  const messy = await validateBip39("  ABANDON \t abandon\nabandon " + A12.split(" ").slice(3).join(" ") + " ");
+  check(messy.valid, "mixed case and whitespace normalize to a valid mnemonic");
+
+  // Negative cases: each failure reason is reachable and correctly labelled.
+  const badChecksum = await validateBip39(A12.replace(/about$/, "abandon"));
+  check(
+    !badChecksum.valid && badChecksum.reason === "checksum-mismatch" && badChecksum.seedShaped,
+    "bad checksum rejected as checksum-mismatch (seed-shaped)"
+  );
+
+  const unknownWord = await validateBip39(A12.replace(/about$/, "zzzznotaword"));
+  check(
+    !unknownWord.valid && unknownWord.reason === "unknown-word" && unknownWord.seedShaped,
+    "unknown word rejected as unknown-word (seed-shaped, <=1 unknown)"
+  );
+
+  const wrongCount = await validateBip39("abandon about");
+  check(
+    !wrongCount.valid && wrongCount.reason === "wrong-word-count" && !wrongCount.seedShaped,
+    "wrong word count rejected and NOT flagged seed-shaped"
+  );
+
+  // toStandardSeedQR must refuse anything not in the wordlist rather than
+  // silently emitting a short/garbled payload.
+  await rejects("toStandardSeedQR refuses a non-wordlist word", async () =>
+    toStandardSeedQR(["abandon", "zzzznotaword"])
   );
 
   // ---- Summary ----
