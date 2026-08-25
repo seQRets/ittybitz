@@ -1303,7 +1303,7 @@ export function EncryptorTool() {
           </div>
           <div className="flex items-center gap-3">
             <a href="https://github.com/seQRets/ittybitz" target="_blank" rel="noopener noreferrer" className="hover:underline">GitHub</a>
-            <span>v2.8.0 🦕 Triceratops</span>
+            <span>v2.8.1 🦕 Triceratops</span>
           </div>
         </div>
       </footer>
