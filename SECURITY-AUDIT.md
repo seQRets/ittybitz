@@ -19,7 +19,7 @@ The app's security posture is genuinely strong for its threat model:
 - All cryptography uses the Web Crypto API with conservative parameters, unchanged since v1.0.
 - No user-controlled HTML rendering; the only `dangerouslySetInnerHTML` in the codebase is a static, hardcoded service-worker registration script.
 - No secrets in the client bundle; no `process.env` / `NEXT_PUBLIC_*` references outside a single `NODE_ENV` check gating the CSP tag.
-- `npm audit`: 0 vulnerabilities across 115 packages.
+- `npm audit`: 0 vulnerabilities across 172 packages (70 prod, 65 dev, 67 optional).
 
 Findings are grouped by severity below.
 
@@ -111,7 +111,7 @@ No defects found — unusually careful work for a from-scratch BIP-39 implementa
 - **SHA-pinning:** all four third-party action references (`actions/checkout`, `actions/setup-node`, `actions/upload-pages-artifact`, `actions/deploy-pages`) are pinned to full 40-character commit SHAs with version-tag comments. Confirmed against the GitHub API that all four SHAs resolve exactly to the tag stated in the comment.
 - **`persist-credentials: false`** on every checkout — the `GITHUB_TOKEN` is never written to `.git/config` where a compromised build-time dependency could read it.
 - **Least-privilege permissions:** workflow-level `permissions: {}` in both files, with each job requesting only what it needs (`contents: read` for build/test jobs; `pages: write` + `id-token: write` only in the separate `deploy` job, which runs no third-party build code).
-- **`npm ci --ignore-scripts`:** verified empirically — scanned all 115 installed packages' `package.json` files for `preinstall`/`install`/`postinstall` hooks. Found zero. The flag costs nothing today and is a legitimate forward-looking control against a future compromised transitive dependency shipping an install-time payload.
+- **`npm ci --ignore-scripts`:** verified empirically — checked all 172 packages in `package-lock.json` for install hooks (`hasInstallScript`). Found zero. The flag costs nothing today and is a legitimate forward-looking control against a future compromised transitive dependency shipping an install-time payload.
 - **`crypto-regression.yml`** intentionally skips `npm ci` entirely for the frozen-crypto regression job, since `crypto.ts` and `bip39.ts` have zero runtime dependencies — a smaller, more auditable job unaffected by a dependency-level compromise.
 
 No findings. Above what most static-site projects bother with.
