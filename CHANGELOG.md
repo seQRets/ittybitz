@@ -8,6 +8,7 @@ Every IttyBitz release, newest first. Full notes for each version live in [`docs
 
 | Version | Date | Summary |
 |---|---|---|
+| [**2.8.2** 🦕 Triceratops](docs/releases/v2.8.2.md) | 2026-08-31 | Next.js 16.3.3 — two Critical RCE advisories patched upstream (not reachable in a static export); supply chain verified against the registry |
 | [**2.8.1** 🦕 Triceratops](docs/releases/v2.8.1.md) | 2026-08-25 | Password generator could emit a password failing the app's own strength gate (1 in 41); BIP-39/SeedQR gated in CI; `npm ci --ignore-scripts` |
 | [**2.8.0** 🦕 Triceratops](docs/releases/v2.8.0.md) | 2026-07-27 | React 19, Tailwind CSS v4, and a cross-version fixture corpus proving ciphertexts from all 17 prior releases still decrypt |
 | [**2.7.3** 🦖 Velociraptor](docs/releases/v2.7.3.md) | 2026-07-26 | Permanent crypto regression gate in CI; lucide-react v1 and qrcode.react v4 |
