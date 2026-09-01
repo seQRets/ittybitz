@@ -50,17 +50,21 @@ Compare the result against the checksum published with the [release](../CHANGELO
 
 ## A note for maintainers
 
-Two copies of this file exist, deliberately:
+**This is the only copy of the recovery tool in the repository. Edit it here.**
 
-| Path | Purpose |
-|---|---|
-| `Recover/ittybitz-recovery.html` | Discoverable copy — what users find when browsing the repo |
-| `public/ittybitz-recovery.html` | Served copy — becomes `ittybitz.app/ittybitz-recovery.html`, and is precached by the service worker for offline use |
+Next.js serves static files exclusively from `public/`, so a copy has to exist there for the dev server to serve it and for the production build to emit it into `out/`. That copy is *generated*, not committed:
 
-They are **kept byte-identical by CI**. `npm run test:crypto` compares them and fails if they differ, so neither can silently go stale.
-
-When editing the recovery tool, change `public/ittybitz-recovery.html` and copy it here:
-
-```bash
-cp public/ittybitz-recovery.html Recover/ittybitz-recovery.html
 ```
+Recover/ittybitz-recovery.html   ← the one tracked file; edit this
+        │
+        │  scripts/sync-recovery.mjs  (runs on every npm run dev / npm run build)
+        ▼
+public/ittybitz-recovery.html    ← generated, gitignored, never edited
+        │
+        ▼
+out/ittybitz-recovery.html       ← published as ittybitz.app/ittybitz-recovery.html
+```
+
+Two committed copies of a decryption tool would be a drift hazard — someone edits one, the other silently goes stale, and a published checksum stops meaning anything. Generating the served copy removes that risk structurally: there is nothing to keep in sync, because the second file does not exist until build time.
+
+`npm run test:crypto` reads this file directly, so the 32-fixture replay always tests the copy you edited, with no build step in between.

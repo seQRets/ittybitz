@@ -261,7 +261,7 @@ async function main() {
   );
 
   // ---- 6. Standalone recovery file ----
-  // public/ittybitz-recovery.html is a single self-contained page that
+  // Recover/ittybitz-recovery.html is a single self-contained page that
   // decrypts IttyBitz containers with no dependencies, no network and no
   // build step, so a user can recover their data even if this project,
   // its domain and its author are all gone.
@@ -271,27 +271,15 @@ async function main() {
   // its own claims: the decrypt core is extracted from the HTML and every
   // historical fixture above is replayed through it. If the recovery file
   // and crypto.ts ever disagree about any real ciphertext, this fails.
-  console.log("\nStandalone recovery file (public/ittybitz-recovery.html):");
+  console.log("\nStandalone recovery file (Recover/ittybitz-recovery.html):");
 
-  // The file exists twice on purpose: public/ is the copy that gets served
-  // and precached, Recover/ is the copy users find when browsing the repo.
-  // Everything below tests the served copy, so that only proves the shipped
-  // tool correct — a stale Recover/ copy would hand someone a recovery file
-  // that this suite never checked. Byte-identity is therefore a gate, not a
-  // nicety: it is what lets one published checksum vouch for both.
-  const servedRecoveryBytes = readFileSync(join(HERE, "..", "public", "ittybitz-recovery.html"));
-  const repoRecoveryBytes = readFileSync(join(HERE, "..", "Recover", "ittybitz-recovery.html"));
-  check(
-    servedRecoveryBytes.equals(repoRecoveryBytes),
-    "Recover/ and public/ copies of the recovery file are byte-identical"
-  );
-  if (!servedRecoveryBytes.equals(repoRecoveryBytes)) {
-    console.error(
-      "  ^ copy public/ittybitz-recovery.html to Recover/ittybitz-recovery.html"
-    );
-  }
-
-  const recoveryHtml = servedRecoveryBytes.toString("utf8");
+  // Recover/ is the single tracked copy and the only one anybody edits. The
+  // served file at public/ittybitz-recovery.html is generated from it by
+  // scripts/sync-recovery.mjs at dev/build time and is gitignored, so there
+  // is no second copy to drift from this one. Reading the canonical file
+  // also means this suite needs no build step — which is why its workflow
+  // can skip npm ci entirely.
+  const recoveryHtml = readFileSync(join(HERE, "..", "Recover", "ittybitz-recovery.html"), "utf8");
   const coreMatch = recoveryHtml.match(
     /<script id="ittybitz-decrypt-core">([\s\S]*?)<\/script>/
   );
