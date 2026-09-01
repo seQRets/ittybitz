@@ -91,6 +91,29 @@ The current audit findings and accepted tradeoffs are tracked in-repo: [SECURITY
 
 <br/>
 
+## 🪶 Recovery tool — decrypt without IttyBitz
+
+**[Download `ittybitz-recovery.html`](https://ittybitz.app/ittybitz-recovery.html)** (26 KB, one file)
+
+A standalone page that decrypts your IttyBitz files with **no dependencies, no network, no installation and no build step**. Save it alongside your encrypted data — on the same USB stick, the same backup drive, the same safe.
+
+It exists so that recovering your own data never depends on this website resolving, on GitHub Pages serving, on this project still being maintained, or on its author still being around. Open it in any browser, on an air-gapped machine, in twenty years.
+
+- **Decrypt-only** — half the code to trust; create new secrets with the full app.
+- **Verified against every release.** CI replays 32 real ciphertexts from v1.0 onward through this exact file on every change, so it can never silently drift from the main implementation.
+- **Enforced offline.** Its `Content-Security-Policy` blocks all network access outright — "nothing is sent" is structurally true, not a promise.
+- **Self-documenting.** The container format and key derivation are written into the file's own source, so your data stays recoverable even if the page itself never runs.
+
+Verify what you downloaded before trusting it:
+
+```bash
+shasum -a 256 ittybitz-recovery.html
+```
+
+and compare against the checksum published with the release.
+
+<br/>
+
 ## 📋 Release history
 
 Every version, with what changed in each, is listed in the [**changelog**](CHANGELOG.md). Full notes per release live in [`docs/releases/`](docs/releases/).

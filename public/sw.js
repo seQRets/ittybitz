@@ -1,6 +1,6 @@
 // IttyBitz Service Worker — hand-rolled, zero dependencies
 // Cache version: bump this on every release to invalidate stale caches
-const CACHE_VERSION = 'ittybitz-v2.8.2';
+const CACHE_VERSION = 'ittybitz-v2.9.0';
 
 // Static, hand-maintained part of the app shell.
 const APP_SHELL = [
