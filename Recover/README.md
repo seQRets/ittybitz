@@ -1,8 +1,10 @@
 # 🪶 IttyBitz Recovery
 
-### ⬇️ [**Download the Recovery tool**](https://ittybitz.app/ittybitz-recovery.html)
+### ⬇️ [**Download the Recovery tool**](https://github.com/seQRets/ittybitz/releases/latest/download/ittybitz-recovery.html)
 
-*One file · 26 KB · no installation · works offline forever*
+*Saves the file to your computer · 26 KB · no installation · works offline forever*
+
+Or **[open it in your browser](https://ittybitz.app/ittybitz-recovery.html)** to use it right now without saving. Downloading is the point, though — see below.
 
 <br/>
 
@@ -18,7 +20,7 @@ It has no dependencies, makes no network requests, needs no build step and requi
 
 This folder is a signpost, not a second copy. The tool itself is one file, kept in one place:
 
-**📄 [`public/ittybitz-recovery.html`](../public/ittybitz-recovery.html)** — view or download it straight from the repository.
+**📄 [`public/ittybitz-recovery.html`](../public/ittybitz-recovery.html)** — read the source in this repository. (This link shows the code; use the download link above to get the file itself.)
 
 It sits in `public/` because that is the directory this site serves from, so the file needs no build step, no copying and no processing to reach [ittybitz.app/ittybitz-recovery.html](https://ittybitz.app/ittybitz-recovery.html). The simplest possible path from repository to your hands — which is the right property for the one file you may need when everything else has failed.
 
@@ -28,8 +30,8 @@ This folder exists so you can *find* it. Recovering your own data should never d
 
 ## How to use it
 
-1. Download it — the link at the top gives you a working copy.
-2. Open it in any browser. Double-clicking the file works; no server needed.
+1. Download it using the link at the top. Your browser saves `ittybitz-recovery.html` to your computer.
+2. Open the saved file in any browser. Double-clicking it works; no server and no internet needed.
 3. Drop in your encrypted file, or paste your encrypted text.
 4. Enter your password, and your key file if you used one.
 

@@ -101,9 +101,9 @@ The current audit findings and accepted tradeoffs are tracked in-repo: [SECURITY
 
 ## 🪶 Recovery tool — decrypt without IttyBitz
 
-**[⬇️ Get it from the `Recover/` folder](Recover/)** · [direct download](https://ittybitz.app/ittybitz-recovery.html) (26 KB, one file)
+**[⬇️ Download it](https://github.com/seQRets/ittybitz/releases/latest/download/ittybitz-recovery.html)** (26 KB, one file) · [open it in your browser](https://ittybitz.app/ittybitz-recovery.html) · [what it is](Recover/)
 
-It lives in [`Recover/`](Recover/) at the top level of this repository, so it stays easy to find years from now rather than buried somewhere only developers look.
+[`Recover/`](Recover/) at the top level of this repository explains it in full — what it is, how to verify it, and where the file itself lives — so it stays easy to find years from now rather than buried somewhere only developers look.
 
 A standalone page that decrypts your IttyBitz files with **no dependencies, no network, no installation and no build step**. Save it alongside your encrypted data — on the same USB stick, the same backup drive, the same safe.
 
