@@ -20,7 +20,7 @@
  */
 import { createHash } from 'node:crypto';
 import { readdirSync, readFileSync, writeFileSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, basename } from 'node:path';
 
 const OUT_DIR = new URL('../out', import.meta.url).pathname;
 
@@ -33,6 +33,18 @@ function htmlFiles(dir) {
   }
   return found;
 }
+
+// The standalone recovery tool is deliberately left alone. It is a single
+// self-contained artifact that must stay byte-identical everywhere it
+// appears — in the repo, on the site, and attached to each GitHub release —
+// so the checksum published alongside it is verifiable no matter where a
+// user got the file. Rewriting its CSP at build time would fork it into two
+// different files with two different hashes.
+//
+// It is safe to leave: it carries its own `default-src 'none'` policy that
+// blocks every network destination, renders no user-controlled HTML, and
+// the two 'unsafe-inline' allowances cover only its own fixed inline blocks.
+const CSP_EXEMPT = new Set(['ittybitz-recovery.html']);
 
 // Inline scripts whose type makes them executable. Data blocks
 // (application/json etc.) never execute, so they need no hash.
@@ -64,6 +76,7 @@ const metaRe =
   /(<meta\s+http-equiv="Content-Security-Policy"\s+content=")([^"]*)("\s*\/?>)/i;
 
 for (const file of htmlFiles(OUT_DIR)) {
+  if (CSP_EXEMPT.has(basename(file))) continue;
   let html = readFileSync(file, 'utf8');
 
   const metaMatch = html.match(metaRe);
@@ -125,6 +138,7 @@ if (processed === 0) {
 // regex) instead of silently shipping a loose policy for it.
 const leaked = [];
 for (const file of htmlFiles(OUT_DIR)) {
+  if (CSP_EXEMPT.has(basename(file))) continue;
   const html = readFileSync(file, 'utf8');
   const metaMatch = html.match(metaRe);
   if (!metaMatch) continue; // a page with no CSP meta is a separate concern

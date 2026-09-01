@@ -34,6 +34,7 @@
  * wallet — silent and unrecoverable — so it is gated here too.
  */
 import { readFileSync } from "node:fs";
+import { createContext, runInContext } from "node:vm";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { webcrypto } from "node:crypto";
@@ -258,6 +259,94 @@ async function main() {
   await rejects("toStandardSeedQR refuses a non-wordlist word", async () =>
     toStandardSeedQR(["abandon", "zzzznotaword"])
   );
+
+  // ---- 6. Standalone recovery file ----
+  // public/ittybitz-recovery.html is a single self-contained page that
+  // decrypts IttyBitz containers with no dependencies, no network and no
+  // build step, so a user can recover their data even if this project,
+  // its domain and its author are all gone.
+  //
+  // It reimplements the container parsing and key derivation, which means it
+  // can silently drift from crypto.ts. So it does not get to be trusted on
+  // its own claims: the decrypt core is extracted from the HTML and every
+  // historical fixture above is replayed through it. If the recovery file
+  // and crypto.ts ever disagree about any real ciphertext, this fails.
+  console.log("\nStandalone recovery file (public/ittybitz-recovery.html):");
+
+  const recoveryHtml = readFileSync(join(HERE, "..", "public", "ittybitz-recovery.html"), "utf8");
+  const coreMatch = recoveryHtml.match(
+    /<script id="ittybitz-decrypt-core">([\s\S]*?)<\/script>/
+  );
+  check(!!coreMatch, "decrypt core block found in the recovery HTML");
+
+  if (coreMatch) {
+    const sandbox: any = { crypto: webcrypto, TextEncoder, TextDecoder, console };
+    createContext(sandbox);
+    runInContext(coreMatch[1]!, sandbox);
+    const recoveryDecrypt = sandbox.ittybitzDecrypt;
+    check(typeof recoveryDecrypt === "function", "recovery core exposes ittybitzDecrypt()");
+
+    // The recovery file must state the same PBKDF2 iteration count. A
+    // mismatch here would decrypt nothing, but catching it by name gives a
+    // far clearer failure than a wall of authentication errors.
+    check(
+      sandbox.ITTYBITZ_PBKDF2_ITERATIONS === 1_000_000,
+      "recovery core uses 1,000,000 PBKDF2 iterations"
+    );
+
+    if (typeof recoveryDecrypt === "function") {
+      let recovered = 0;
+      let recoveryFailed = 0;
+      for (const fx of FIXTURES.fixtures) {
+        try {
+          const keyFile = fx.keyFile
+            ? new Uint8Array(hexToArrayBuffer(FIXTURES.keyFileHex))
+            : null;
+          const bytes = new Uint8Array(b64ToArrayBuffer(fx.base64));
+          const out = dec.decode(await recoveryDecrypt(bytes, FIXTURES.password, keyFile));
+          if (out === fx.plaintext) recovered++;
+          else {
+            recoveryFailed++;
+            console.error(`  FAIL  recovery mismatch on ${fx.version} ${fx.payload}`);
+          }
+        } catch (err) {
+          recoveryFailed++;
+          console.error(`  FAIL  recovery threw on ${fx.version} ${fx.payload}: ${(err as Error).message}`);
+        }
+      }
+      check(
+        recovered === FIXTURES.fixtures.length && recoveryFailed === 0,
+        `recovery file decrypts all ${FIXTURES.fixtures.length} historical fixtures (v0 and v1, with and without key file)`
+      );
+
+      // The independently-constructed v0 blob too.
+      try {
+        const out = dec.decode(
+          await recoveryDecrypt(
+            new Uint8Array(b64ToArrayBuffer(FIXTURES.independent.base64)),
+            FIXTURES.password,
+            null
+          )
+        );
+        check(out === FIXTURES.independent.plaintext, "recovery file decrypts the raw-primitive v0 blob");
+      } catch (err) {
+        check(false, `recovery file on raw-primitive v0 blob — threw: ${(err as Error).message}`);
+      }
+
+      // And it must refuse the same things crypto.ts refuses.
+      await rejects("recovery file rejects a wrong password", () =>
+        recoveryDecrypt(new Uint8Array(ct.slice(0)), FIXTURES.password + "wrong", null)
+      );
+      await rejects("recovery file rejects a tampered ciphertext", () => {
+        const tampered = new Uint8Array(ct.slice(0));
+        tampered[tampered.length - 1] ^= 0xff;
+        return recoveryDecrypt(tampered, FIXTURES.password, null);
+      });
+      await rejects("recovery file rejects truncated input", () =>
+        recoveryDecrypt(new Uint8Array(ct.slice(0, 20)), FIXTURES.password, null)
+      );
+    }
+  }
 
   // ---- Summary ----
   console.log(`\n${passed} passed, ${failures} failed`);

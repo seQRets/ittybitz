@@ -11,6 +11,9 @@ const APP_SHELL = [
   '/apple-touch-icon.png',
   '/icon-192x192.png',
   '/icon-512x512.png',
+  // The standalone recovery tool. Precached so an installed app can still
+  // hand the user their offline decryption tool with no network.
+  '/ittybitz-recovery.html',
 ];
 
 // Content-hashed build output (JS chunks, CSS), injected at build time by
