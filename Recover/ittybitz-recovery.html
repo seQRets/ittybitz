@@ -1,0 +1,566 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IttyBitz Recovery — offline decryption</title>
+<!-- Enforces the "no network" promise rather than merely asserting it: this
+     page cannot fetch, load, or send anything anywhere. default-src 'none'
+     blocks every network destination; the two 'unsafe-inline' allowances
+     cover only this file's own inline style and script blocks. blob: is
+     permitted so a decrypted file can be handed to the browser's download
+     mechanism, which never touches the network. -->
+<meta http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'none'; img-src 'none'; form-action 'none'; base-uri 'none'">
+<!--
+  ═══════════════════════════════════════════════════════════════════════
+  IttyBitz Recovery Tool — standalone offline decryption
+  ═══════════════════════════════════════════════════════════════════════
+
+  WHAT THIS IS
+  A single self-contained HTML file that decrypts files and text encrypted
+  by IttyBitz (https://ittybitz.app). It has no dependencies, makes no
+  network requests, and needs no installation. Open it in any modern
+  browser — from a USB stick, an air-gapped machine, anywhere.
+
+  WHY IT EXISTS
+  So your ability to recover your own data never depends on ittybitz.app
+  resolving, on GitHub Pages serving, on this project still being
+  maintained, or on its author still being alive. Keep a copy of this file
+  next to your encrypted files.
+
+  It decrypts only. It cannot encrypt. That is deliberate: it halves the
+  amount of code you have to trust, and new long-term secrets should be
+  created with the reviewed, tested application.
+
+  ═══════════════════════════════════════════════════════════════════════
+  THE FILE FORMAT — documented so this can be reimplemented from scratch
+  ═══════════════════════════════════════════════════════════════════════
+
+  Two container formats exist. Both use identical key derivation.
+
+    v1 (IttyBitz v2.0.0 and later)
+      bytes 0-3    magic "IBTZ"  (0x49 0x42 0x54 0x5A)
+      byte  4      format version (0x01)
+      bytes 5-20   salt        (16 bytes)
+      bytes 21-32  IV          (12 bytes)
+      bytes 33+    ciphertext  (AES-GCM, includes the 16-byte auth tag)
+
+    v0 (IttyBitz v1.0 through v1.4.0 — no header)
+      bytes 0-15   salt        (16 bytes)
+      bytes 16-27  IV          (12 bytes)
+      bytes 28+    ciphertext  (AES-GCM, includes the 16-byte auth tag)
+
+  A blob is v1 if and only if its first four bytes are exactly "IBTZ".
+
+  KEY DERIVATION (identical for both formats, unchanged since v1.0)
+      key material = UTF-8 bytes of the password
+                     followed by the raw bytes of the key file, if one was
+                     used (simple concatenation, password first)
+      PBKDF2, hash SHA-256, 1,000,000 iterations, the salt above
+      output: a 256-bit AES-GCM key
+
+  DECRYPTION
+      AES-256-GCM with the derived key and the IV above.
+      Authentication failure means a wrong password, a wrong key file, or
+      corrupted data — the three are indistinguishable by design.
+
+  Text secrets are stored as Base64 of the container bytes; file secrets
+  are the raw container bytes, conventionally with an .ibitz extension.
+
+  ═══════════════════════════════════════════════════════════════════════
+  Verify this file's integrity before trusting it (recommended):
+      shasum -a 256 ittybitz-recovery.html
+  and compare against the checksum published with the IttyBitz release
+  you downloaded it from.
+  ═══════════════════════════════════════════════════════════════════════
+-->
+<style>
+  /* Values mirror the main app's dark theme so this file feels like the same
+     product. Plain CSS, no build step — this file has to keep working,
+     unmodified, for decades. */
+  :root {
+    color-scheme: dark;
+    --background: #000;
+    --foreground: #f4f4f5;
+    --muted-foreground: #a1a1aa;
+    --accent: #f59e0b;
+    --success: rgb(44, 221, 150);
+    --destructive: rgb(220, 40, 40);
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+  body {
+    margin: 0; padding: 0 1rem 4rem; min-height: 100vh;
+    background-color: var(--background);
+    background-image:
+      radial-gradient(ellipse 80% 60% at 50% -10%, rgba(245, 158, 11, 0.12), transparent 60%),
+      radial-gradient(ellipse 60% 50% at 100% 100%, rgba(239, 68, 68, 0.06), transparent 60%);
+    background-attachment: fixed;
+    color: var(--foreground);
+    font: 15px/1.55 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+    letter-spacing: -0.011em;
+  }
+  .wrap { max-width: 680px; margin: 0 auto; padding-top: 3rem; }
+
+  /* Hero — mirrors the app's h1: 44px, 56px from the sm breakpoint. */
+  header { text-align: center; margin-bottom: 2.5rem; }
+  .brand { display: flex; align-items: center; justify-content: center; gap: .625rem; margin-bottom: 1.25rem; }
+  .brand span { font-size: 17px; font-weight: 600; letter-spacing: -0.02em; }
+  h1 {
+    margin: 0;
+    font-size: 44px; line-height: 1.05; font-weight: 700; letter-spacing: -0.04em;
+    background: linear-gradient(180deg, #fff 0%, #b8b8be 100%);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent; color: transparent;
+  }
+  @media (min-width: 640px) { h1 { font-size: 56px; } }
+  .sub { color: var(--muted-foreground); font-size: 17px; line-height: 1.35; margin: 1rem auto 0; max-width: 30rem; }
+  .badge {
+    display: inline-block; font-size: .72rem; padding: .2rem .6rem; border-radius: 20px;
+    background: rgba(44, 221, 150, .08); border: 1px solid rgba(44, 221, 150, .3);
+    color: var(--success); margin-top: 1rem;
+  }
+
+  /* Card — the app's .glass-card. */
+  .card {
+    background: hsla(0, 0%, 100%, 0.04);
+    -webkit-backdrop-filter: blur(40px) saturate(180%);
+    backdrop-filter: blur(40px) saturate(180%);
+    border: 1px solid hsla(0, 0%, 100%, 0.08);
+    box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.5);
+    border-radius: 20px; padding: 1.5rem;
+  }
+  @media (min-width: 640px) { .card { padding: 2rem; } }
+
+  /* File / Text pills. */
+  .pills { display: flex; gap: 2px; border-radius: 12px; background: hsla(0,0%,100%,0.04); padding: 4px; margin-bottom: 1.25rem; }
+  .pills button {
+    flex: 1; cursor: pointer; border: 0; background: none; border-radius: 8px;
+    padding: .5rem .75rem; text-align: center; font: inherit; font-size: 13px; font-weight: 500;
+    color: var(--muted-foreground); transition: all .15s;
+  }
+  .pills button[aria-selected="true"] {
+    background: hsla(0,0%,100%,0.10); color: var(--foreground);
+    box-shadow: 0 1px 2px rgba(0,0,0,.15);
+  }
+  .pills button:hover { color: var(--foreground); }
+
+  /* Drop zone — mirrors the app's FileSelector. */
+  .drop {
+    position: relative; display: flex; width: 100%; cursor: pointer;
+    flex-direction: column; align-items: center; justify-content: center;
+    border-radius: 12px; border: 1px dashed hsla(0,0%,100%,0.15);
+    background: hsla(0,0%,100%,0.02);
+    padding: 2.5rem 1.5rem; text-align: center; transition: all .2s;
+  }
+  .drop:hover { border-color: rgba(245,158,11,.5); background: rgba(245,158,11,.03); }
+  .drop.dragging { border-color: rgba(245,158,11,.6); background: rgba(245,158,11,.05); }
+  .drop:focus-visible { outline: 2px solid rgba(245,158,11,.6); outline-offset: 2px; }
+  .drop .tile {
+    margin-bottom: .75rem; display: grid; place-items: center;
+    height: 3rem; width: 3rem; border-radius: 12px;
+    background: hsla(0,0%,100%,0.05); color: var(--accent);
+  }
+  .drop h3 { margin: 0; font-size: 15px; font-weight: 500; color: var(--foreground); }
+  .drop p {
+    margin: .25rem 0 0; font-size: 13px; color: var(--muted-foreground);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%;
+  }
+  .drop p.picked { color: var(--accent); font-weight: 500; }
+  .clear { text-align: right; margin-top: .5rem; }
+  .clear button { background: none; border: 0; color: var(--destructive); font: inherit; font-size: 12px; cursor: pointer; padding: 0; }
+  .hidden-input { display: none; }
+
+  /* Fields. */
+  .row { margin-bottom: 1.25rem; }
+  label { display: block; font-size: 13px; font-weight: 500; color: var(--muted-foreground); margin-bottom: .5rem; }
+  textarea, input[type=password] {
+    width: 100%; padding: .7rem .75rem; border-radius: 12px; font: inherit;
+    background: hsla(0,0%,100%,0.04); border: 1px solid hsla(0,0%,100%,0.10);
+    color: var(--foreground);
+  }
+  textarea { min-height: 116px; resize: vertical; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
+  input[type=password] { height: 2.75rem; font-size: 15px; }
+  textarea:focus, input:focus { outline: none; border-color: rgba(245,158,11,.5); }
+
+  /* Action button. */
+  .go {
+    margin-top: .5rem; width: 100%; border: 0; border-radius: 12px; cursor: pointer;
+    background: linear-gradient(to bottom right, #fbbf24, #f97316 50%, #ef4444);
+    color: #000; font: inherit; font-size: 15px; font-weight: 600; padding: .875rem;
+    box-shadow: 0 8px 24px -8px rgba(245,158,11,0.5); transition: all .2s;
+    display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
+  }
+  .go:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 12px 32px -8px rgba(245,158,11,0.65); }
+  .go:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+
+  /* Result. */
+  .out {
+    margin-top: 1.25rem; padding: .875rem; border-radius: 12px; display: none;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px;
+    white-space: pre-wrap; word-break: break-word;
+  }
+  .out.ok  { display: block; background: rgba(44,221,150,.06); border: 1px solid rgba(44,221,150,.35); color: var(--success); }
+  .out.err { display: block; background: rgba(220,40,40,.07); border: 1px solid rgba(220,40,40,.4); color: #fca5a5; }
+  .out.blur { filter: blur(4px); cursor: pointer; transition: filter .15s; }
+  .hint { font-size: 12px; color: #6e6e77; margin-top: .625rem; }
+  .note { font-size: 13px; color: var(--muted-foreground); text-align: center; margin-top: 2rem; line-height: 1.7; }
+  .note code { color: var(--foreground); font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <svg viewBox="0 0 512 512" width="28" height="28" aria-label="IttyBitz Logo" role="img" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="ibHdrGrad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#fbbf24" />
+            <stop offset="20%" stop-color="#f59e0b" />
+            <stop offset="100%" stop-color="#ef4444" />
+          </linearGradient>
+          <mask id="ibHdrKey">
+            <rect width="512" height="512" fill="white" />
+            <circle cx="256" cy="205" r="51" fill="black" />
+            <path d="M 230 205 L 282 205 L 297 369 L 215 369 Z" fill="black" />
+          </mask>
+        </defs>
+        <rect width="512" height="512" rx="48" fill="url(#ibHdrGrad)" mask="url(#ibHdrKey)" />
+      </svg>
+      <span>IttyBitz</span>
+    </div>
+    <h1>IttyBitz Recovery</h1>
+    <p class="sub">Standalone offline decryption.<br>No network. No installation. No dependencies.</p>
+    <span class="badge" id="netbadge">checking&#8230;</span>
+  </header>
+
+  <section class="card">
+    <div class="pills" role="tablist">
+      <button role="tab" id="tab-file" aria-selected="true">Decrypt a File</button>
+      <button role="tab" id="tab-text" aria-selected="false">Decrypt Text</button>
+    </div>
+
+    <div class="row" id="pane-file">
+      <div class="drop" id="drop-main" role="button" tabindex="0">
+        <div class="tile">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/>
+            <path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/>
+          </svg>
+        </div>
+        <h3>Drop your encrypted file here</h3>
+        <p id="main-desc">or click to browse &#183; .ibitz</p>
+      </div>
+      <div class="clear" id="main-clear" style="display:none"><button type="button">Clear</button></div>
+      <input class="hidden-input" type="file" id="f">
+    </div>
+
+    <div class="row" id="pane-text" style="display:none">
+      <label for="t">Encrypted text</label>
+      <textarea id="t" placeholder="Paste the Base64 output from IttyBitz&#8230;" spellcheck="false"></textarea>
+    </div>
+
+    <div class="row">
+      <label for="p">Password</label>
+      <input type="password" id="p" autocomplete="off" spellcheck="false" placeholder="Enter decryption password">
+    </div>
+
+    <div class="row">
+      <label>Key file <span style="color:#6e6e77">(only if one was used)</span></label>
+      <div class="drop" id="drop-key" role="button" tabindex="0" style="padding:1.75rem 1.5rem">
+        <div class="tile" style="height:2.5rem;width:2.5rem">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/>
+            <circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/>
+          </svg>
+        </div>
+        <h3 style="font-size:14px">Drop your key file here</h3>
+        <p id="key-desc">or click to browse</p>
+      </div>
+      <div class="clear" id="key-clear" style="display:none"><button type="button">Clear</button></div>
+      <input class="hidden-input" type="file" id="k">
+    </div>
+
+    <button class="go" id="go">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/>
+      </svg>
+      <span>Decrypt</span>
+    </button>
+
+    <div class="out" id="out"></div>
+    <div class="hint" id="hint"></div>
+  </section>
+
+  <p class="note">
+    Decryption runs entirely in this page using your browser's built-in Web Crypto.<br>
+    Nothing is uploaded, logged, or stored. Works with the network disconnected.<br>
+    Format and key derivation are documented in this file's source &#8212; <code>view-source:</code> to read it.
+  </p>
+</div>
+<script id="ittybitz-decrypt-core">
+/* ── IttyBitz decryption core ────────────────────────────────────────────
+   Kept free of DOM references so the project's regression suite can extract
+   this exact block and run the historical ciphertext fixtures through it.
+   If you change anything here, `npm run test:crypto` must still pass.
+   ───────────────────────────────────────────────────────────────────────── */
+var ITTYBITZ_PBKDF2_ITERATIONS = 1000000;
+var ITTYBITZ_SALT_LENGTH = 16;
+var ITTYBITZ_IV_LENGTH = 12;
+var ITTYBITZ_MAGIC = [0x49, 0x42, 0x54, 0x5a]; // "IBTZ"
+var ITTYBITZ_MAX_VERSION = 1;
+
+function ittybitzFormatVersion(bytes) {
+  if (bytes.length < 5) return 0;
+  for (var i = 0; i < 4; i++) if (bytes[i] !== ITTYBITZ_MAGIC[i]) return 0;
+  return bytes[4];
+}
+
+async function ittybitzDeriveKey(password, salt, keyFileBytes) {
+  var pw = new TextEncoder().encode(password);
+  var material;
+  if (keyFileBytes && keyFileBytes.length) {
+    material = new Uint8Array(pw.length + keyFileBytes.length);
+    material.set(pw, 0);
+    material.set(keyFileBytes, pw.length);
+  } else {
+    material = pw;
+  }
+  var base = await crypto.subtle.importKey('raw', material, { name: 'PBKDF2' }, false, ['deriveKey']);
+  return crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt: salt, iterations: ITTYBITZ_PBKDF2_ITERATIONS, hash: 'SHA-256' },
+    base,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['decrypt']
+  );
+}
+
+/**
+ * Decrypt an IttyBitz container.
+ * @param {Uint8Array} bytes     raw container bytes (v0 or v1)
+ * @param {string}     password
+ * @param {Uint8Array|null} keyFileBytes
+ * @returns {Promise<Uint8Array>} plaintext bytes
+ */
+async function ittybitzDecrypt(bytes, password, keyFileBytes) {
+  if (!bytes || !bytes.length) throw new Error('No data to decrypt.');
+
+  var version = ittybitzFormatVersion(bytes);
+  if (version > ITTYBITZ_MAX_VERSION) {
+    throw new Error(
+      'This file was encrypted with a newer version of IttyBitz than this recovery tool understands.'
+    );
+  }
+  var offset = version >= 1 ? 5 : 0;
+
+  var headerEnd = offset + ITTYBITZ_SALT_LENGTH + ITTYBITZ_IV_LENGTH;
+  if (bytes.length <= headerEnd) throw new Error('Invalid encrypted data format — file is too short.');
+
+  var salt = bytes.slice(offset, offset + ITTYBITZ_SALT_LENGTH);
+  var iv = bytes.slice(offset + ITTYBITZ_SALT_LENGTH, headerEnd);
+  var ciphertext = bytes.slice(headerEnd);
+
+  var key = await ittybitzDeriveKey(password, salt, keyFileBytes);
+  var plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: iv }, key, ciphertext);
+  return new Uint8Array(plain);
+}
+</script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var mode = 'file';
+  var mainFile = null;
+  var keyFile = null;
+
+  $('netbadge').textContent = navigator.onLine ? 'online \u2014 but nothing is sent' : 'offline \u2014 working normally';
+
+  // Web Crypto is only exposed in a "secure context". Opening this file
+  // directly from disk (file://) qualifies in current Chrome, Firefox, Edge
+  // and Safari, but the spec leaves room for variation and some older or
+  // restricted browsers do not. If that happens, say so plainly and give a
+  // way out - failing with "cannot read property 'importKey' of undefined"
+  // at the moment someone is trying to recover their data would be cruel.
+  if (!(window.crypto && window.crypto.subtle)) {
+    document.querySelector('.card').innerHTML =
+      '<div class="out err" style="display:block">' +
+      '<strong>This browser will not allow decryption from a local file.</strong>\n\n' +
+      'Your data is fine \u2014 this is a browser restriction, not a problem with your file.\n' +
+      'Web Crypto is unavailable here because the page is not in a "secure context".\n\n' +
+      'Either:\n' +
+      '  1. Open this same file in Chrome, Firefox, Edge or Safari, or\n' +
+      '  2. Serve the folder locally and open it over http://localhost \u2014 from a\n' +
+      '     terminal in the folder containing this file, run:\n\n' +
+      '       python3 -m http.server 8000\n\n' +
+      '     then visit http://localhost:8000/ittybitz-recovery.html\n\n' +
+      'The file format is fully documented in this page\'s source, so the data\n' +
+      'can also be decrypted with any AES-256-GCM / PBKDF2 implementation.' +
+      '</div>';
+    return;
+  }
+
+  function setMode(m) {
+    mode = m;
+    $('tab-file').setAttribute('aria-selected', String(m === 'file'));
+    $('tab-text').setAttribute('aria-selected', String(m === 'text'));
+    $('pane-file').style.display = m === 'file' ? '' : 'none';
+    $('pane-text').style.display = m === 'text' ? '' : 'none';
+    reset();
+  }
+  $('tab-file').onclick = function () { setMode('file'); };
+  $('tab-text').onclick = function () { setMode('text'); };
+
+  // Mirrors the main app's filename validation: rejects path traversal, null
+  // bytes, C0 control characters and Unicode bidi overrides (U+202A-U+202E,
+  // U+2066-U+2069), which can disguise a file's real extension when the
+  // decrypted result is downloaded.
+  var BAD_NAME = /[\u0000-\u001f\u202a-\u202e\u2066-\u2069]/;
+  function validName(name) {
+    if (name.indexOf('..') >= 0 || name.indexOf('/') >= 0 || name.indexOf('\\') >= 0) return false;
+    if (name.length > 255) return false;
+    return !BAD_NAME.test(name);
+  }
+
+  function wireDrop(zoneId, inputId, descId, clearId, onPick) {
+    var zone = $(zoneId), input = $(inputId), desc = $(descId), clear = $(clearId);
+    var defaultText = desc.textContent;
+
+    function pick(file) {
+      if (!file) return;
+      if (!validName(file.name)) {
+        show('err', 'That filename contains characters that are not allowed.');
+        return;
+      }
+      onPick(file);
+      desc.textContent = file.name;
+      desc.className = 'picked';
+      clear.style.display = '';
+    }
+
+    zone.addEventListener('click', function () { input.click(); });
+    zone.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.click(); }
+    });
+    input.addEventListener('change', function () { pick(input.files && input.files[0]); });
+
+    ['dragenter', 'dragover'].forEach(function (ev) {
+      zone.addEventListener(ev, function (e) {
+        e.preventDefault(); e.stopPropagation(); zone.classList.add('dragging');
+      });
+    });
+    ['dragleave', 'drop'].forEach(function (ev) {
+      zone.addEventListener(ev, function (e) {
+        e.preventDefault(); e.stopPropagation(); zone.classList.remove('dragging');
+      });
+    });
+    zone.addEventListener('drop', function (e) {
+      if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) {
+        pick(e.dataTransfer.files[0]);
+      }
+    });
+
+    clear.querySelector('button').addEventListener('click', function (e) {
+      e.stopPropagation();
+      onPick(null); input.value = '';
+      desc.textContent = defaultText; desc.className = '';
+      clear.style.display = 'none';
+    });
+  }
+
+  wireDrop('drop-main', 'f', 'main-desc', 'main-clear', function (f) { mainFile = f; });
+  wireDrop('drop-key', 'k', 'key-desc', 'key-clear', function (f) { keyFile = f; });
+
+  // Swallow drops on the rest of the window so a near-miss does not make the
+  // browser navigate away from the page and lose what the user has typed.
+  ['dragover', 'drop'].forEach(function (ev) {
+    window.addEventListener(ev, function (e) { e.preventDefault(); }, false);
+  });
+
+  function readBytes(file) {
+    return new Promise(function (resolve, reject) {
+      if (!file) return resolve(null);
+      var r = new FileReader();
+      r.onload = function () { resolve(new Uint8Array(r.result)); };
+      r.onerror = function () { reject(new Error('Could not read ' + file.name)); };
+      r.readAsArrayBuffer(file);
+    });
+  }
+
+  function b64ToBytes(s) {
+    var bin = atob(String(s).replace(/\s+/g, ''));
+    var out = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
+  }
+
+  function show(cls, text) { var o = $('out'); o.className = 'out ' + cls; o.textContent = text; }
+  function reset() { $('out').className = 'out'; $('out').textContent = ''; $('hint').textContent = ''; }
+
+  function looksLikeText(bytes) {
+    var n = Math.min(bytes.length, 512), ctrl = 0;
+    for (var i = 0; i < n; i++) {
+      var b = bytes[i];
+      if (b === 0) return false;
+      if (b < 9 || (b > 13 && b < 32)) ctrl++;
+    }
+    return ctrl / Math.max(n, 1) < 0.05;
+  }
+
+  $('go').onclick = async function () {
+    var btn = this;
+    btn.disabled = true;
+    reset();
+
+    try {
+      var input = null, outName = 'decrypted';
+      if (mode === 'file') {
+        if (!mainFile) throw new Error('Drop an encrypted file above, or click to browse.');
+        input = await readBytes(mainFile);
+        outName = mainFile.name.replace(/\.ibitz$/i, '') || 'decrypted';
+      } else {
+        var txt = $('t').value.trim();
+        if (!txt) throw new Error('Paste the encrypted text first.');
+        try { input = b64ToBytes(txt); }
+        catch (e) { throw new Error('That does not look like valid Base64 text.'); }
+      }
+
+      var pw = $('p').value;
+      if (!pw) throw new Error('Enter the password.');
+
+      var kfBytes = await readBytes(keyFile);
+      show('ok', 'Deriving key (1,000,000 PBKDF2 iterations \u2014 this takes a moment)\u2026');
+
+      var plain = await ittybitzDecrypt(input, pw, kfBytes);
+
+      if (mode === 'text' || looksLikeText(plain)) {
+        show('ok', new TextDecoder().decode(plain));
+        $('out').classList.add('blur');
+        $('out').title = 'Click to reveal';
+        $('out').onclick = function () { this.classList.toggle('blur'); };
+        $('hint').textContent = 'Decrypted successfully. Click the result to reveal or hide it.';
+      } else {
+        var blob = new Blob([plain], { type: 'application/octet-stream' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url; a.download = outName;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        show('ok', 'Decrypted successfully \u2014 downloaded as "' + outName + '".');
+      }
+    } catch (err) {
+      var m = err && err.message ? err.message : String(err);
+      if (/operation-specific reason|OperationError|decrypt/i.test(m) &&
+          !/newer version|too short|Base64|Drop an|Enter the|Paste the|filename/i.test(m)) {
+        m = 'Decryption failed. The password or key file is wrong, or the data is corrupted.';
+      }
+      show('err', m);
+    } finally {
+      btn.disabled = false;
+    }
+  };
+})();
+</script>
+</body>
+</html>

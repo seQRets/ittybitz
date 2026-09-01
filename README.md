@@ -15,6 +15,14 @@ IttyBitz offers a secure and private way to encrypt sensitive information direct
 
 <br/>
 
+> ### 🪶 Locked out? Start here.
+>
+> **[⬇️ Get the Recovery tool →](Recover/)**
+>
+> One 26 KB HTML file that decrypts your IttyBitz data with **no installation, no network and no dependencies** — even if this website, this project and its author are all gone. Save it next to your encrypted files.
+
+<br/>
+
 ## ⚙️ Core features
 
 Here’s what you can do with IttyBitz:
@@ -93,7 +101,9 @@ The current audit findings and accepted tradeoffs are tracked in-repo: [SECURITY
 
 ## 🪶 Recovery tool — decrypt without IttyBitz
 
-**[Download `ittybitz-recovery.html`](https://ittybitz.app/ittybitz-recovery.html)** (26 KB, one file)
+**[⬇️ Get it from the `Recover/` folder](Recover/)** · [direct download](https://ittybitz.app/ittybitz-recovery.html) (26 KB, one file)
+
+It lives in [`Recover/`](Recover/) at the top level of this repository, so it stays easy to find years from now rather than buried somewhere only developers look.
 
 A standalone page that decrypts your IttyBitz files with **no dependencies, no network, no installation and no build step**. Save it alongside your encrypted data — on the same USB stick, the same backup drive, the same safe.
 

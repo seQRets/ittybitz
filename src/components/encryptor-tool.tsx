@@ -21,6 +21,7 @@ import {
   Shield,
   Globe,
   UserX,
+  LifeBuoy,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -1303,6 +1304,18 @@ export function EncryptorTool() {
             </Dialog>
           </div>
           <div className="flex items-center gap-3">
+            {/* Not target="_blank": the recovery tool is the thing you reach
+                for when something has gone wrong, and it should open in place
+                rather than behind a popup blocker. Plain href, no router —
+                it is a static file in public/, not a Next.js route. */}
+            <a
+              href="/ittybitz-recovery.html"
+              className="flex items-center gap-1 text-accent hover:underline"
+              title="Standalone offline decryption tool — works without this app"
+            >
+              <LifeBuoy className="h-3 w-3" />
+              Recovery tool
+            </a>
             <a href="https://github.com/seQRets/ittybitz" target="_blank" rel="noopener noreferrer" className="hover:underline">GitHub</a>
             <span>v2.9.0 🦕 Archaeopteryx</span>
           </div>
