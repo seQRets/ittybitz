@@ -2,9 +2,7 @@
 // Cache version: bump this on every release to invalidate stale caches
 const CACHE_VERSION = 'ittybitz-v2.8.2';
 
-// App shell files to precache on install.
-// For a static Next.js export the HTML entry point and key assets are enough;
-// the rest (JS chunks, CSS) are picked up at runtime via the fetch handler.
+// Static, hand-maintained part of the app shell.
 const APP_SHELL = [
   '/',
   '/logo.svg',
@@ -15,11 +13,35 @@ const APP_SHELL = [
   '/icon-512x512.png',
 ];
 
+// Content-hashed build output (JS chunks, CSS), injected at build time by
+// scripts/inject-sw-assets.mjs. DO NOT EDIT BY HAND — the filenames change
+// every build.
+//
+// This list is why offline works. These files cannot be left to the runtime
+// fetch handler to pick up opportunistically: on a first visit the page's
+// asset requests complete BEFORE this worker controls the page, so they
+// never reach the fetch handler and never get cached. The app is a React
+// SPA whose HTML is an empty shell, so without them an offline launch
+// renders nothing but the manifest's background colour.
+//
+// It also includes chunks index.html does not reference directly — notably
+// the lazily-imported BIP-39 wordlist — so seed detection works offline too.
+const BUILD_ASSETS = [
+  /* __BUILD_ASSETS__ */
+];
+
+// Deduplicated: '/' appears in APP_SHELL and index.html is not listed twice.
+const PRECACHE = [...new Set([...APP_SHELL, ...BUILD_ASSETS])];
+
 // ---- Install: precache the app shell ----
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_VERSION).then((cache) => {
-      return cache.addAll(APP_SHELL);
+      // addAll is atomic: if any entry fails the install fails, this worker
+      // does not activate, and any previously installed worker keeps serving.
+      // That is the behaviour we want — a half-populated cache is exactly the
+      // silent breakage this list exists to prevent.
+      return cache.addAll(PRECACHE);
     })
   );
   // Activate immediately instead of waiting for existing tabs to close

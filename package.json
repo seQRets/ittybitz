@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 9002",
-    "build": "next build && node scripts/apply-csp-hashes.mjs",
+    "build": "next build && node scripts/apply-csp-hashes.mjs && node scripts/inject-sw-assets.mjs",
     "typecheck": "tsc --noEmit",
     "test:crypto": "node scripts/crypto-regression.mts",
     "analyze": "ANALYZE=true next build --webpack"
