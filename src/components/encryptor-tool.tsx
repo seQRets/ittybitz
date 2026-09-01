@@ -856,14 +856,14 @@ export function EncryptorTool() {
             onClick={() => handleInputTypeChange('file')}
             className={inputTypePillClasses(inputType === 'file')}
           >
-            File
+            {currentMode === 'encrypt' ? 'Encrypt a File' : 'Decrypt a File'}
           </button>
           <button
             type="button"
             onClick={() => handleInputTypeChange('text')}
             className={inputTypePillClasses(inputType === 'text')}
           >
-            Text
+            {currentMode === 'encrypt' ? 'Encrypt Text' : 'Decrypt Text'}
           </button>
         </div>
 
@@ -1188,7 +1188,8 @@ export function EncryptorTool() {
         ) : (
           currentMode === 'encrypt' ? <Lock className="mr-2 h-5 w-5" /> : <Unlock className="mr-2 h-5 w-5" />
         )}
-        {currentMode === 'encrypt' ? `Encrypt ${inputType === 'file' ? 'File' : 'Text'}` : `Decrypt ${inputType === 'file' ? 'File' : 'Text'}`}
+        {/* Just the verb — the File/Text pills above already name the object. */}
+        {currentMode === 'encrypt' ? 'Encrypt' : 'Decrypt'}
       </Button>
     </div>
   );
