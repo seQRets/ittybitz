@@ -101,7 +101,7 @@ The current audit findings and accepted tradeoffs are tracked in-repo: [SECURITY
 
 ## 🪶 Recovery tool — decrypt without IttyBitz
 
-**[⬇️ Download it](https://github.com/seQRets/ittybitz/releases/latest/download/ittybitz-recovery.html)** (26 KB, one file) · [open it in your browser](https://ittybitz.app/ittybitz-recovery.html) · [what it is](Recover/)
+**[⬇️ Download it](https://github.com/seQRets/ittybitz/releases/download/v2.9.0/ittybitz-recovery.html)** (26 KB, one file) · [open it in your browser](https://ittybitz.app/ittybitz-recovery.html) · [how to save and use it](Recover/)
 
 [`Recover/`](Recover/) at the top level of this repository explains it in full — what it is, how to verify it, and where the file itself lives — so it stays easy to find years from now rather than buried somewhere only developers look.
 

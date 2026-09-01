@@ -1,10 +1,10 @@
 # 🪶 IttyBitz Recovery
 
-### ⬇️ [**Download the Recovery tool**](https://github.com/seQRets/ittybitz/releases/latest/download/ittybitz-recovery.html)
+### ⬇️ [**Download the Recovery tool**](https://github.com/seQRets/ittybitz/releases/download/v2.9.0/ittybitz-recovery.html)
 
-*Saves the file to your computer · 26 KB · no installation · works offline forever*
+*Saves `ittybitz-recovery.html` to your computer · 26 KB · no installation · works offline forever*
 
-Or **[open it in your browser](https://ittybitz.app/ittybitz-recovery.html)** to use it right now without saving. Downloading is the point, though — see below.
+Or **[open it in your browser](https://ittybitz.app/ittybitz-recovery.html)** to use it right now without saving — but a copy on your own disk is the whole point.
 
 <br/>
 
@@ -28,14 +28,30 @@ This folder exists so you can *find* it. Recovering your own data should never d
 
 <br/>
 
-## How to use it
+## Getting the file onto your disk
 
-1. Download it using the link at the top. Your browser saves `ittybitz-recovery.html` to your computer.
-2. Open the saved file in any browser. Double-clicking it works; no server and no internet needed.
-3. Drop in your encrypted file, or paste your encrypted text.
-4. Enter your password, and your key file if you used one.
+**The download link above** is the direct route — your browser saves the file straight to your computer, no steps in between.
+
+**If you would rather save it from the page**, or the link ever stops working:
+
+1. Open **[ittybitz.app/ittybitz-recovery.html](https://ittybitz.app/ittybitz-recovery.html)**
+2. Press **⌘S** (Mac) or **Ctrl+S** (Windows / Linux) — or use *File → Save Page As…*
+3. If your browser offers a format, choose **"Web Page, HTML Only"** — not "Complete". The page is a single file; "Complete" adds a folder you don't need.
+4. Save it wherever your encrypted data is — the same USB stick, the same backup drive.
+
+A copy saved this way runs perfectly well. It may differ from the published file by a few bytes depending on the browser, so if you want the checksum below to match exactly, use the download link rather than Save As.
+
+<br/>
+
+## Using it
+
+1. **Double-click the saved file.** It opens in your browser and runs from your disk. No server, no internet, no installation.
+2. Drop in your encrypted file, or paste your encrypted text.
+3. Enter your password, and your key file if you used one.
 
 That's it. Nothing is uploaded, because nothing *can* be uploaded — see below.
+
+You can disconnect from the network entirely first, and it will work exactly the same. That is the intended way to use it.
 
 <br/>
 
