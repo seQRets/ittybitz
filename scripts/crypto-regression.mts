@@ -261,7 +261,7 @@ async function main() {
   );
 
   // ---- 6. Standalone recovery file ----
-  // Recover/ittybitz-recovery.html is a single self-contained page that
+  // public/ittybitz-recovery.html is a single self-contained page that
   // decrypts IttyBitz containers with no dependencies, no network and no
   // build step, so a user can recover their data even if this project,
   // its domain and its author are all gone.
@@ -271,15 +271,14 @@ async function main() {
   // its own claims: the decrypt core is extracted from the HTML and every
   // historical fixture above is replayed through it. If the recovery file
   // and crypto.ts ever disagree about any real ciphertext, this fails.
-  console.log("\nStandalone recovery file (Recover/ittybitz-recovery.html):");
+  console.log("\nStandalone recovery file (public/ittybitz-recovery.html):");
 
-  // Recover/ is the single tracked copy and the only one anybody edits. The
-  // served file at public/ittybitz-recovery.html is generated from it by
-  // scripts/sync-recovery.mjs at dev/build time and is gitignored, so there
-  // is no second copy to drift from this one. Reading the canonical file
-  // also means this suite needs no build step — which is why its workflow
-  // can skip npm ci entirely.
-  const recoveryHtml = readFileSync(join(HERE, "..", "Recover", "ittybitz-recovery.html"), "utf8");
+  // This is the only copy of the recovery tool in the repository. It lives in
+  // public/ because that is what Next.js serves, so it needs no build step to
+  // reach ittybitz.app — and no build step here either, which is why this
+  // suite's workflow can skip npm ci entirely. Recover/README.md is a pointer
+  // to this file, not a second copy of it.
+  const recoveryHtml = readFileSync(join(HERE, "..", "public", "ittybitz-recovery.html"), "utf8");
   const coreMatch = recoveryHtml.match(
     /<script id="ittybitz-decrypt-core">([\s\S]*?)<\/script>/
   );
