@@ -710,6 +710,20 @@ export function EncryptorTool() {
         return;
     }
 
+    // Defence in depth alongside the disabled button. The toggle is a promise
+    // that a key file protects this data; proceeding without one would
+    // encrypt password-only while the UI says otherwise — and the user would
+    // later supply the key file they believe they used, fail, and conclude
+    // the backup is corrupt.
+    if (useKeyFile && !keyFile) {
+        toast({
+          title: "Key File Required",
+          description: "\"Use key file\" is turned on but no key file is selected. Choose one, or turn the option off.",
+          variant: "destructive",
+        });
+        return;
+    }
+
     setIsLoading(true);
     setOutputText('');
     setShowDecryptedText(false);
@@ -815,7 +829,7 @@ export function EncryptorTool() {
       setPassword('');
       setIsLoading(false);
     }
-  }, [file, mode, keyFile, toast, inputType, textSecret, password]);
+  }, [file, mode, keyFile, useKeyFile, toast, inputType, textSecret, password]);
   
   const handleUseKeyFileChange = useCallback((checked: boolean) => {
       setUseKeyFile(checked);
@@ -835,6 +849,8 @@ export function EncryptorTool() {
     const hasInput = inputType === 'file' ? !!file : !!textSecret;
     const hasPassword = !!password;
     if (!hasInput || !hasPassword) return true;
+    // Toggle on, nothing chosen: not a valid state to submit from.
+    if (useKeyFile && !keyFile) return true;
     
     if (mode === 'encrypt' && !passwordIsStrong) {
         return true;
