@@ -33,40 +33,10 @@
   amount of code you have to trust, and new long-term secrets should be
   created with the reviewed, tested application.
 
-  ═══════════════════════════════════════════════════════════════════════
-  THE FILE FORMAT — documented so this can be reimplemented from scratch
-  ═══════════════════════════════════════════════════════════════════════
-
-  Two container formats exist. Both use identical key derivation.
-
-    v1 (IttyBitz v2.0.0 and later)
-      bytes 0-3    magic "IBTZ"  (0x49 0x42 0x54 0x5A)
-      byte  4      format version (0x01)
-      bytes 5-20   salt        (16 bytes)
-      bytes 21-32  IV          (12 bytes)
-      bytes 33+    ciphertext  (AES-GCM, includes the 16-byte auth tag)
-
-    v0 (IttyBitz v1.0 through v1.4.0 — no header)
-      bytes 0-15   salt        (16 bytes)
-      bytes 16-27  IV          (12 bytes)
-      bytes 28+    ciphertext  (AES-GCM, includes the 16-byte auth tag)
-
-  A blob is v1 if and only if its first four bytes are exactly "IBTZ".
-
-  KEY DERIVATION (identical for both formats, unchanged since v1.0)
-      key material = UTF-8 bytes of the password
-                     followed by the raw bytes of the key file, if one was
-                     used (simple concatenation, password first)
-      PBKDF2, hash SHA-256, 1,000,000 iterations, the salt above
-      output: a 256-bit AES-GCM key
-
-  DECRYPTION
-      AES-256-GCM with the derived key and the IV above.
-      Authentication failure means a wrong password, a wrong key file, or
-      corrupted data — the three are indistinguishable by design.
-
-  Text secrets are stored as Base64 of the container bytes; file secrets
-  are the raw container bytes, conventionally with an .ibitz extension.
+  TECHNICAL REFERENCE
+  The IttyBitz source — including the exact container format and key
+  derivation this tool implements — is at:
+      https://github.com/seQRets/ittybitz
 
   ═══════════════════════════════════════════════════════════════════════
   Verify this file's integrity before trusting it (recommended):
@@ -297,7 +267,7 @@
   <p class="note">
     Decryption runs entirely in this page using your browser's built-in Web Crypto.<br>
     Nothing is uploaded, logged, or stored. Works with the network disconnected.<br>
-    Format and key derivation are documented in this file's source &#8212; <code>view-source:</code> to read it.
+    Source &amp; technical reference: <a href="https://github.com/seQRets/ittybitz" target="_blank" rel="noopener noreferrer">github.com/seQRets/ittybitz</a>
   </p>
 </div>
 <script id="ittybitz-decrypt-core">
@@ -395,8 +365,9 @@ async function ittybitzDecrypt(bytes, password, keyFileBytes) {
       '     terminal in the folder containing this file, run:\n\n' +
       '       python3 -m http.server 8000\n\n' +
       '     then visit http://localhost:8000/ittybitz-recovery.html\n\n' +
-      'The file format is fully documented in this page\'s source, so the data\n' +
-      'can also be decrypted with any AES-256-GCM / PBKDF2 implementation.' +
+      'The IttyBitz source and file format are at\n' +
+      'https://github.com/seQRets/ittybitz — the data can also be decrypted\n' +
+      'with any AES-256-GCM / PBKDF2 implementation.' +
       '</div>';
     return;
   }
