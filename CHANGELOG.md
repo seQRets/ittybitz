@@ -8,6 +8,7 @@ Every IttyBitz release, newest first. Full notes for each version live in [`docs
 
 | Version | Date | Summary |
 |---|---|---|
+| [**2.9.3** 🦕 Archaeopteryx](docs/releases/v2.9.3.md) | 2026-09-02 | Offline PWA hardening — no more blank screen; the worker self-repairs on the next online open |
 | [**2.9.2** 🦕 Archaeopteryx](docs/releases/v2.9.2.md) | 2026-09-02 | Recovery app: key file clears on tab switch; footer simplified to a repo link |
 | [**2.9.1** 🦕 Archaeopteryx](docs/releases/v2.9.1.md) | 2026-09-02 | Nine defects from a code review — key-file toggle could be silently ignored; recovery app hardening; spurious first-install banner; Base64 errors named correctly |
 | [**2.9.0** 🦕 Archaeopteryx](docs/releases/v2.9.0.md) | 2026-09-01 | **Standalone Recovery app** — one offline HTML file that decrypts your data without this project existing; offline PWA fixed (it never worked) |

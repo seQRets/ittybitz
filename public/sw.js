@@ -1,6 +1,6 @@
 // IttyBitz Service Worker — hand-rolled, zero dependencies
 // Cache version: bump this on every release to invalidate stale caches
-const CACHE_VERSION = 'ittybitz-v2.9.2';
+const CACHE_VERSION = 'ittybitz-v2.9.3';
 
 // Static, hand-maintained part of the app shell.
 const APP_SHELL = [
@@ -36,6 +36,21 @@ const BUILD_ASSETS = [
 // Deduplicated: '/' appears in APP_SHELL and index.html is not listed twice.
 const PRECACHE = [...new Set([...APP_SHELL, ...BUILD_ASSETS])];
 
+// Last-resort page for an offline launch when the app shell was never cached
+// (e.g. an older worker that only cached the shell, before offline was fixed).
+// Better an honest, actionable message than a blank coloured screen.
+const OFFLINE_FALLBACK_HTML =
+  '<!doctype html><html lang="en"><head><meta charset="utf-8">' +
+  '<meta name="viewport" content="width=device-width, initial-scale=1">' +
+  '<title>IttyBitz — offline setup needed</title></head>' +
+  '<body style="margin:0;min-height:100vh;display:flex;align-items:center;' +
+  'justify-content:center;background:#000;color:#f4f4f5;font:16px/1.6 system-ui,' +
+  '-apple-system,sans-serif;padding:2rem;text-align:center">' +
+  '<div style="max-width:26rem"><h1 style="font-size:1.5rem;margin:0 0 .75rem">IttyBitz</h1>' +
+  '<p style="color:#a1a1aa;margin:0">This device has not finished caching the app ' +
+  'for offline use. Connect to the internet once and reopen IttyBitz to complete ' +
+  'setup — after that it works offline.</p></div></body></html>';
+
 // ---- Install: precache the app shell ----
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -53,25 +68,23 @@ self.addEventListener('install', (event) => {
 
 // ---- Activate: clean up old caches ----
 self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((keys) => {
-      const stale = keys.filter((key) => key !== CACHE_VERSION);
-      // Only an UPDATE has stale caches to clear; a first install has none.
-      // That distinction gates the banner below: telling a brand-new visitor
-      // "a new version is available — tap to reload" is wrong, and on a
-      // security tool it reads as a bug at best and phishing at worst.
-      const isUpdate = stale.length > 0;
-      return Promise.all(stale.map((key) => caches.delete(key))).then(() => {
-        // Take control of all open tabs immediately
-        self.clients.claim();
-        if (!isUpdate) return;
-        // Notify open tabs that a new version replaced a previous one
-        return self.clients.matchAll({ type: 'window' }).then((clients) => {
-          clients.forEach((client) => client.postMessage({ type: 'SW_UPDATED' }));
-        });
-      });
-    })
-  );
+  event.waitUntil((async () => {
+    const keys = await caches.keys();
+    const stale = keys.filter((key) => key !== CACHE_VERSION);
+    // Only an UPDATE has stale caches to clear; a first install has none.
+    // That distinction gates the banner below: telling a brand-new visitor
+    // "a new version is available — tap to reload" is wrong, and on a
+    // security tool it reads as a bug at best and phishing at worst.
+    const isUpdate = stale.length > 0;
+    await Promise.all(stale.map((key) => caches.delete(key)));
+    // install's addAll is atomic, so whenever this worker activates the
+    // precache is already complete — there is nothing to repair here.
+    await self.clients.claim();
+    if (isUpdate) {
+      const clients = await self.clients.matchAll({ type: 'window' });
+      clients.forEach((client) => client.postMessage({ type: 'SW_UPDATED' }));
+    }
+  })());
 });
 
 // ---- Fetch strategies ----
@@ -111,15 +124,25 @@ self.addEventListener('fetch', (event) => {
     url.pathname === '/index.html';
 
   if (isNavigation) {
-    // Network-first with cache fallback (offline support). Only '/' is
-    // precached; any other navigation path (e.g. '/index.html') falls back
-    // to the precached app shell when there is no exact cache match.
+    // Network-first, with an offline fallback that can never resolve to
+    // undefined. `respondWith(undefined)` is treated as a network error and
+    // paints the manifest's blank background — the exact failure this guards
+    // against. Try the exact request, then the precached app shell, then a
+    // tiny built-in page that tells the user what to do rather than showing
+    // nothing.
     event.respondWith(
       fetch(event.request)
         .then((response) => cacheResponse(event.request, response))
-        .catch(() =>
-          caches.match(event.request).then((cached) => cached || caches.match('/'))
-        )
+        .catch(async () => {
+          const cached =
+            (await caches.match(event.request)) ||
+            (await caches.match('/')) ||
+            (await caches.match('/index.html'));
+          if (cached) return cached;
+          return new Response(OFFLINE_FALLBACK_HTML, {
+            headers: { 'Content-Type': 'text/html; charset=utf-8' },
+          });
+        })
     );
     return;
   }
