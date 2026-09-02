@@ -1342,7 +1342,7 @@ export function EncryptorTool() {
               Recovery tool
             </a>
             <a href="https://github.com/seQRets/ittybitz" target="_blank" rel="noopener noreferrer" className="hover:underline">GitHub</a>
-            <span>v2.9.1 🦕 Archaeopteryx</span>
+            <span>v2.9.2 🦕 Archaeopteryx</span>
           </div>
         </div>
       </footer>
