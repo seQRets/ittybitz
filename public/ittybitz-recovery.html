@@ -378,6 +378,10 @@ async function ittybitzDecrypt(bytes, password, keyFileBytes) {
     $('tab-text').setAttribute('aria-selected', String(m === 'text'));
     $('pane-file').style.display = m === 'file' ? '' : 'none';
     $('pane-text').style.display = m === 'text' ? '' : 'none';
+    // The key file is a shared input that applies to whichever mode you
+    // decrypt in. Clear it on a tab switch so a key file chosen for one
+    // secret is never silently applied to the next.
+    if (clearKeyZone) clearKeyZone();
     reset();
   }
   $('tab-file').onclick = function () { setMode('file'); };
@@ -432,16 +436,20 @@ async function ittybitzDecrypt(bytes, password, keyFileBytes) {
       }
     });
 
-    clear.querySelector('button').addEventListener('click', function (e) {
-      e.stopPropagation();
+    function resetZone() {
       onPick(null); input.value = '';
       desc.textContent = defaultText; desc.className = '';
       clear.style.display = 'none';
+    }
+    clear.querySelector('button').addEventListener('click', function (e) {
+      e.stopPropagation();
+      resetZone();
     });
+    return resetZone;
   }
 
   wireDrop('drop-main', 'f', 'main-desc', 'main-clear', function (f) { mainFile = f; });
-  wireDrop('drop-key', 'k', 'key-desc', 'key-clear', function (f) { keyFile = f; });
+  var clearKeyZone = wireDrop('drop-key', 'k', 'key-desc', 'key-clear', function (f) { keyFile = f; });
 
   // Swallow drops on the rest of the window so a near-miss does not make the
   // browser navigate away from the page and lose what the user has typed.
