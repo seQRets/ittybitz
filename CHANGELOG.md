@@ -8,6 +8,7 @@ Every IttyBitz release, newest first. Full notes for each version live in [`docs
 
 | Version | Date | Summary |
 |---|---|---|
+| [**2.9.1** 🦕 Archaeopteryx](docs/releases/v2.9.1.md) | 2026-09-02 | Nine defects from a code review — key-file toggle could be silently ignored; recovery app hardening; spurious first-install banner; Base64 errors named correctly |
 | [**2.9.0** 🦕 Archaeopteryx](docs/releases/v2.9.0.md) | 2026-09-01 | **Standalone Recovery app** — one offline HTML file that decrypts your data without this project existing; offline PWA fixed (it never worked) |
 | [**2.8.2** 🦕 Triceratops](docs/releases/v2.8.2.md) | 2026-08-31 | Next.js 16.3.3 — two Critical RCE advisories patched upstream (not reachable in a static export); supply chain verified against the registry |
 | [**2.8.1** 🦕 Triceratops](docs/releases/v2.8.1.md) | 2026-08-25 | Password generator could emit a password failing the app's own strength gate (1 in 41); BIP-39/SeedQR gated in CI; `npm ci --ignore-scripts` |
