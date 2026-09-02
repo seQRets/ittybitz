@@ -55,22 +55,23 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
-      return Promise.all(
-        keys
-          .filter((key) => key !== CACHE_VERSION)
-          .map((key) => caches.delete(key))
-      );
+      const stale = keys.filter((key) => key !== CACHE_VERSION);
+      // Only an UPDATE has stale caches to clear; a first install has none.
+      // That distinction gates the banner below: telling a brand-new visitor
+      // "a new version is available — tap to reload" is wrong, and on a
+      // security tool it reads as a bug at best and phishing at worst.
+      const isUpdate = stale.length > 0;
+      return Promise.all(stale.map((key) => caches.delete(key))).then(() => {
+        // Take control of all open tabs immediately
+        self.clients.claim();
+        if (!isUpdate) return;
+        // Notify open tabs that a new version replaced a previous one
+        return self.clients.matchAll({ type: 'window' }).then((clients) => {
+          clients.forEach((client) => client.postMessage({ type: 'SW_UPDATED' }));
+        });
+      });
     })
   );
-  // Take control of all open tabs immediately
-  self.clients.claim();
-
-  // Notify all open tabs that a new version is active
-  self.clients.matchAll({ type: 'window' }).then((clients) => {
-    clients.forEach((client) => {
-      client.postMessage({ type: 'SW_UPDATED' });
-    });
-  });
 });
 
 // ---- Fetch strategies ----
