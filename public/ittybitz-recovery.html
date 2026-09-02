@@ -496,16 +496,10 @@ async function ittybitzDecrypt(bytes, password, keyFileBytes) {
   }
 
   function show(cls, text) { var o = $('out'); o.className = 'out ' + cls; o.textContent = text; }
-  function reset() { $('out').className = 'out'; $('out').textContent = ''; $('hint').textContent = ''; }
-
-  function looksLikeText(bytes) {
-    var n = Math.min(bytes.length, 512), ctrl = 0;
-    for (var i = 0; i < n; i++) {
-      var b = bytes[i];
-      if (b === 0) return false;
-      if (b < 9 || (b > 13 && b < 32)) ctrl++;
-    }
-    return ctrl / Math.max(n, 1) < 0.05;
+  function reset() {
+    var o = $('out');
+    o.className = 'out'; o.textContent = ''; o.title = ''; o.onclick = null;
+    $('hint').textContent = '';
   }
 
   $('go').onclick = async function () {
@@ -518,7 +512,12 @@ async function ittybitzDecrypt(bytes, password, keyFileBytes) {
       if (mode === 'file') {
         if (!mainFile) throw new Error('Drop an encrypted file above, or click to browse.');
         input = await readBytes(mainFile);
-        outName = mainFile.name.replace(/\.ibitz$/i, '') || 'decrypted';
+        // Match the main app: strip .ibitz, otherwise prefix so the download
+        // can never silently carry the encrypted file's own name.
+        outName = /\.ibitz$/i.test(mainFile.name)
+          ? mainFile.name.replace(/\.ibitz$/i, '')
+          : 'decrypted-' + mainFile.name;
+        if (!outName) outName = 'decrypted';
       } else {
         var txt = $('t').value.trim();
         if (!txt) throw new Error('Paste the encrypted text first.');
@@ -532,9 +531,22 @@ async function ittybitzDecrypt(bytes, password, keyFileBytes) {
       var kfBytes = await readBytes(keyFile);
       show('ok', 'Deriving key (1,000,000 PBKDF2 iterations \u2014 this takes a moment)\u2026');
 
-      var plain = await ittybitzDecrypt(input, pw, kfBytes);
+      var plain;
+      try {
+        plain = await ittybitzDecrypt(input, pw, kfBytes);
+      } catch (e) {
+        // Web Crypto signals a failed AES-GCM authentication (wrong password
+        // or key file, or corrupted data) as a DOMException. Our own format
+        // checks throw plain Errors with messages worth showing verbatim.
+        // Classifying by type means a filename or message text can never
+        // accidentally trigger the wrong explanation.
+        if (e instanceof DOMException) {
+          throw new Error('Decryption failed. The password or key file is wrong, or the data is corrupted.');
+        }
+        throw e;
+      }
 
-      if (mode === 'text' || looksLikeText(plain)) {
+      if (mode === 'text') {
         show('ok', new TextDecoder().decode(plain));
         $('out').classList.add('blur');
         $('out').title = 'Click to reveal';
@@ -549,15 +561,16 @@ async function ittybitzDecrypt(bytes, password, keyFileBytes) {
         URL.revokeObjectURL(url);
         show('ok', 'Decrypted successfully \u2014 downloaded as "' + outName + '".');
       }
+      // Best-effort erase now that the plaintext has been handed off (the
+      // Blob and TextDecoder both copy). Same posture as the main app.
+      plain.fill(0);
     } catch (err) {
-      var m = err && err.message ? err.message : String(err);
-      if (/operation-specific reason|OperationError|decrypt/i.test(m) &&
-          !/newer version|too short|Base64|Drop an|Enter the|Paste the|filename/i.test(m)) {
-        m = 'Decryption failed. The password or key file is wrong, or the data is corrupted.';
-      }
-      show('err', m);
+      show('err', err && err.message ? err.message : String(err));
     } finally {
       btn.disabled = false;
+      // Never leave the password sitting in the field. This tool is meant for
+      // borrowed and air-gapped machines — exactly where that matters most.
+      $('p').value = '';
     }
   };
 })();
