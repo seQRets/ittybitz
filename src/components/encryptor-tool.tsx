@@ -754,7 +754,15 @@ export function EncryptorTool() {
         if (inputType === 'file') {
             inputBuffer = await file!.arrayBuffer();
         } else {
-            const bytes = base64ToUint8Array(textSecret);
+            let bytes: Uint8Array;
+            try {
+              bytes = base64ToUint8Array(textSecret);
+            } catch {
+              // atob throws on a stray character. Name the real problem —
+              // otherwise it surfaces as "wrong password" and the user
+              // retypes a correct password in vain.
+              throw new Error('The encrypted text is not valid Base64.');
+            }
             inputBuffer = bytes.buffer as ArrayBuffer;
         }
 
@@ -811,6 +819,7 @@ export function EncryptorTool() {
           'A password or key file is required for decryption.',
           'Web Crypto API not available.',
           'This file was encrypted with a newer version of IttyBitz. Please update the app.',
+          'The encrypted text is not valid Base64.',
         ];
         const raw = error.message || '';
         const safeMessage = knownSafeMessages.includes(raw)
