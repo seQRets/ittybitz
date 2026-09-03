@@ -1,46 +1,12 @@
 {
   "name": "ittybitz",
-  "version": "2.9.3",
+  "version": "3.0.0",
   "private": true,
+  "description": "Single-file, client-side AES-256 encryption. No dependencies, no build for users, no network.",
+  "license": "SEE LICENSE IN LICENSE",
   "scripts": {
-    "dev": "next dev -p 9002",
-    "build": "next build && node scripts/apply-csp-hashes.mjs && node scripts/inject-sw-assets.mjs",
-    "typecheck": "tsc --noEmit",
+    "build": "node scripts/build-app.mjs",
     "test:crypto": "node scripts/crypto-regression.mts",
-    "analyze": "ANALYZE=true next build --webpack"
-  },
-  "dependencies": {
-    "@radix-ui/react-dialog": "^1.1.23",
-    "@radix-ui/react-label": "^2.1.15",
-    "@radix-ui/react-slot": "^1.3.1",
-    "@radix-ui/react-switch": "^1.3.7",
-    "@radix-ui/react-tabs": "^1.1.21",
-    "@radix-ui/react-toast": "^1.2.23",
-    "@radix-ui/react-tooltip": "^1.2.16",
-    "class-variance-authority": "^0.7.0",
-    "clsx": "^2.1.1",
-    "lucide-react": "^1.34.0",
-    "next": "^16.3.3",
-    "qrcode.react": "^4.2.0",
-    "react": "^19.2.8",
-    "react-dom": "^19.2.8",
-    "tailwind-merge": "^3.6.0",
-    "tailwindcss-animate": "^1.0.7"
-  },
-  "devDependencies": {
-    "@next/bundle-analyzer": "^16.3.3",
-    "@tailwindcss/postcss": "^4.3.3",
-    "@types/node": "^26.3.0",
-    "@types/react": "^19.2.18",
-    "@types/react-dom": "^19.2.5",
-    "postcss": "^8.5.26",
-    "tailwindcss": "^4.3.3",
-    "typescript": "^6.0.3"
-  },
-  "overrides": {
-    "nanoid": "^3.3.17",
-    "postcss": "^8.5.26",
-    "sharp": "^0.35.0",
-    "ws": "^8.18.3"
+    "dev": "cd site && python3 -m http.server 9002"
   }
 }

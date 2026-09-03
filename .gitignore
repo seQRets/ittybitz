@@ -1,14 +1,5 @@
-# dependencies
+# dependencies (there are none, but never commit an accidental install)
 /node_modules
-
-# next.js / build output
-/.next/
-/out/
-*.tsbuildinfo
-next-env.d.ts
-
-# production bundle analyzer
-/analyze
 
 # misc
 .DS_Store

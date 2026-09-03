@@ -31,7 +31,7 @@ Here’s what you can do with IttyBitz:
 - **File & text support**: encrypt and decrypt both files and text snippets.
 - **QR code sharing**: easily share encrypted text snippets via a downloadable QR code.
 - **Hardware-wallet SeedQR export**: when decrypted text is a valid BIP-39 seed phrase, IttyBitz auto-detects it and can display a **Standard SeedQR** for direct import into hardware wallets (Coldcard, SeedSigner, Sparrow, Specter, Krux, Keystone, Jade). Any other decrypted text can be shown as a plain QR. Both are blurred until you deliberately reveal them.
-- **Installable PWA with full offline support**: install IttyBitz to your home screen or desktop. After the first visit it works with zero network connectivity — ideal for air-gapped machines.
+- **One self-contained file**: the entire app is a single HTML file — no dependencies, no build, no service worker. Save it (or *File → Save Page As…* from [ittybitz.app](https://ittybitz.app)) and it runs offline forever, on an air-gapped machine, from a USB stick, in twenty years.
 - **Privacy-focused UI**: the secret text field offers a show/hide blur toggle to prevent shoulder-surfing during input, and decrypted output is blurred by default until you tap to reveal.
 - **Clipboard auto-clear**: copied passwords and output are wiped from the clipboard after 60 seconds (best-effort; requires the tab to retain focus).
 - **Backward-compatible file format**: encrypted payloads include an `IBTZ` version header so the app can evolve without breaking old files. Anything encrypted with prior versions still decrypts identically.
@@ -101,7 +101,7 @@ The current audit findings and accepted tradeoffs are tracked in-repo: [SECURITY
 
 ## 🪶 Recovery tool — decrypt without IttyBitz
 
-**[⬇️ Download it](https://github.com/seQRets/ittybitz/releases/download/v2.9.3/ittybitz-recovery.html)** (26 KB, one file) · [open it in your browser](https://ittybitz.app/ittybitz-recovery.html) · [how to save and use it](Recover/)
+**[⬇️ Download it](https://github.com/seQRets/ittybitz/releases/download/v3.0.0/ittybitz-recovery.html)** (26 KB, one file) · [open it in your browser](https://ittybitz.app/ittybitz-recovery.html) · [how to save and use it](Recover/)
 
 A standalone page that decrypts your IttyBitz files with **no dependencies, no network, no installation and no build step**. Save it alongside your encrypted data — on the same USB stick, the same backup drive, the same safe.
 
@@ -129,181 +129,44 @@ You are free to use, modify, and distribute this software. Any derivative works 
 
 <br/>
 
-## 💻  Ittybitz - Local Setup Instructions
+## 💻 Run it locally / offline
 
-For maximum security when handling sensitive data like seed phrases, you can run ittybitz locally on your own machine.
+IttyBitz is **one HTML file**. There is nothing to install, compile, or configure — not for you, not for anyone you share it with.
 
-The build is pure JavaScript — there is no native compilation and no platform-specific build step, so the same four commands work on every OS. The sections below cover installing Node.js and serving the build on each platform.
+**Three ways to get a local copy:**
 
-### Prerequisites
-- **Node.js 20.9 or newer** — check with `node --version`. See the per-OS install notes below.
-- **Git** (or download the repository as a ZIP from GitHub).
-
-### The four steps (all platforms)
+1. **Download it** from the [latest release](https://github.com/seQRets/ittybitz/releases/latest) — grab `ittybitz.html`, then double-click it. Done.
+2. **Save the page**: open [ittybitz.app](https://ittybitz.app), then *File → Save Page As…* (⌘S / Ctrl+S). If your browser asks, choose **"Web Page, HTML Only"** — it is a single file, so "Complete" only adds a folder you don't need.
+3. **Clone the repo** and open `site/index.html`, or serve it:
 
 ```bash
 git clone https://github.com/seQRets/ittybitz.git
 cd ittybitz
-npm install
-npm run build
+npm run dev   # serves site/ at http://localhost:9002
 ```
 
-`npm run build` produces a fully static site in the `out/` directory. IttyBitz is a static export — there is no application server, so you just need any static file server to view it. Pick your platform below.
+Once you have the file it works with the network disconnected — Web Crypto runs in your browser, and nothing is fetched, uploaded, or logged. A `Content-Security-Policy` in the file enforces that: it cannot make a network request even if it tried.
 
-> **Note:** the production build is the recommended way to run locally, because the Content-Security-Policy is only applied to production builds. `npm run dev` (port 9002) is for development only.
-
----
-
-<details open>
-<summary><h3>🪟 Windows</h3></summary>
-
-**Install Node.js**
-
-Download the LTS installer from [nodejs.org](https://nodejs.org), or use a package manager:
-
-```powershell
-winget install OpenJS.NodeJS.LTS
-```
-
-Close and reopen your terminal afterwards so `PATH` updates.
-
-**If `npm` won't run in PowerShell**
-
-PowerShell blocks script execution by default, so `npm install` may fail with *"npm.ps1 cannot be loaded because running scripts is disabled on this system."* Either allow local scripts for your user:
-
-```powershell
-Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
-```
-
-…or simply use **Command Prompt (cmd.exe)** or **Git Bash**, which are not affected.
-
-**Run the four steps**, then serve the build:
-
-```powershell
-npx serve out -l 3000
-```
-
-**Python alternative** — note that on Windows the command is `python`, not `python3` (typing `python3` usually opens the Microsoft Store instead of running anything):
-
-```powershell
-python -m http.server 3000 -d out
-```
-
-Open **http://localhost:3000**, and press `Ctrl+C` in the terminal to stop.
-
-**Using WSL?** Follow the Linux instructions instead, and open the URL in your normal Windows browser — WSL forwards `localhost` automatically.
-
-</details>
-
-<details open>
-<summary><h3>🍎 macOS</h3></summary>
-
-**Install Node.js**
-
-Download the LTS installer from [nodejs.org](https://nodejs.org), or use [Homebrew](https://brew.sh):
+**Verify it before you trust it** (recommended for a security tool):
 
 ```bash
-brew install node
+shasum -a 256 ittybitz.html
 ```
 
-**Run the four steps**, then serve the build:
+Compare against the checksum published with the [release](CHANGELOG.md). The file is byte-identical wherever you got it — the website, the release asset, or this repository's `site/index.html`.
+
+### 🧰 Build from source (contributors only)
+
+You never need this to *use* IttyBitz — the shipped [`site/index.html`](site/index.html) is the product. The build exists so that file is reproducible from small, auditable parts.
 
 ```bash
-npx serve out -l 3000
+npm run build        # reassembles site/index.html from scripts/build/*
+npm run test:crypto  # crypto regression gate (zero dependencies)
 ```
 
-**Python alternative** — macOS ships with Python 3, so no extra install is needed:
+`build` concatenates the hand-written page, the vendored [`qrcode-generator`](https://github.com/kazuhikoarase/qrcode-generator) (MIT), the DOM-free crypto core, and a BIP-39 core generated from `src/lib/bip39.ts` (so the wordlist can never drift). `test:crypto` proves the assembled file both decrypts every historical ciphertext **and** round-trips against the frozen reference implementation in [`src/lib/crypto.ts`](src/lib/crypto.ts) — in both directions, with and without key files.
 
-```bash
-python3 -m http.server 3000 -d out
-```
-
-Open **http://localhost:3000**, and press `Ctrl+C` in the terminal to stop.
-
-</details>
-
-<details open>
-<summary><h3>🐧 Linux</h3></summary>
-
-**Install Node.js**
-
-Distribution packages are often older than the required 20.9 — `apt install nodejs` on Debian/Ubuntu in particular may give you a version that fails the build. Check with `node --version` and, if it's too old, use [nvm](https://github.com/nvm-sh/nvm):
-
-```bash
-curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
-# reopen your terminal, then:
-nvm install --lts
-```
-
-Or use [NodeSource](https://github.com/nodesource/distributions) packages, or your distro's own current package (`dnf install nodejs`, `pacman -S nodejs npm`).
-
-**Run the four steps**, then serve the build:
-
-```bash
-npx serve out -l 3000
-```
-
-**Python alternative** — present on essentially every distribution:
-
-```bash
-python3 -m http.server 3000 -d out
-```
-
-Open **http://localhost:3000**, and press `Ctrl+C` in the terminal to stop.
-
-</details>
-
----
-
-> **If port 3000 is already taken**, the `serve` command will quietly start on a different port — always use the URL it prints in the terminal. To pick your own port instead, change the number after `-l` (for example `npx serve out -l 8080`).
-
-### Security Notes
-
-- ✅ **Open Source**: All code is auditable and transparent
-- ✅ **Offline Operation**: Works completely offline after initial setup
-- ✅ **No External Dependencies**: All operations happen locally with no external network requests
-- ✅ **Air-Gap Compatible**: Can be run on isolated machines
-
-**For handling high-value secrets**, consider:
-- Running on an air-gapped machine
-- Auditing the source code before use
-- Using the production build for better performance
-
-### Troubleshooting
-
-**1. Check your Node.js version** — must be 20.9 or newer:
-```bash
-node --version
-```
-
-**2. Clear dependencies and reinstall**
-
-macOS / Linux:
-```bash
-rm -rf node_modules && npm install
-```
-Windows (PowerShell):
-```powershell
-Remove-Item -Recurse -Force node_modules; npm install
-```
-
-**3. Find what's using port 3000**
-
-macOS / Linux:
-```bash
-lsof -ti:3000
-```
-Windows (PowerShell):
-```powershell
-Get-NetTCPConnection -LocalPort 3000 | Select-Object OwningProcess
-```
-You don't have to free the port — just serve on another one, e.g. `npx serve out -l 8080`.
-
-**4. `npm` won't run in PowerShell** — see the execution-policy note in the Windows section above.
-
-**5. `python3` opens the Microsoft Store** — on Windows the command is `python`, not `python3`.
-
-<br/>
+There are **no runtime or build dependencies**: `node` (22.6+, for native TypeScript stripping) and Python 3 (only for `npm run dev`'s static server) are all that is used.
 
 ## ❤️ Support this project
 

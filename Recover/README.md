@@ -1,6 +1,6 @@
 # 🪶 IttyBitz Recovery
 
-### ⬇️ [**Download the Recovery tool**](https://github.com/seQRets/ittybitz/releases/download/v2.9.3/ittybitz-recovery.html)
+### ⬇️ [**Download the Recovery tool**](https://github.com/seQRets/ittybitz/releases/download/v3.0.0/ittybitz-recovery.html)
 
 *Saves `ittybitz-recovery.html` to your computer · 26 KB · no installation · works offline forever*
 
@@ -20,11 +20,11 @@ It has no dependencies, makes no network requests, needs no build step and requi
 
 This folder is a signpost, not a second copy. The tool itself is one file, kept in one place:
 
-**📄 [`public/ittybitz-recovery.html`](../public/ittybitz-recovery.html)** — read the source in this repository. (This link shows the code; use the download link above to get the file itself.)
+**📄 [`site/ittybitz-recovery.html`](../site/ittybitz-recovery.html)** — read the source in this repository. (This link shows the code; use the download link above to get the file itself.)
 
-It sits in `public/` because that is the directory this site serves from, so the file needs no build step, no copying and no processing to reach [ittybitz.app/ittybitz-recovery.html](https://ittybitz.app/ittybitz-recovery.html). The simplest possible path from repository to your hands — which is the right property for the one file you may need when everything else has failed.
+It sits in `site/` because that is the directory published to GitHub Pages, so the file needs no build step, no copying and no processing to reach [ittybitz.app/ittybitz-recovery.html](https://ittybitz.app/ittybitz-recovery.html). The simplest possible path from repository to your hands — which is the right property for the one file you may need when everything else has failed.
 
-This folder exists so you can *find* it. Recovering your own data should never depend on knowing which directory a web framework serves from.
+This folder exists so you can *find* it. Recovering your own data should never depend on knowing which directory a website serves from.
 
 <br/>
 

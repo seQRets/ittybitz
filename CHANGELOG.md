@@ -4,6 +4,12 @@ Every IttyBitz release, newest first. Full notes for each version live in [`docs
 
 > **Cryptography has never changed.** Key derivation has been identical since v1.0 — PBKDF2-SHA256 @ 1,000,000 iterations, AES-256-GCM, 16-byte salt, 12-byte IV. Only two container formats have ever existed: **v0** (headerless, v1.0–v1.4.0) and **v1** (`IBTZ` header, v2.0.0 onward). Anything encrypted with any version still decrypts today, and `npm run test:crypto` proves it against real ciphertexts from every release.
 
+## 3.x
+
+| Version | Date | Summary |
+|---|---|---|
+| [**3.0.0** 🦕 Iguanodon](docs/releases/v3.0.0.md) | 2026-09-03 | **The single-file era.** The whole app is now one self-contained HTML file — no framework, no build for users, no service worker, zero dependencies. Offline is "save the file." Cryptography unchanged and gated in CI in both directions against the frozen reference. |
+
 ## 2.x
 
 | Version | Date | Summary |

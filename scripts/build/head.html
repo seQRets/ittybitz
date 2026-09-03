@@ -1,0 +1,421 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IttyBitz — client-side encryption</title>
+<!-- The "no network" promise, enforced rather than asserted. default-src
+     'none' blocks every network destination; the two 'unsafe-inline'
+     allowances cover only this file's own inline style and scripts. QR codes
+     render to <canvas> (no img-src needed) and downloads use blob:/data: which
+     are not network fetches. Nothing here can phone home. -->
+<meta http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; font-src 'none'; form-action 'none'; base-uri 'none'">
+<!--
+  ═══════════════════════════════════════════════════════════════════════
+  IttyBitz — single-file client-side encryption
+  ═══════════════════════════════════════════════════════════════════════
+
+  A complete, self-contained IttyBitz: encrypt AND decrypt files and text,
+  in one HTML file with no dependencies, no build step and no network. Open
+  it in any modern browser — online at ittybitz.app, or saved to disk and
+  run offline from anywhere, including an air-gapped machine.
+
+  It is byte-compatible with every version of IttyBitz: files it produces
+  open in the app and the recovery tool, and vice-versa. The container
+  format and key derivation mirror src/lib/crypto.ts exactly and are gated,
+  in both directions, by the project's crypto regression suite.
+
+  Source & technical reference: https://github.com/seQRets/ittybitz
+
+  ═══════════════════════════════════════════════════════════════════════
+  Verify this file's integrity before trusting it (recommended):
+      shasum -a 256 ittybitz.html
+  and compare against the checksum published with the release you
+  downloaded it from.
+  ═══════════════════════════════════════════════════════════════════════
+-->
+<style>
+  :root {
+    color-scheme: dark;
+    --background: #000;
+    --foreground: #f4f4f5;
+    --muted-foreground: #a1a1aa;
+    --faint: #6e6e77;
+    --accent: #f59e0b;
+    --success: rgb(44, 221, 150);
+    --destructive: rgb(220, 40, 40);
+    --border: hsla(0,0%,100%,0.10);
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+  body {
+    margin: 0; padding: 0 1rem 4rem; min-height: 100vh;
+    background-color: var(--background);
+    background-image:
+      radial-gradient(ellipse 80% 60% at 50% -10%, rgba(245, 158, 11, 0.12), transparent 60%),
+      radial-gradient(ellipse 60% 50% at 100% 100%, rgba(239, 68, 68, 0.06), transparent 60%);
+    background-attachment: fixed;
+    color: var(--foreground);
+    font: 15px/1.55 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+    letter-spacing: -0.011em;
+  }
+  .wrap { max-width: 680px; margin: 0 auto; }
+
+  /* Header */
+  header.bar {
+    position: sticky; top: 0; z-index: 40; margin: 0 -1rem 0;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: .75rem 1rem; border-bottom: 1px solid hsla(0,0%,100%,0.08);
+    background: rgba(0,0,0,0.7); backdrop-filter: blur(20px) saturate(150%);
+    -webkit-backdrop-filter: blur(20px) saturate(150%);
+  }
+  .brand { display: flex; align-items: center; gap: .625rem; }
+  .brand span { font-size: 17px; font-weight: 600; letter-spacing: -0.02em; }
+  .modetabs { display: flex; gap: 2px; background: hsla(0,0%,100%,0.06); padding: 2px; border-radius: 10px; }
+  .modetabs button {
+    border: 0; background: none; cursor: pointer; font: inherit; font-size: 13px; font-weight: 500;
+    color: var(--muted-foreground); padding: .35rem 1rem; border-radius: 8px; transition: all .15s;
+  }
+  .modetabs button[aria-selected="true"] { background: hsla(0,0%,100%,0.10); color: var(--foreground); box-shadow: 0 1px 2px rgba(0,0,0,.15); }
+
+  /* Hero */
+  .hero { text-align: center; margin: 3rem 0 2.5rem; }
+  h1 {
+    margin: 0; font-size: 44px; line-height: 1.05; font-weight: 700; letter-spacing: -0.04em;
+    background: linear-gradient(180deg, #fff 0%, #b8b8be 100%);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent; color: transparent;
+  }
+  @media (min-width: 640px) { h1 { font-size: 56px; } }
+  .sub { color: var(--muted-foreground); font-size: 17px; line-height: 1.35; margin: 1rem auto 0; max-width: 30rem; }
+  .sub a { color: var(--accent); text-decoration: none; }
+  .sub a:hover { text-decoration: underline; }
+
+  /* Card */
+  .card {
+    background: hsla(0, 0%, 100%, 0.04);
+    -webkit-backdrop-filter: blur(40px) saturate(180%);
+    backdrop-filter: blur(40px) saturate(180%);
+    border: 1px solid hsla(0, 0%, 100%, 0.08);
+    box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.5);
+    border-radius: 20px; padding: 1.5rem;
+  }
+  @media (min-width: 640px) { .card { padding: 2rem; } }
+
+  /* File / Text pills */
+  .pills { display: flex; gap: 2px; border-radius: 12px; background: hsla(0,0%,100%,0.04); padding: 4px; margin-bottom: 1.25rem; }
+  .pills button {
+    flex: 1; cursor: pointer; border: 0; background: none; border-radius: 8px;
+    padding: .5rem .75rem; text-align: center; font: inherit; font-size: 13px; font-weight: 500;
+    color: var(--muted-foreground); transition: all .15s;
+  }
+  .pills button[aria-selected="true"] { background: hsla(0,0%,100%,0.10); color: var(--foreground); box-shadow: 0 1px 2px rgba(0,0,0,.15); }
+  .pills button:hover { color: var(--foreground); }
+
+  /* Drop zones */
+  .drop {
+    position: relative; display: flex; width: 100%; cursor: pointer;
+    flex-direction: column; align-items: center; justify-content: center;
+    border-radius: 12px; border: 1px dashed hsla(0,0%,100%,0.15);
+    background: hsla(0,0%,100%,0.02);
+    padding: 2.5rem 1.5rem; text-align: center; transition: all .2s;
+  }
+  .drop:hover { border-color: rgba(245,158,11,.5); background: rgba(245,158,11,.03); }
+  .drop.dragging { border-color: rgba(245,158,11,.6); background: rgba(245,158,11,.05); }
+  .drop:focus-visible { outline: 2px solid rgba(245,158,11,.6); outline-offset: 2px; }
+  .drop .tile { margin-bottom: .75rem; display: grid; place-items: center; height: 3rem; width: 3rem; border-radius: 12px; background: hsla(0,0%,100%,0.05); color: var(--accent); }
+  .drop h3 { margin: 0; font-size: 15px; font-weight: 500; color: var(--foreground); }
+  .drop p { margin: .25rem 0 0; font-size: 13px; color: var(--muted-foreground); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+  .drop p.picked { color: var(--accent); font-weight: 500; }
+  .clear { text-align: right; margin-top: .5rem; }
+  .clear button { background: none; border: 0; color: var(--destructive); font: inherit; font-size: 12px; cursor: pointer; padding: 0; }
+  .hidden-input { display: none; }
+
+  /* Fields */
+  .row { margin-bottom: 1.25rem; }
+  label { display: block; font-size: 13px; font-weight: 500; color: var(--muted-foreground); margin-bottom: .5rem; }
+  textarea, input[type=password], input[type=text] {
+    width: 100%; padding: .7rem .75rem; border-radius: 12px; font: inherit;
+    background: hsla(0,0%,100%,0.04); border: 1px solid var(--border); color: var(--foreground);
+    transition: border-color .15s;
+  }
+  textarea { min-height: 116px; resize: vertical; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
+  input[type=password], input[type=text].pw { height: 2.75rem; font-size: 15px; padding-right: 4.6rem; }
+  textarea:focus, input:focus { outline: none; border-color: rgba(245,158,11,.5); }
+  .ok-border { border-color: var(--success) !important; }
+  .bad-border { border-color: var(--destructive) !important; }
+  .field { position: relative; }
+  .toggle-btn {
+    position: absolute; right: .5rem; top: 50%; transform: translateY(-50%);
+    border: 1px solid var(--border); background: hsla(0,0%,100%,0.05); color: var(--muted-foreground);
+    border-radius: 8px; padding: .2rem .55rem; font: inherit; font-size: 12px; font-weight: 500; cursor: pointer; transition: all .15s;
+  }
+  .toggle-btn:hover { background: hsla(0,0%,100%,0.10); color: var(--foreground); }
+  .toggle-btn.icon { top: .5rem; transform: none; padding: .3rem; }
+  textarea.blurred { filter: blur(5px); }
+
+  /* Small helper buttons row */
+  .btnrow { display: flex; gap: .5rem; margin-top: .625rem; }
+  .btn {
+    flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: .35rem;
+    border: 1px solid var(--border); background: hsla(0,0%,100%,0.04); color: var(--muted-foreground);
+    border-radius: 8px; padding: .45rem .5rem; font: inherit; font-size: 13px; font-weight: 500; cursor: pointer; transition: all .15s;
+  }
+  .btn:hover:not(:disabled) { background: hsla(0,0%,100%,0.08); color: var(--foreground); }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+  .btn svg { width: 14px; height: 14px; }
+
+  /* Key file toggle */
+  .switchrow { display: flex; align-items: center; gap: .75rem; margin-bottom: 1.25rem; }
+  .switch { position: relative; width: 40px; height: 22px; border-radius: 999px; border: 0; background: hsla(0,0%,100%,0.15); cursor: pointer; transition: background .15s; flex: none; padding: 0; }
+  .switch[aria-checked="true"] { background: var(--success); }
+  .switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: transform .15s; }
+  .switch[aria-checked="true"]::after { transform: translateX(18px); }
+  .switchrow label { margin: 0; color: var(--foreground); font-size: 14px; cursor: pointer; }
+  .switchrow .muted { color: var(--muted-foreground); }
+  .divider { display: flex; align-items: center; gap: .75rem; margin: .875rem 0; }
+  .divider hr { flex: 1; border: 0; border-top: 1px solid var(--border); }
+  .divider span { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: .08em; color: var(--muted-foreground); }
+  .wfull { width: 100%; }
+
+  /* Action button */
+  .go {
+    margin-top: .5rem; width: 100%; border: 0; border-radius: 12px; cursor: pointer;
+    background: linear-gradient(to bottom right, #fbbf24, #f97316 50%, #ef4444);
+    color: #000; font: inherit; font-size: 15px; font-weight: 600; padding: .875rem;
+    box-shadow: 0 8px 24px -8px rgba(245,158,11,0.5); transition: all .2s;
+    display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
+  }
+  .go:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 12px 32px -8px rgba(245,158,11,0.65); }
+  .go:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+  .go svg { width: 20px; height: 20px; }
+  .spin { animation: spin 1s linear infinite; } @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Result + status */
+  .result { margin-top: 1.25rem; }
+  .result .field textarea { padding-right: 3rem; }
+  .status { margin-top: 1rem; padding: .75rem .875rem; border-radius: 10px; font-size: 13px; display: none; white-space: pre-wrap; word-break: break-word; }
+  .status.show { display: block; }
+  .status.ok { background: rgba(44,221,150,.06); border: 1px solid rgba(44,221,150,.35); color: var(--success); }
+  .status.err { background: rgba(220,40,40,.07); border: 1px solid rgba(220,40,40,.4); color: #fca5a5; }
+  .out-actions { position: absolute; right: .35rem; top: .35rem; display: flex; flex-direction: column; gap: .15rem; }
+
+  /* Feature cards */
+  .features { margin-top: 2rem; display: grid; gap: .75rem; }
+  @media (min-width: 640px) { .features { grid-template-columns: repeat(3, 1fr); } }
+  .feat { border: 1px solid hsla(0,0%,100%,0.06); background: hsla(0,0%,100%,0.02); border-radius: 16px; padding: 1.25rem; }
+  .feat .fi { margin-bottom: .625rem; display: grid; place-items: center; height: 2rem; width: 2rem; border-radius: 8px; background: rgba(245,158,11,0.10); color: var(--accent); }
+  .feat .fi svg { width: 16px; height: 16px; }
+  .feat b { font-size: 14px; font-weight: 600; }
+  .feat p { margin: .25rem 0 0; font-size: 12px; line-height: 1.5; color: var(--muted-foreground); }
+
+  /* Footer */
+  footer { max-width: 680px; margin: 2rem auto 0; padding-top: 1.25rem; border-top: 1px solid hsla(0,0%,100%,0.06); display: flex; flex-wrap: wrap; gap: .75rem 1.25rem; align-items: center; justify-content: space-between; font-size: 12px; color: var(--muted-foreground); }
+  footer a { color: var(--muted-foreground); text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+  footer .accent, footer a.accent { color: var(--accent); }
+  footer .grp { display: flex; align-items: center; gap: .875rem; }
+  .linkbtn { background: none; border: 0; color: var(--accent); font: inherit; font-size: 12px; cursor: pointer; padding: 0; }
+  .linkbtn:hover { text-decoration: underline; }
+
+  /* Overlays (QR + donate) */
+  .overlay { position: fixed; inset: 0; z-index: 60; display: none; align-items: center; justify-content: center; padding: 1rem; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); }
+  .overlay.show { display: flex; }
+  .modal { width: 100%; max-width: 380px; background: #0b0b0d; border: 1px solid hsla(0,0%,100%,0.12); border-radius: 18px; padding: 1.5rem; box-shadow: 0 40px 100px -20px rgba(0,0,0,.7); }
+  .modal h2 { margin: 0 0 .25rem; font-size: 18px; font-weight: 600; }
+  .modal .desc { margin: 0 0 1rem; font-size: 13px; color: var(--muted-foreground); }
+  .modal .center { display: flex; flex-direction: column; align-items: center; gap: 1rem; }
+  .qrbox { background: #fff; border-radius: 12px; padding: 12px; }
+  .qrbox canvas { display: block; width: 256px; height: 256px; image-rendering: pixelated; }
+  .qr-placeholder { width: 280px; height: 280px; border-radius: 12px; background: hsla(0,0%,100%,0.06); display: grid; place-items: center; color: hsla(0,0%,100%,0.25); }
+  .qr-placeholder svg { width: 64px; height: 64px; }
+  .qr-blur canvas { filter: blur(9px); }
+  .warn { width: 100%; text-align: center; font-size: 12px; color: #facc15; background: rgba(120,90,10,.2); border-radius: 8px; padding: .5rem .75rem; }
+  .caption { font-size: 12px; color: var(--muted-foreground); text-align: center; }
+  .modal-actions { display: flex; gap: .5rem; width: 100%; }
+  .modal-actions .btn { flex: 1; }
+  .modal .closebtn { margin-top: 1rem; width: 100%; background: hsla(0,0%,100%,0.06); border: 1px solid var(--border); color: var(--foreground); border-radius: 10px; padding: .55rem; font: inherit; font-size: 14px; cursor: pointer; }
+  .modal .closebtn:hover { background: hsla(0,0%,100%,0.10); }
+  .donate-link { font-size: 13px; color: var(--accent); text-decoration: none; word-break: break-all; }
+</style>
+</head>
+<body>
+<header class="bar">
+  <div class="brand">
+    <svg viewBox="0 0 512 512" width="28" height="28" aria-label="IttyBitz Logo" role="img" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="ibHdrGrad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#fbbf24" /><stop offset="20%" stop-color="#f59e0b" /><stop offset="100%" stop-color="#ef4444" />
+        </linearGradient>
+        <mask id="ibHdrKey">
+          <rect width="512" height="512" fill="white" />
+          <circle cx="256" cy="205" r="51" fill="black" />
+          <path d="M 230 205 L 282 205 L 297 369 L 215 369 Z" fill="black" />
+        </mask>
+      </defs>
+      <rect width="512" height="512" rx="48" fill="url(#ibHdrGrad)" mask="url(#ibHdrKey)" />
+    </svg>
+    <span>IttyBitz</span>
+  </div>
+  <div class="modetabs" role="tablist">
+    <button role="tab" id="tab-enc" aria-selected="true">Encrypt</button>
+    <button role="tab" id="tab-dec" aria-selected="false">Decrypt</button>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="hero">
+    <h1>Encrypt everything.<br>Trust nothing.</h1>
+    <p class="sub">Client-side encryption that never leaves your browser.
+      <a href="https://github.com/seQRets/ittybitz" target="_blank" rel="noopener noreferrer">Open source</a>. No accounts. No servers.</p>
+  </div>
+
+  <section class="card">
+    <div class="pills" role="tablist">
+      <button role="tab" id="pill-file" aria-selected="true">Encrypt a File</button>
+      <button role="tab" id="pill-text" aria-selected="false">Encrypt Text</button>
+    </div>
+
+    <!-- File input -->
+    <div class="row" id="pane-file">
+      <div class="drop" id="drop-main" role="button" tabindex="0">
+        <div class="tile">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/>
+            <path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/>
+          </svg>
+        </div>
+        <h3>Drop a file here</h3>
+        <p id="main-desc">or click to browse &#183; 100 MB max</p>
+      </div>
+      <div class="clear" id="main-clear" style="display:none"><button type="button">Clear</button></div>
+      <input class="hidden-input" type="file" id="f">
+    </div>
+
+    <!-- Text input -->
+    <div class="row" id="pane-text" style="display:none">
+      <label for="t" id="text-label">Secret text</label>
+      <div class="field">
+        <textarea id="t" placeholder="Enter text to encrypt&#8230;" spellcheck="false"></textarea>
+        <button type="button" class="toggle-btn icon" id="t-toggle" aria-label="Hide secret text" title="Hide secret text">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Password -->
+    <div class="row">
+      <label for="p">Password <span class="muted" id="pw-hint" style="color:var(--faint);font-weight:400">· min 24 chars, upper, lower, number, symbol</span></label>
+      <div class="field">
+        <input type="password" id="p" class="pw" autocomplete="off" spellcheck="false" placeholder="Enter a strong password">
+        <button type="button" class="toggle-btn" id="p-toggle">Show</button>
+      </div>
+      <div class="btnrow">
+        <button class="btn" id="p-copy" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>Copy</button>
+        <button class="btn" id="p-clear" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>Clear</button>
+        <button class="btn" id="p-gen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>Generate</button>
+      </div>
+    </div>
+
+    <!-- Key file -->
+    <div class="switchrow">
+      <button class="switch" id="kf-switch" role="switch" aria-checked="false" aria-label="Use key file"></button>
+      <label id="kf-label">Use key file <span class="muted">(optional)</span></label>
+    </div>
+    <div class="row" id="kf-pane" style="display:none">
+      <div class="drop" id="drop-key" role="button" tabindex="0" style="padding:1.75rem 1.5rem">
+        <div class="tile" style="height:2.5rem;width:2.5rem">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/>
+          </svg>
+        </div>
+        <h3 style="font-size:14px">Select key file</h3>
+        <p id="key-desc">drag &amp; drop or click to select an existing file</p>
+      </div>
+      <div class="clear" id="key-clear" style="display:none"><button type="button">Clear</button></div>
+      <input class="hidden-input" type="file" id="k">
+      <div class="divider"><hr><span>or</span><hr></div>
+      <button class="btn wfull" id="k-gen" style="flex:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="m7 10 5 5 5-5"/><path d="M21 21H3"/></svg>Generate &amp; download new key file</button>
+    </div>
+
+    <!-- Result -->
+    <div class="result" id="result" style="display:none">
+      <label id="out-label">Result</label>
+      <div class="field">
+        <textarea id="out" readonly rows="5"></textarea>
+        <div class="out-actions">
+          <button type="button" class="toggle-btn icon" id="out-reveal" style="display:none" title="Reveal"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg></button>
+          <button type="button" class="toggle-btn icon" id="out-copy" title="Copy"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></button>
+          <button type="button" class="toggle-btn icon" id="out-qr" style="display:none" title="Show QR"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/><path d="M3 12h.01"/><path d="M12 3h.01"/><path d="M12 16v.01"/><path d="M16 12h1"/><path d="M21 12v.01"/><path d="M12 21v-1"/></svg></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="status" id="status"></div>
+
+    <button class="go" id="go">
+      <span id="go-icon"></span><span id="go-label">Encrypt</span>
+    </button>
+  </section>
+
+  <div class="features">
+    <div class="feat">
+      <div class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></svg></div>
+      <b>AES-256-GCM</b><p>Military-grade encryption with 1M iteration key derivation.</p>
+    </div>
+    <div class="feat">
+      <div class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg></div>
+      <b>100% Client-Side</b><p>Nothing leaves your browser. No servers, no uploads, no tracking.</p>
+    </div>
+    <div class="feat">
+      <div class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 21a8 8 0 0 0-16 0"/><circle cx="10" cy="8" r="5"/><path d="m17 3 4 4-4 4"/></svg></div>
+      <b>No Accounts</b><p>No sign-ups or logins. Just encrypt and go.</p>
+    </div>
+  </div>
+
+  <footer>
+    <div class="grp">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="#ef4444" aria-hidden="true"><path d="M12 21s-8-5.33-8-11a4.5 4.5 0 0 1 8-2.5A4.5 4.5 0 0 1 20 10c0 5.67-8 11-8 11z"/></svg>
+      <span>Enjoying IttyBitz?</span>
+      <button class="linkbtn" id="donate-open">Support this project</button>
+    </div>
+    <div class="grp">
+      <a class="accent" href="./ittybitz-recovery.html" title="Standalone offline decryption tool">Recovery tool</a>
+      <a href="https://github.com/seQRets/ittybitz" target="_blank" rel="noopener noreferrer">GitHub</a>
+      <span id="version">v3.0.0 🦕 Iguanodon</span>
+    </div>
+  </footer>
+</div>
+
+<!-- QR overlay -->
+<div class="overlay" id="qr-overlay">
+  <div class="modal">
+    <h2 id="qr-title">QR Code</h2>
+    <p class="desc" id="qr-desc"></p>
+    <div class="center">
+      <div class="qrbox qr-blur" id="qr-box"><canvas id="qr-canvas" width="256" height="256"></canvas></div>
+      <p class="warn" id="qr-warn"></p>
+      <p class="caption" id="qr-caption" style="display:none"></p>
+      <div class="modal-actions">
+        <button class="btn" id="qr-reveal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>Reveal</button>
+        <button class="btn" id="qr-download" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="m7 10 5 5 5-5"/><path d="M21 21H3"/></svg>Download PNG</button>
+      </div>
+    </div>
+    <button class="closebtn" id="qr-close">Close</button>
+  </div>
+</div>
+
+<!-- Donate overlay -->
+<div class="overlay" id="donate-overlay">
+  <div class="modal">
+    <h2>Support IttyBitz</h2>
+    <p class="desc">If you find this tool useful, please consider supporting its development. It keeps the project alive and ad-free.</p>
+    <div class="center">
+      <div class="qrbox"><canvas id="donate-canvas" width="160" height="160" style="width:160px;height:160px"></canvas></div>
+      <a class="donate-link" href="https://coinos.io/seQRets/receive" target="_blank" rel="noopener noreferrer">https://coinos.io/seQRets/receive</a>
+    </div>
+    <button class="closebtn" id="donate-close">Close</button>
+  </div>
+</div>

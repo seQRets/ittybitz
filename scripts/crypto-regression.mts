@@ -261,7 +261,7 @@ async function main() {
   );
 
   // ---- 6. Standalone recovery file ----
-  // public/ittybitz-recovery.html is a single self-contained page that
+  // site/ittybitz-recovery.html is a single self-contained page that
   // decrypts IttyBitz containers with no dependencies, no network and no
   // build step, so a user can recover their data even if this project,
   // its domain and its author are all gone.
@@ -271,14 +271,14 @@ async function main() {
   // its own claims: the decrypt core is extracted from the HTML and every
   // historical fixture above is replayed through it. If the recovery file
   // and crypto.ts ever disagree about any real ciphertext, this fails.
-  console.log("\nStandalone recovery file (public/ittybitz-recovery.html):");
+  console.log("\nStandalone recovery file (site/ittybitz-recovery.html):");
 
   // This is the only copy of the recovery tool in the repository. It lives in
-  // public/ because that is what Next.js serves, so it needs no build step to
+  // site/, the directory published to GitHub Pages, so it needs no build step to
   // reach ittybitz.app — and no build step here either, which is why this
   // suite's workflow can skip npm ci entirely. Recover/README.md is a pointer
   // to this file, not a second copy of it.
-  const recoveryHtml = readFileSync(join(HERE, "..", "public", "ittybitz-recovery.html"), "utf8");
+  const recoveryHtml = readFileSync(join(HERE, "..", "site", "ittybitz-recovery.html"), "utf8");
   const coreMatch = recoveryHtml.match(
     /<script id="ittybitz-decrypt-core">([\s\S]*?)<\/script>/
   );
@@ -350,6 +350,127 @@ async function main() {
       await rejects("recovery file rejects truncated input", () =>
         recoveryDecrypt(new Uint8Array(ct.slice(0, 20)), FIXTURES.password, null)
       );
+    }
+  }
+
+  // ---- 7. Standalone two-way app (site/index.html) ----
+  // The full single-file IttyBitz encrypts AND decrypts. Like the recovery
+  // file it reimplements the container parsing and key derivation, so it is
+  // gated the same way — but in BOTH directions: ciphertext it produces must
+  // open under crypto.ts, and ciphertext crypto.ts produces must open under
+  // it. That two-way guarantee is exactly what a bundled copy of the React
+  // app cannot give by inspection, and it is why this file is trustworthy.
+  console.log("\nStandalone two-way app (site/index.html):");
+
+  const appHtml = readFileSync(join(HERE, "..", "site", "index.html"), "utf8");
+  const appCoreMatch = appHtml.match(/<script id="ittybitz-crypto-core">([\s\S]*?)<\/script>/);
+  const appBip39Match = appHtml.match(/<script id="ittybitz-bip39">([\s\S]*?)<\/script>/);
+  check(!!appCoreMatch, "crypto core block found in ittybitz.html");
+  check(!!appBip39Match, "bip39 block found in ittybitz.html");
+
+  if (appCoreMatch && appBip39Match) {
+    const box: any = { crypto: webcrypto, TextEncoder, TextDecoder, console };
+    createContext(box);
+    runInContext(appCoreMatch[1]!, box);
+    runInContext(appBip39Match[1]!, box);
+    const appEncrypt = box.ittybitzEncrypt;
+    const appDecrypt = box.ittybitzDecrypt;
+    check(typeof appEncrypt === "function", "app core exposes ittybitzEncrypt()");
+    check(typeof appDecrypt === "function", "app core exposes ittybitzDecrypt()");
+    check(
+      box.ITTYBITZ_PBKDF2_ITERATIONS === 1_000_000,
+      "app core uses 1,000,000 PBKDF2 iterations"
+    );
+
+    if (typeof appEncrypt === "function" && typeof appDecrypt === "function") {
+      // 7a. Decrypts every historical fixture (v0 and v1, ±key file).
+      let appOk = 0;
+      let appBad = 0;
+      for (const fx of FIXTURES.fixtures) {
+        try {
+          const keyFileU8 = fx.keyFile ? new Uint8Array(hexToArrayBuffer(FIXTURES.keyFileHex)) : null;
+          const out = dec.decode(
+            await appDecrypt(new Uint8Array(b64ToArrayBuffer(fx.base64)), FIXTURES.password, keyFileU8)
+          );
+          if (out === fx.plaintext) appOk++;
+          else { appBad++; console.error(`  FAIL  app mismatch on ${fx.version} ${fx.payload}`); }
+        } catch (err) {
+          appBad++;
+          console.error(`  FAIL  app threw on ${fx.version} ${fx.payload}: ${(err as Error).message}`);
+        }
+      }
+      check(
+        appOk === FIXTURES.fixtures.length && appBad === 0,
+        `app decrypts all ${FIXTURES.fixtures.length} historical fixtures (v0 and v1, with and without key file)`
+      );
+
+      // 7b. Cross round-trips — the guarantee this whole file exists to make.
+      for (const withKey of [false, true]) {
+        const kfHex = FIXTURES.keyFileHex;
+        const suffix = withKey ? "key file" : "password only";
+
+        const appMsg = "app->crypto.ts " + withKey;
+        const appCt = await appEncrypt(
+          enc.encode(appMsg),
+          FIXTURES.password,
+          withKey ? new Uint8Array(hexToArrayBuffer(kfHex)) : null
+        );
+        // appEncrypt runs in a vm realm, so appCt.buffer is that realm's
+        // ArrayBuffer and fails crypto.ts's `instanceof ArrayBuffer` guard.
+        // Uint8Array.from copies the bytes into a main-realm buffer.
+        const appCtBuf = Uint8Array.from(appCt).buffer as ArrayBuffer;
+        const appCtPt = dec.decode(
+          await decryptFile(appCtBuf, FIXTURES.password, withKey ? hexToArrayBuffer(kfHex) : null)
+        );
+        check(appCtPt === appMsg, `app-encrypted text opens under crypto.ts (${suffix})`);
+
+        const tsMsg = "crypto.ts->app " + withKey;
+        const tsCt = await encryptFile(
+          enc.encode(tsMsg).buffer as ArrayBuffer,
+          FIXTURES.password,
+          withKey ? hexToArrayBuffer(kfHex) : null
+        );
+        const tsCtPt = dec.decode(
+          await appDecrypt(
+            new Uint8Array(tsCt),
+            FIXTURES.password,
+            withKey ? new Uint8Array(hexToArrayBuffer(kfHex)) : null
+          )
+        );
+        check(tsCtPt === tsMsg, `crypto.ts-encrypted text opens under app (${suffix})`);
+      }
+
+      // 7c. The app produces a well-formed v1 container.
+      const appHeader = await appEncrypt(enc.encode("header check"), FIXTURES.password, null);
+      check(
+        appHeader[0] === 0x49 && appHeader[1] === 0x42 && appHeader[2] === 0x54 &&
+          appHeader[3] === 0x5a && appHeader[4] === 0x01,
+        "app emits an IBTZ v1 header"
+      );
+
+      // 7d. Same rejections as crypto.ts.
+      await rejects("app rejects a wrong password", () =>
+        appDecrypt(new Uint8Array(ct.slice(0)), FIXTURES.password + "wrong", null)
+      );
+      await rejects("app rejects a tampered ciphertext", () => {
+        const tampered = new Uint8Array(ct.slice(0));
+        tampered[tampered.length - 1] ^= 0xff;
+        return appDecrypt(tampered, FIXTURES.password, null);
+      });
+      await rejects("app rejects truncated input", () =>
+        appDecrypt(new Uint8Array(ct.slice(0, 20)), FIXTURES.password, null)
+      );
+
+      // 7e. BIP-39 parity with src/lib/bip39.ts.
+      const appValidate = box.ittybitzValidateBip39;
+      const appSeedQr = box.ittybitzToSeedQR;
+      for (const [label, mnemonic, bits, seedQr] of seedVectors) {
+        const r = await appValidate(mnemonic);
+        check(
+          r.valid && r.entropyBits === bits && appSeedQr(r.words) === seedQr,
+          `app BIP-39 ${label} validates and SeedQR matches spec`
+        );
+      }
     }
   }
 
