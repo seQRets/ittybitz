@@ -1,6 +1,6 @@
 {
   "name": "ittybitz",
-  "version": "3.0.1",
+  "version": "3.0.2",
   "private": true,
   "description": "Single-file, client-side AES-256 encryption. No dependencies, no build for users, no network.",
   "license": "SEE LICENSE IN LICENSE",

@@ -471,6 +471,21 @@ async function main() {
           `app BIP-39 ${label} validates and SeedQR matches spec`
         );
       }
+
+      // 7f. BIP-32 master fingerprint (vendored from myseedphrase.app). A wrong
+      // fingerprint would point the user at the wrong wallet, so it is gated
+      // against the canonical test-vector seeds.
+      const appFpMatch = appHtml.match(/<script id="ittybitz-fingerprint">([\s\S]*?)<\/script>/);
+      check(!!appFpMatch, "fingerprint block found in ittybitz.html");
+      if (appFpMatch) {
+        runInContext(appFpMatch[1]!, box);
+        const appFp = box.masterFingerprint;
+        check(typeof appFp === "function", "app exposes masterFingerprint()");
+        if (typeof appFp === "function") {
+          check((await appFp(A12.split(" "))) === "73c5da0a", "app master fingerprint (12-word) = 73c5da0a");
+          check((await appFp(A24.split(" "))) === "5436d724", "app master fingerprint (24-word) = 5436d724");
+        }
+      }
     }
   }
 

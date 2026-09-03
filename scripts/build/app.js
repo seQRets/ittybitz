@@ -30,6 +30,28 @@
     };
   })();
 
+  // ---- Offline option for hosted web visitors ----
+  // Let people running the hosted page know they can download IttyBitz and run
+  // it from their own disk. Hidden when already running from a local file
+  // (file://) — they've clearly done it — and when running as the installed
+  // PWA (which shows its own migration banner instead).
+  (function () {
+    var isFile = location.protocol === 'file:';
+    var standalone =
+      (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+      window.navigator.standalone === true;
+    if (isFile || standalone) return;
+    try { if (localStorage.getItem('ib-offline-tip') === '1') return; } catch (e) {}
+    var n = document.getElementById('offline-tip');
+    if (!n) return;
+    n.classList.add('show');
+    var x = document.getElementById('offline-x');
+    if (x) x.onclick = function () {
+      n.classList.remove('show');
+      try { localStorage.setItem('ib-offline-tip', '1'); } catch (e) {}
+    };
+  })();
+
   // ---- Web Crypto secure-context guard (same posture as the recovery file) ----
   if (!(window.crypto && window.crypto.subtle && window.crypto.getRandomValues)) {
     document.querySelector('.card').innerHTML =
@@ -62,6 +84,8 @@
   var ICON_LOCK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
   var ICON_UNLOCK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>';
   var ICON_SPIN = '<svg class="spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>';
+  var ICON_EYE = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>';
+  var ICON_EYE_OFF = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"/><path d="M14.084 14.158a3 3 0 0 1-4.242-4.242"/><path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"/><path d="m2 2 20 20"/></svg>';
 
   // ---- Helpers ----
   function isPasswordStrong(pwd) {
@@ -215,8 +239,21 @@
     $('out').value = ''; $('out').classList.remove('blurred', 'ok-border', 'bad-border');
     $('out-qr').style.display = 'none';
     $('out-reveal').style.display = 'none';
+    hideFp('dec');
     qrState = null;
     clearStatus();
+  }
+
+  // ---- Master-fingerprint display ----
+  // Shown when a valid BIP-39 seed is detected: on the encrypt secret field,
+  // on the decrypt result, and beside the SeedQR. The fingerprint is a public
+  // identifier (a one-way hash), so it is safe to show even while the secret
+  // stays blurred — it lets you confirm the right seed without exposing it.
+  var encFpToken = 0; // guards the async encrypt-side fingerprint against races
+  function hideFp(which) { var el = $(which + '-fp'); if (el) el.classList.remove('show'); }
+  function showFp(which, fp) {
+    var code = $(which + '-fp-code'); if (code) code.textContent = fp;
+    var el = $(which + '-fp'); if (el) el.classList.add('show');
   }
 
   function fullReset() {
@@ -225,6 +262,7 @@
     $('p').value = '';
     $('t').value = '';
     $('t').classList.remove('ok-border', 'bad-border');
+    encFpToken++; hideFp('enc');
     refreshPasswordButtons();
     resetResult();
   }
@@ -240,11 +278,14 @@
     $('t').placeholder = enc ? 'Enter text to encrypt…' : 'Paste the Base64 output from IttyBitz…';
     $('p').placeholder = enc ? 'Enter a strong password' : 'Enter decryption password';
     $('pw-hint').style.display = enc ? '' : 'none';
-    $('t-toggle').style.display = enc ? '' : 'none';
+    $('t-actions').style.display = enc ? '' : 'none';
     $('p-gen').style.display = enc ? '' : 'none';
     $('go-icon').innerHTML = enc ? ICON_LOCK : ICON_UNLOCK;
     $('go-label').textContent = enc ? 'Encrypt' : 'Decrypt';
-    // Encrypt-side secret text is blurred-toggleable; decrypt-side textarea is plain.
+    // Encrypt-side secret text is a human passphrase (sans font, blur toggle);
+    // decrypt-side it holds base64, so switch to monospace.
+    $('t').classList.toggle('mono', !enc);
+    updateSecretToggle();
     updateTextBlur();
   }
 
@@ -260,6 +301,7 @@
     $('pill-text').setAttribute('aria-selected', String(t === 'text'));
     $('pane-file').style.display = t === 'file' ? '' : 'none';
     $('pane-text').style.display = t === 'text' ? '' : 'none';
+    encFpToken++; hideFp('enc');
     resetResult();
   }
 
@@ -274,23 +316,43 @@
     if (mode === 'encrypt' && !showTextSecret && t.value) t.classList.add('blurred');
     else t.classList.remove('blurred');
   }
+  // Action-based eye icon — it shows what a click WILL do:
+  //   hidden/blurred -> a clear eye        (click to reveal)
+  //   visible        -> an eye with a slash (click to hide)
+  function setEyeIcon(btn, hidden, noun) {
+    btn.innerHTML = hidden ? ICON_EYE : ICON_EYE_OFF;
+    var lbl = (hidden ? 'Show ' : 'Hide ') + (noun || 'text');
+    btn.setAttribute('title', lbl);
+    btn.setAttribute('aria-label', lbl);
+  }
+  function updateSecretToggle() { setEyeIcon($('t-toggle'), !showTextSecret, 'secret text'); }
   $('t-toggle').onclick = function () {
     showTextSecret = !showTextSecret;
-    this.setAttribute('title', showTextSecret ? 'Hide secret text' : 'Show secret text');
+    updateSecretToggle();
     updateTextBlur();
   };
+  $('t-copy').onclick = function () { copyText($('t').value); };
 
   $('t').addEventListener('input', function () {
     updateTextBlur();
     if (mode !== 'encrypt') return;
     var val = $('t').value;
     if (seedTimer) clearTimeout(seedTimer);
+    hideFp('enc');
+    var token = ++encFpToken; // invalidate any in-flight fingerprint
     if (!val.trim()) { $('t').classList.remove('ok-border', 'bad-border'); return; }
     seedTimer = setTimeout(function () {
       ittybitzValidateBip39(val).then(function (res) {
+        if (token !== encFpToken) return;
         $('t').classList.remove('ok-border', 'bad-border');
-        if (res.valid) $('t').classList.add('ok-border');
-        else if (res.seedShaped) $('t').classList.add('bad-border');
+        if (res.valid) {
+          $('t').classList.add('ok-border');
+          masterFingerprint(res.words).then(function (fp) {
+            if (token === encFpToken && fp) showFp('enc', fp);
+          }).catch(function () {});
+        } else if (res.seedShaped) {
+          $('t').classList.add('bad-border');
+        }
       }).catch(function () { $('t').classList.remove('ok-border', 'bad-border'); });
     }, 300);
   });
@@ -334,6 +396,7 @@
   $('out-reveal').onclick = function () {
     showDecrypted = !showDecrypted;
     $('out').classList.toggle('blurred', !showDecrypted);
+    setEyeIcon($('out-reveal'), !showDecrypted, 'result');
   };
   $('out-qr').onclick = function () { if (qrState) openQr(); };
 
@@ -341,16 +404,19 @@
   function openQr() {
     qrRevealed = false;
     $('qr-box').classList.add('qr-blur');
-    var ctx = $('qr-canvas').getContext('2d');
-    ctx.clearRect(0, 0, $('qr-canvas').width, $('qr-canvas').height);
+    // Draw the QR right away but blurred, so it clearly reads as a QR — a blank
+    // white box looks broken. The Reveal button below just removes the blur.
+    drawQR($('qr-canvas'), qrState.getValue(), qrState.numeric, 512, 4);
     $('qr-download').disabled = true;
     $('qr-reveal').lastChild.textContent = 'Reveal';
     if (qrState.kind === 'seed') {
       $('qr-title').textContent = 'Standard SeedQR';
-      $('qr-desc').textContent = 'BIP-39 seed phrase, encoded for hardware-wallet import (Coldcard, SeedSigner, Sparrow, Specter, Krux, Keystone, Jade).';
+      $('qr-desc').textContent = 'BIP-39 seed phrase, encoded for hardware-wallet import.';
       $('qr-warn').textContent = 'Anyone who scans this QR can recover your seed. Show only on a trusted device and screen.';
       $('qr-caption').style.display = '';
       $('qr-caption').textContent = qrState.caption || '';
+      if (qrState.fp) { $('qr-fp-code').textContent = qrState.fp; $('qr-fp').style.display = 'block'; }
+      else { $('qr-fp').style.display = 'none'; }
     } else {
       $('qr-title').textContent = 'QR Code';
       $('qr-desc').textContent = mode === 'encrypt'
@@ -360,6 +426,7 @@
         ? 'This QR contains your encrypted text.'
         : 'This QR contains your decrypted text. Show only on a trusted device and screen.';
       $('qr-caption').style.display = 'none';
+      $('qr-fp').style.display = 'none';
     }
     $('qr-overlay').classList.add('show');
   }
@@ -367,19 +434,11 @@
   $('qr-close').onclick = closeQr;
   $('qr-overlay').addEventListener('click', function (e) { if (e.target === this) closeQr(); });
   $('qr-reveal').onclick = function () {
+    // The QR is already drawn (blurred); reveal just toggles the blur.
     qrRevealed = !qrRevealed;
-    if (qrRevealed) {
-      drawQR($('qr-canvas'), qrState.getValue(), qrState.numeric, 512, 4);
-      $('qr-box').classList.remove('qr-blur');
-      $('qr-download').disabled = false;
-      this.lastChild.textContent = 'Hide';
-    } else {
-      var ctx = $('qr-canvas').getContext('2d');
-      ctx.clearRect(0, 0, $('qr-canvas').width, $('qr-canvas').height);
-      $('qr-box').classList.add('qr-blur');
-      $('qr-download').disabled = true;
-      this.lastChild.textContent = 'Reveal';
-    }
+    $('qr-box').classList.toggle('qr-blur', !qrRevealed);
+    $('qr-download').disabled = !qrRevealed;
+    this.lastChild.textContent = qrRevealed ? 'Hide' : 'Reveal';
   };
   $('qr-download').onclick = function () {
     if (!qrRevealed || !qrState) return;
@@ -473,9 +532,12 @@
             if (res.valid) {
               $('out').classList.add('ok-border');
               var words = res.words;
+              var fp = null;
+              try { fp = await masterFingerprint(words); } catch (e3) {}
               qrState = { getValue: function () { return ittybitzToSeedQR(words); }, numeric: true, kind: 'seed',
-                          caption: 'Standard SeedQR · ' + words.length + ' words · ' + (words.length * 4) + ' digits' };
+                          caption: 'Standard SeedQR · ' + words.length + ' words · ' + (words.length * 4) + ' digits', fp: fp };
               $('out-qr').style.display = '';
+              if (fp) showFp('dec', fp);
             } else {
               if (res.seedShaped) $('out').classList.add('bad-border');
               if (text.length <= QR_MAX_CHARS) {
@@ -510,7 +572,7 @@
     // Reveal control + blur only for decrypt-text output.
     var showReveal = mode === 'decrypt' && inputType === 'text' && isDecryptOutput;
     $('out-reveal').style.display = showReveal ? '' : 'none';
-    if (showReveal) { showDecrypted = false; $('out').classList.add('blurred'); }
+    if (showReveal) { showDecrypted = false; $('out').classList.add('blurred'); setEyeIcon($('out-reveal'), true, 'result'); }
     $('out-label').textContent = 'Result';
   }
 

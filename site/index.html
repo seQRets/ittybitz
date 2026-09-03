@@ -143,6 +143,12 @@
     transition: border-color .15s;
   }
   textarea { min-height: 116px; resize: vertical; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
+  /* The secret-text field holds a human passphrase/seed, so it reads better in
+     the sans UI font at a larger size, with room on the right for the eye
+     toggle. It flips to monospace only when reused for base64 on the decrypt
+     side (the .mono class, set by mode). */
+  #t { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; font-size: 15px; line-height: 1.55; letter-spacing: -0.006em; padding-right: 4.7rem; }
+  #t.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; letter-spacing: 0; padding-right: .75rem; }
   input[type=password], input[type=text].pw { height: 2.75rem; font-size: 15px; padding-right: 4.6rem; }
   textarea:focus, input:focus { outline: none; border-color: rgba(245,158,11,.5); }
   .ok-border { border-color: var(--success) !important; }
@@ -196,12 +202,25 @@
 
   /* Result + status */
   .result { margin-top: 1.25rem; }
-  .result .field textarea { padding-right: 3rem; }
+  .result .field textarea { padding-right: 6rem; }
   .status { margin-top: 1rem; padding: .75rem .875rem; border-radius: 10px; font-size: 13px; display: none; white-space: pre-wrap; word-break: break-word; }
   .status.show { display: block; }
   .status.ok { background: rgba(44,221,150,.06); border: 1px solid rgba(44,221,150,.35); color: var(--success); }
   .status.err { background: rgba(220,40,40,.07); border: 1px solid rgba(220,40,40,.4); color: #fca5a5; }
-  .out-actions { position: absolute; right: .35rem; top: .35rem; display: flex; flex-direction: column; gap: .15rem; }
+  .out-actions { position: absolute; right: .35rem; top: .35rem; display: flex; flex-direction: row; gap: .15rem; }
+  /* The result-box buttons are flex items stacked in .out-actions, so they must
+     NOT inherit .toggle-btn's absolute positioning (which piled them all in one
+     spot, hiding the reveal eye behind the QR button). */
+  .out-actions .toggle-btn { position: static; top: auto; right: auto; transform: none; }
+
+  /* Master-fingerprint line, shown when a valid BIP-39 seed is detected. */
+  .fp { display: none; align-items: center; flex-wrap: wrap; gap: .4rem .5rem; margin-top: .6rem; font-size: 13px; }
+  .fp.show { display: flex; }
+  .fp .fp-label { color: var(--success); }
+  .fp code, #qr-fp code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 600; font-size: 13px; letter-spacing: .06em; color: var(--success); background: rgba(44,221,150,.10); border: 1px solid rgba(44,221,150,.30); border-radius: 6px; padding: .1rem .45rem; }
+  #qr-fp { display: none; margin: .15rem 0 .1rem; text-align: center; }
+  #qr-fp .qr-fp-label { color: var(--muted-foreground); font-size: 12px; }
+  #qr-fp code { font-size: 14px; }
 
   /* Feature cards */
   .features { margin-top: 2rem; display: grid; gap: .75rem; }
@@ -224,32 +243,34 @@
   /* Overlays (QR + donate) */
   .overlay { position: fixed; inset: 0; z-index: 60; display: none; align-items: center; justify-content: center; padding: 1rem; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); }
   .overlay.show { display: flex; }
-  .modal { width: 100%; max-width: 380px; background: #0b0b0d; border: 1px solid hsla(0,0%,100%,0.12); border-radius: 18px; padding: 1.5rem; box-shadow: 0 40px 100px -20px rgba(0,0,0,.7); }
+  .modal { width: 100%; max-width: 360px; max-height: 90vh; overflow-y: auto; background: #0b0b0d; border: 1px solid hsla(0,0%,100%,0.12); border-radius: 18px; padding: 1.25rem; box-shadow: 0 40px 100px -20px rgba(0,0,0,.7); }
   .modal h2 { margin: 0 0 .25rem; font-size: 18px; font-weight: 600; }
-  .modal .desc { margin: 0 0 1rem; font-size: 13px; color: var(--muted-foreground); }
-  .modal .center { display: flex; flex-direction: column; align-items: center; gap: 1rem; }
-  .qrbox { background: #fff; border-radius: 12px; padding: 12px; }
-  .qrbox canvas { display: block; width: 256px; height: 256px; image-rendering: pixelated; }
+  .modal .desc { margin: 0 0 .6rem; font-size: 12.5px; line-height: 1.4; color: var(--muted-foreground); }
+  .modal .center { display: flex; flex-direction: column; align-items: center; gap: .55rem; }
+  .qrbox { background: #fff; border-radius: 12px; padding: 10px; }
+  .qrbox canvas { display: block; width: 216px; height: 216px; image-rendering: pixelated; }
   .qr-placeholder { width: 280px; height: 280px; border-radius: 12px; background: hsla(0,0%,100%,0.06); display: grid; place-items: center; color: hsla(0,0%,100%,0.25); }
   .qr-placeholder svg { width: 64px; height: 64px; }
   .qr-blur canvas { filter: blur(9px); }
-  .warn { width: 100%; text-align: center; font-size: 12px; color: #facc15; background: rgba(120,90,10,.2); border-radius: 8px; padding: .5rem .75rem; }
+  .warn { width: 100%; text-align: center; font-size: 11.5px; line-height: 1.35; color: #facc15; background: rgba(120,90,10,.2); border-radius: 8px; padding: .4rem .65rem; }
   .caption { font-size: 12px; color: var(--muted-foreground); text-align: center; }
   .modal-actions { display: flex; gap: .5rem; width: 100%; }
   .modal-actions .btn { flex: 1; }
-  .modal .closebtn { margin-top: 1rem; width: 100%; background: hsla(0,0%,100%,0.06); border: 1px solid var(--border); color: var(--foreground); border-radius: 10px; padding: .55rem; font: inherit; font-size: 14px; cursor: pointer; }
+  .modal .closebtn { margin-top: .6rem; width: 100%; background: hsla(0,0%,100%,0.06); border: 1px solid var(--border); color: var(--foreground); border-radius: 10px; padding: .55rem; font: inherit; font-size: 14px; cursor: pointer; }
   .modal .closebtn:hover { background: hsla(0,0%,100%,0.10); }
   .donate-link { font-size: 13px; color: var(--accent); text-decoration: none; word-break: break-all; }
 
   /* One-time migration nudge shown only when opened as the retired installed app. */
   #pwa-notice { display: none; background: linear-gradient(90deg, rgba(245,158,11,.16), rgba(239,68,68,.10)); border-bottom: 1px solid rgba(245,158,11,.35); }
   #pwa-notice.show { display: block; }
+  #offline-tip { display: none; background: rgba(245,158,11,.08); border-bottom: 1px solid rgba(245,158,11,.22); }
+  #offline-tip.show { display: block; }
   .pwa-inner { max-width: 680px; margin: 0 auto; padding: .6rem 1rem; display: flex; align-items: center; gap: .75rem; font-size: 13px; color: var(--foreground); }
-  .pwa-inner span { flex: 1; }
+  .pwa-inner span { flex: 1; text-align: center; }
   .pwa-inner a { color: var(--accent); font-weight: 600; text-decoration: none; white-space: nowrap; }
   .pwa-inner a:hover { text-decoration: underline; }
-  #pwa-x { background: none; border: 0; color: var(--muted-foreground); font-size: 20px; line-height: 1; cursor: pointer; padding: 0 .25rem; }
-  #pwa-x:hover { color: var(--foreground); }
+  #pwa-x, #offline-x { background: none; border: 0; color: var(--muted-foreground); font-size: 20px; line-height: 1; cursor: pointer; padding: 0 .25rem; }
+  #pwa-x:hover, #offline-x:hover { color: var(--foreground); }
   @media (max-width: 640px) { .pwa-inner { flex-wrap: wrap; justify-content: center; text-align: center; } .pwa-inner span { flex-basis: 100%; } }
   /* Center the footer on narrow screens (it wraps to two stacked rows). */
   @media (max-width: 640px) {
@@ -261,9 +282,16 @@
 <body>
 <div id="pwa-notice">
   <div class="pwa-inner">
-    <span>You're using the installed app. For offline use, IttyBitz is now a single file you save once.</span>
+    <span>You're using the installed app. For offline use, download IttyBitz as a single HTML file — double-click it and it opens right here in your browser, no install.</span>
     <a href="https://github.com/seQRets/ittybitz/releases/latest/download/ittybitz.html">Download it</a>
     <button id="pwa-x" aria-label="Dismiss" title="Dismiss">&times;</button>
+  </div>
+</div>
+<div id="offline-tip">
+  <div class="pwa-inner">
+    <span>Want to run IttyBitz offline? Download it and open the file — it runs right here in your browser, no install.</span>
+    <a href="https://github.com/seQRets/ittybitz/releases/latest/download/ittybitz.html">Download</a>
+    <button id="offline-x" aria-label="Dismiss" title="Dismiss">&times;</button>
   </div>
 </div>
 <header class="bar">
@@ -323,9 +351,14 @@
       <label for="t" id="text-label">Secret text</label>
       <div class="field">
         <textarea id="t" placeholder="Enter text to encrypt&#8230;" spellcheck="false"></textarea>
-        <button type="button" class="toggle-btn icon" id="t-toggle" aria-label="Hide secret text" title="Hide secret text">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>
-        </button>
+        <div class="out-actions" id="t-actions">
+          <button type="button" class="toggle-btn icon" id="t-toggle" aria-label="Hide secret text" title="Hide secret text"></button>
+          <button type="button" class="toggle-btn icon" id="t-copy" title="Copy"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></button>
+        </div>
+      </div>
+      <div class="fp" id="enc-fp">
+        <span class="fp-label">✓ Valid seed phrase · master fingerprint</span>
+        <code id="enc-fp-code">—</code>
       </div>
     </div>
 
@@ -375,6 +408,10 @@
           <button type="button" class="toggle-btn icon" id="out-qr" style="display:none" title="Show QR"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/><path d="M3 12h.01"/><path d="M12 3h.01"/><path d="M12 16v.01"/><path d="M16 12h1"/><path d="M21 12v.01"/><path d="M12 21v-1"/></svg></button>
         </div>
       </div>
+      <div class="fp" id="dec-fp">
+        <span class="fp-label">✓ Valid seed phrase · master fingerprint</span>
+        <code id="dec-fp-code">—</code>
+      </div>
     </div>
 
     <div class="status" id="status"></div>
@@ -408,7 +445,7 @@
     <div class="grp">
       <a class="accent" href="./ittybitz-recovery.html" title="Standalone offline decryption tool">Recovery tool</a>
       <a href="https://github.com/seQRets/ittybitz" target="_blank" rel="noopener noreferrer">GitHub</a>
-      <span id="version">v3.0.1 🦕 Iguanodon</span>
+      <span id="version">v3.0.2 🦕 Iguanodon</span>
     </div>
   </footer>
 </div>
@@ -420,6 +457,7 @@
     <p class="desc" id="qr-desc"></p>
     <div class="center">
       <div class="qrbox qr-blur" id="qr-box"><canvas id="qr-canvas" width="256" height="256"></canvas></div>
+      <p id="qr-fp"><span class="qr-fp-label">Master fingerprint</span> <code id="qr-fp-code">—</code></p>
       <p class="warn" id="qr-warn"></p>
       <p class="caption" id="qr-caption" style="display:none"></p>
       <div class="modal-actions">
@@ -2954,6 +2992,121 @@ function ittybitzToSeedQR(words) {
 }
 
 </script>
+<script id="ittybitz-fingerprint">
+/* ── BIP-32 master fingerprint ────────────────────────────────────────────
+   Vendored verbatim from seQRets/My-Seed-Phrase (myseedphrase.app). DOM-free.
+
+   phrase -> seed (PBKDF2-SHA512, empty passphrase) -> master key
+   (HMAC-SHA512 "Bitcoin seed") -> compressed public key -> first four bytes of
+   RIPEMD160(SHA256(pubkey)). The last two steps need secp256k1 and RIPEMD-160,
+   which no browser API provides, so both are implemented here — the one place
+   this file rolls its own primitives.
+
+   Display only: nothing is signed and no key leaves masterFingerprint(). The
+   crypto regression suite holds it to the published test vector.
+   ───────────────────────────────────────────────────────────────────────── */
+var hexOf = function (b) { return [].map.call(b, function (x) { return x.toString(16).padStart(2, '0'); }).join(''); };
+
+function ripemd160(msg) {
+  var rotl = function (x, n) { return ((x << n) | (x >>> (32 - n))) >>> 0; };
+  var f = function (j, x, y, z) {
+    return j < 16 ? x ^ y ^ z : j < 32 ? (x & y) | (~x & z) : j < 48 ? (x | ~y) ^ z
+      : j < 64 ? (x & z) | (y & ~z) : x ^ (y | ~z);
+  };
+  var K1 = [0, 0x5a827999, 0x6ed9eba1, 0x8f1bbcdc, 0xa953fd4e];
+  var K2 = [0x50a28be6, 0x5c4dd124, 0x6d703ef3, 0x7a6d76e9, 0];
+  var R1 = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,7,4,13,1,10,6,15,3,12,0,9,5,2,14,11,8,3,10,14,4,9,15,8,1,2,7,0,6,13,11,5,12,1,9,11,10,0,8,12,4,13,3,7,15,14,5,6,2,4,0,5,9,7,12,2,10,14,1,3,8,11,6,15,13];
+  var R2 = [5,14,7,0,9,2,11,4,13,6,15,8,1,10,3,12,6,11,3,7,0,13,5,10,14,15,8,12,4,9,1,2,15,5,1,3,7,14,6,9,11,8,12,2,10,0,4,13,8,6,4,1,3,11,15,0,5,12,2,13,9,7,10,14,12,15,10,4,1,5,8,7,6,2,13,14,0,3,9,11];
+  var S1 = [11,14,15,12,5,8,7,9,11,13,14,15,6,7,9,8,7,6,8,13,11,9,7,15,7,12,15,9,11,7,13,12,11,13,6,7,14,9,13,15,14,8,13,6,5,12,7,5,11,12,14,15,14,15,9,8,9,14,5,6,8,6,5,12,9,15,5,11,6,8,13,12,5,12,13,14,11,8,5,6];
+  var S2 = [8,9,9,11,13,15,15,5,7,7,8,11,14,14,12,6,9,13,15,7,12,8,9,11,7,7,12,7,6,15,13,11,9,7,15,11,8,6,6,14,12,13,5,14,13,13,7,5,15,5,8,11,14,14,6,14,6,9,12,9,12,5,15,8,8,5,12,9,12,5,14,6,8,13,6,5,15,13,11,11];
+  var len = msg.length, total = ((len + 9 + 63) >> 6) << 6;
+  var m = new Uint8Array(total); m.set(msg); m[len] = 0x80;
+  var bits = len * 8;
+  for (var i = 0; i < 8; i++)
+    m[total - 8 + i] = (i < 4 ? bits >>> (8 * i) : Math.floor(bits / 4294967296) >>> (8 * (i - 4))) & 0xff;
+  var h0 = 0x67452301, h1 = 0xefcdab89, h2 = 0x98badcfe, h3 = 0x10325476, h4 = 0xc3d2e1f0;
+  var X = new Uint32Array(16);
+  for (var off = 0; off < total; off += 64) {
+    for (var i2 = 0; i2 < 16; i2++)
+      X[i2] = m[off+4*i2] | m[off+4*i2+1] << 8 | m[off+4*i2+2] << 16 | m[off+4*i2+3] << 24;
+    var a = h0, b = h1, c = h2, d = h3, e = h4;
+    var A = h0, B = h1, C = h2, D = h3, E = h4;
+    for (var j = 0; j < 80; j++) {
+      var t = (rotl((a + f(j, b, c, d) + X[R1[j]] + K1[j >> 4]) >>> 0, S1[j]) + e) >>> 0;
+      a = e; e = d; d = rotl(c, 10); c = b; b = t;
+      t = (rotl((A + f(79 - j, B, C, D) + X[R2[j]] + K2[j >> 4]) >>> 0, S2[j]) + E) >>> 0;
+      A = E; E = D; D = rotl(C, 10); C = B; B = t;
+    }
+    var tt = (h1 + c + D) >>> 0;
+    h1 = (h2 + d + E) >>> 0; h2 = (h3 + e + A) >>> 0;
+    h3 = (h4 + a + B) >>> 0; h4 = (h0 + b + C) >>> 0; h0 = tt;
+  }
+  var out = new Uint8Array(20);
+  [h0, h1, h2, h3, h4].forEach(function (h, i) {
+    out[4*i] = h & 255; out[4*i+1] = (h >>> 8) & 255;
+    out[4*i+2] = (h >>> 16) & 255; out[4*i+3] = (h >>> 24) & 255;
+  });
+  return out;
+}
+
+// secp256k1 compressed public key, affine double-and-add with BigInt.
+var SECP_P = 2n ** 256n - 2n ** 32n - 977n;
+var SECP_N = 0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141n;
+var SECP_G = [0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798n,
+              0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8n];
+function secpMod(a) { var r = a % SECP_P; return r < 0n ? r + SECP_P : r; }
+function secpInv(a) {
+  var t = 0n, nt = 1n, r = SECP_P, nr = secpMod(a);
+  while (nr !== 0n) { var q = r / nr; var x1 = t - q * nt; t = nt; nt = x1; var x2 = r - q * nr; r = nr; nr = x2; }
+  return secpMod(t);
+}
+function secpAdd(P, Q) {
+  if (!P) return Q; if (!Q) return P;
+  var px = P[0], py = P[1], qx = Q[0], qy = Q[1];
+  if (px === qx) {
+    if (secpMod(py + qy) === 0n) return null;                    // inverse points
+    var s = secpMod(3n * px * px * secpInv(2n * py));            // doubling
+    var x = secpMod(s * s - 2n * px);
+    return [x, secpMod(s * (px - x) - py)];
+  }
+  var s2 = secpMod((qy - py) * secpInv(qx - px));
+  var x2 = secpMod(s2 * s2 - px - qx);
+  return [x2, secpMod(s2 * (px - x2) - py)];
+}
+function secpPub(priv) {
+  if (priv <= 0n || priv >= SECP_N) return null;                 // invalid key
+  var R = null, A = SECP_G;
+  for (var k = priv; k > 0n; k >>= 1n) {
+    if (k & 1n) R = secpAdd(R, A);
+    A = secpAdd(A, A);
+  }
+  var out = new Uint8Array(33);
+  out[0] = R[1] & 1n ? 3 : 2;
+  var x = R[0];
+  for (var i = 32; i >= 1; i--) { out[i] = Number(x & 255n); x >>= 8n; }
+  return out;
+}
+
+async function bip39Seed(words) {
+  var enc = new TextEncoder();
+  var key = await crypto.subtle.importKey('raw', enc.encode(words.join(' ')), 'PBKDF2', false, ['deriveBits']);
+  // 2048 rounds, salt "mnemonic" — an empty BIP-39 passphrase is assumed.
+  var bits = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', hash: 'SHA-512', salt: enc.encode('mnemonic'), iterations: 2048 }, key, 512);
+  return new Uint8Array(bits);
+}
+async function fingerprintOfSeed(seed) {
+  var hk = await crypto.subtle.importKey('raw', new TextEncoder().encode('Bitcoin seed'),
+    { name: 'HMAC', hash: 'SHA-512' }, false, ['sign']);
+  var I = new Uint8Array(await crypto.subtle.sign('HMAC', hk, seed));
+  var pub = secpPub(BigInt('0x' + hexOf(I.slice(0, 32))));
+  if (!pub) return null;                       // probability about 2^-127
+  var sha = new Uint8Array(await crypto.subtle.digest('SHA-256', pub));
+  return hexOf(ripemd160(sha).slice(0, 4));
+}
+async function masterFingerprint(words) { return fingerprintOfSeed(await bip39Seed(words)); }
+
+</script>
 <script>
 /* ── IttyBitz single-file UI ──────────────────────────────────────────────
    All presentation and wiring. The cryptography lives in the DOM-free
@@ -2984,6 +3137,28 @@ function ittybitzToSeedQR(words) {
     if (x) x.onclick = function () {
       n.classList.remove('show');
       try { localStorage.setItem('ib-pwa-notice', '1'); } catch (e) {}
+    };
+  })();
+
+  // ---- Offline option for hosted web visitors ----
+  // Let people running the hosted page know they can download IttyBitz and run
+  // it from their own disk. Hidden when already running from a local file
+  // (file://) — they've clearly done it — and when running as the installed
+  // PWA (which shows its own migration banner instead).
+  (function () {
+    var isFile = location.protocol === 'file:';
+    var standalone =
+      (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+      window.navigator.standalone === true;
+    if (isFile || standalone) return;
+    try { if (localStorage.getItem('ib-offline-tip') === '1') return; } catch (e) {}
+    var n = document.getElementById('offline-tip');
+    if (!n) return;
+    n.classList.add('show');
+    var x = document.getElementById('offline-x');
+    if (x) x.onclick = function () {
+      n.classList.remove('show');
+      try { localStorage.setItem('ib-offline-tip', '1'); } catch (e) {}
     };
   })();
 
@@ -3019,6 +3194,8 @@ function ittybitzToSeedQR(words) {
   var ICON_LOCK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
   var ICON_UNLOCK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>';
   var ICON_SPIN = '<svg class="spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>';
+  var ICON_EYE = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>';
+  var ICON_EYE_OFF = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"/><path d="M14.084 14.158a3 3 0 0 1-4.242-4.242"/><path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"/><path d="m2 2 20 20"/></svg>';
 
   // ---- Helpers ----
   function isPasswordStrong(pwd) {
@@ -3172,8 +3349,21 @@ function ittybitzToSeedQR(words) {
     $('out').value = ''; $('out').classList.remove('blurred', 'ok-border', 'bad-border');
     $('out-qr').style.display = 'none';
     $('out-reveal').style.display = 'none';
+    hideFp('dec');
     qrState = null;
     clearStatus();
+  }
+
+  // ---- Master-fingerprint display ----
+  // Shown when a valid BIP-39 seed is detected: on the encrypt secret field,
+  // on the decrypt result, and beside the SeedQR. The fingerprint is a public
+  // identifier (a one-way hash), so it is safe to show even while the secret
+  // stays blurred — it lets you confirm the right seed without exposing it.
+  var encFpToken = 0; // guards the async encrypt-side fingerprint against races
+  function hideFp(which) { var el = $(which + '-fp'); if (el) el.classList.remove('show'); }
+  function showFp(which, fp) {
+    var code = $(which + '-fp-code'); if (code) code.textContent = fp;
+    var el = $(which + '-fp'); if (el) el.classList.add('show');
   }
 
   function fullReset() {
@@ -3182,6 +3372,7 @@ function ittybitzToSeedQR(words) {
     $('p').value = '';
     $('t').value = '';
     $('t').classList.remove('ok-border', 'bad-border');
+    encFpToken++; hideFp('enc');
     refreshPasswordButtons();
     resetResult();
   }
@@ -3197,11 +3388,14 @@ function ittybitzToSeedQR(words) {
     $('t').placeholder = enc ? 'Enter text to encrypt…' : 'Paste the Base64 output from IttyBitz…';
     $('p').placeholder = enc ? 'Enter a strong password' : 'Enter decryption password';
     $('pw-hint').style.display = enc ? '' : 'none';
-    $('t-toggle').style.display = enc ? '' : 'none';
+    $('t-actions').style.display = enc ? '' : 'none';
     $('p-gen').style.display = enc ? '' : 'none';
     $('go-icon').innerHTML = enc ? ICON_LOCK : ICON_UNLOCK;
     $('go-label').textContent = enc ? 'Encrypt' : 'Decrypt';
-    // Encrypt-side secret text is blurred-toggleable; decrypt-side textarea is plain.
+    // Encrypt-side secret text is a human passphrase (sans font, blur toggle);
+    // decrypt-side it holds base64, so switch to monospace.
+    $('t').classList.toggle('mono', !enc);
+    updateSecretToggle();
     updateTextBlur();
   }
 
@@ -3217,6 +3411,7 @@ function ittybitzToSeedQR(words) {
     $('pill-text').setAttribute('aria-selected', String(t === 'text'));
     $('pane-file').style.display = t === 'file' ? '' : 'none';
     $('pane-text').style.display = t === 'text' ? '' : 'none';
+    encFpToken++; hideFp('enc');
     resetResult();
   }
 
@@ -3231,23 +3426,43 @@ function ittybitzToSeedQR(words) {
     if (mode === 'encrypt' && !showTextSecret && t.value) t.classList.add('blurred');
     else t.classList.remove('blurred');
   }
+  // Action-based eye icon — it shows what a click WILL do:
+  //   hidden/blurred -> a clear eye        (click to reveal)
+  //   visible        -> an eye with a slash (click to hide)
+  function setEyeIcon(btn, hidden, noun) {
+    btn.innerHTML = hidden ? ICON_EYE : ICON_EYE_OFF;
+    var lbl = (hidden ? 'Show ' : 'Hide ') + (noun || 'text');
+    btn.setAttribute('title', lbl);
+    btn.setAttribute('aria-label', lbl);
+  }
+  function updateSecretToggle() { setEyeIcon($('t-toggle'), !showTextSecret, 'secret text'); }
   $('t-toggle').onclick = function () {
     showTextSecret = !showTextSecret;
-    this.setAttribute('title', showTextSecret ? 'Hide secret text' : 'Show secret text');
+    updateSecretToggle();
     updateTextBlur();
   };
+  $('t-copy').onclick = function () { copyText($('t').value); };
 
   $('t').addEventListener('input', function () {
     updateTextBlur();
     if (mode !== 'encrypt') return;
     var val = $('t').value;
     if (seedTimer) clearTimeout(seedTimer);
+    hideFp('enc');
+    var token = ++encFpToken; // invalidate any in-flight fingerprint
     if (!val.trim()) { $('t').classList.remove('ok-border', 'bad-border'); return; }
     seedTimer = setTimeout(function () {
       ittybitzValidateBip39(val).then(function (res) {
+        if (token !== encFpToken) return;
         $('t').classList.remove('ok-border', 'bad-border');
-        if (res.valid) $('t').classList.add('ok-border');
-        else if (res.seedShaped) $('t').classList.add('bad-border');
+        if (res.valid) {
+          $('t').classList.add('ok-border');
+          masterFingerprint(res.words).then(function (fp) {
+            if (token === encFpToken && fp) showFp('enc', fp);
+          }).catch(function () {});
+        } else if (res.seedShaped) {
+          $('t').classList.add('bad-border');
+        }
       }).catch(function () { $('t').classList.remove('ok-border', 'bad-border'); });
     }, 300);
   });
@@ -3291,6 +3506,7 @@ function ittybitzToSeedQR(words) {
   $('out-reveal').onclick = function () {
     showDecrypted = !showDecrypted;
     $('out').classList.toggle('blurred', !showDecrypted);
+    setEyeIcon($('out-reveal'), !showDecrypted, 'result');
   };
   $('out-qr').onclick = function () { if (qrState) openQr(); };
 
@@ -3298,16 +3514,19 @@ function ittybitzToSeedQR(words) {
   function openQr() {
     qrRevealed = false;
     $('qr-box').classList.add('qr-blur');
-    var ctx = $('qr-canvas').getContext('2d');
-    ctx.clearRect(0, 0, $('qr-canvas').width, $('qr-canvas').height);
+    // Draw the QR right away but blurred, so it clearly reads as a QR — a blank
+    // white box looks broken. The Reveal button below just removes the blur.
+    drawQR($('qr-canvas'), qrState.getValue(), qrState.numeric, 512, 4);
     $('qr-download').disabled = true;
     $('qr-reveal').lastChild.textContent = 'Reveal';
     if (qrState.kind === 'seed') {
       $('qr-title').textContent = 'Standard SeedQR';
-      $('qr-desc').textContent = 'BIP-39 seed phrase, encoded for hardware-wallet import (Coldcard, SeedSigner, Sparrow, Specter, Krux, Keystone, Jade).';
+      $('qr-desc').textContent = 'BIP-39 seed phrase, encoded for hardware-wallet import.';
       $('qr-warn').textContent = 'Anyone who scans this QR can recover your seed. Show only on a trusted device and screen.';
       $('qr-caption').style.display = '';
       $('qr-caption').textContent = qrState.caption || '';
+      if (qrState.fp) { $('qr-fp-code').textContent = qrState.fp; $('qr-fp').style.display = 'block'; }
+      else { $('qr-fp').style.display = 'none'; }
     } else {
       $('qr-title').textContent = 'QR Code';
       $('qr-desc').textContent = mode === 'encrypt'
@@ -3317,6 +3536,7 @@ function ittybitzToSeedQR(words) {
         ? 'This QR contains your encrypted text.'
         : 'This QR contains your decrypted text. Show only on a trusted device and screen.';
       $('qr-caption').style.display = 'none';
+      $('qr-fp').style.display = 'none';
     }
     $('qr-overlay').classList.add('show');
   }
@@ -3324,19 +3544,11 @@ function ittybitzToSeedQR(words) {
   $('qr-close').onclick = closeQr;
   $('qr-overlay').addEventListener('click', function (e) { if (e.target === this) closeQr(); });
   $('qr-reveal').onclick = function () {
+    // The QR is already drawn (blurred); reveal just toggles the blur.
     qrRevealed = !qrRevealed;
-    if (qrRevealed) {
-      drawQR($('qr-canvas'), qrState.getValue(), qrState.numeric, 512, 4);
-      $('qr-box').classList.remove('qr-blur');
-      $('qr-download').disabled = false;
-      this.lastChild.textContent = 'Hide';
-    } else {
-      var ctx = $('qr-canvas').getContext('2d');
-      ctx.clearRect(0, 0, $('qr-canvas').width, $('qr-canvas').height);
-      $('qr-box').classList.add('qr-blur');
-      $('qr-download').disabled = true;
-      this.lastChild.textContent = 'Reveal';
-    }
+    $('qr-box').classList.toggle('qr-blur', !qrRevealed);
+    $('qr-download').disabled = !qrRevealed;
+    this.lastChild.textContent = qrRevealed ? 'Hide' : 'Reveal';
   };
   $('qr-download').onclick = function () {
     if (!qrRevealed || !qrState) return;
@@ -3430,9 +3642,12 @@ function ittybitzToSeedQR(words) {
             if (res.valid) {
               $('out').classList.add('ok-border');
               var words = res.words;
+              var fp = null;
+              try { fp = await masterFingerprint(words); } catch (e3) {}
               qrState = { getValue: function () { return ittybitzToSeedQR(words); }, numeric: true, kind: 'seed',
-                          caption: 'Standard SeedQR · ' + words.length + ' words · ' + (words.length * 4) + ' digits' };
+                          caption: 'Standard SeedQR · ' + words.length + ' words · ' + (words.length * 4) + ' digits', fp: fp };
               $('out-qr').style.display = '';
+              if (fp) showFp('dec', fp);
             } else {
               if (res.seedShaped) $('out').classList.add('bad-border');
               if (text.length <= QR_MAX_CHARS) {
@@ -3467,7 +3682,7 @@ function ittybitzToSeedQR(words) {
     // Reveal control + blur only for decrypt-text output.
     var showReveal = mode === 'decrypt' && inputType === 'text' && isDecryptOutput;
     $('out-reveal').style.display = showReveal ? '' : 'none';
-    if (showReveal) { showDecrypted = false; $('out').classList.add('blurred'); }
+    if (showReveal) { showDecrypted = false; $('out').classList.add('blurred'); setEyeIcon($('out-reveal'), true, 'result'); }
     $('out-label').textContent = 'Result';
   }
 

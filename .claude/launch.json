@@ -5,8 +5,7 @@
       "name": "ittybitz",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
-      "port": 9002,
-      "url": "http://localhost:9002/index.html"
+      "port": 9002
     }
   ]
 }

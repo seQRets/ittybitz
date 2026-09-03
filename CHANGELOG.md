@@ -8,6 +8,7 @@ Every IttyBitz release, newest first. Full notes for each version live in [`docs
 
 | Version | Date | Summary |
 |---|---|---|
+| [**3.0.2** 🦕 Iguanodon](docs/releases/v3.0.2.md) | 2026-09-03 | BIP-39 master fingerprint (encrypt, decrypt, and beside the SeedQR); QR modal shows a blurred QR instead of a blank box; shorter SeedQR modal; horizontal non-overlapping result/secret controls; action-based eye icons; readable secret font + copy button; offline-download banner. |
 | [**3.0.1** 🦕 Iguanodon](docs/releases/v3.0.1.md) | 2026-09-03 | Inline favicon; footer centered on mobile; gentle migration worker retires the old PWA — online it loads the single-file app, offline it points installed users to the download. |
 | [**3.0.0** 🦕 Iguanodon](docs/releases/v3.0.0.md) | 2026-09-03 | **The single-file era.** The whole app is now one self-contained HTML file — no framework, no build for users, no service worker, zero dependencies. Offline is "save the file." Cryptography unchanged and gated in CI in both directions against the frozen reference. |
 

@@ -51,6 +51,7 @@ if (bip39Core.includes("__WORDLIST__")) {
 const head = read(join(BUILD, "head.html"));
 const qrcode = read(join(BUILD, "qrcode-lib.js"));
 const cryptoCore = read(join(BUILD, "crypto-core.js"));
+const fingerprint = read(join(BUILD, "fingerprint-core.js"));
 const app = read(join(BUILD, "app.js"));
 
 // 4. Assemble. Script ids match what scripts/crypto-regression.mts extracts.
@@ -59,6 +60,7 @@ const out =
   '\n<script id="ittybitz-vendor-qrcode">\n' + qrcode +
   '\n</script>\n<script id="ittybitz-crypto-core">\n' + cryptoCore +
   '\n</script>\n<script id="ittybitz-bip39">\n' + bip39Core +
+  '\n</script>\n<script id="ittybitz-fingerprint">\n' + fingerprint +
   '\n</script>\n<script>\n' + app +
   '\n</script>\n</body>\n</html>\n';
 
