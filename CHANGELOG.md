@@ -8,6 +8,7 @@ Every IttyBitz release, newest first. Full notes for each version live in [`docs
 
 | Version | Date | Summary |
 |---|---|---|
+| [**3.0.1** 🦕 Iguanodon](docs/releases/v3.0.1.md) | 2026-09-03 | Inline favicon; footer centered on mobile; gentle migration worker retires the old PWA — online it loads the single-file app, offline it points installed users to the download. |
 | [**3.0.0** 🦕 Iguanodon](docs/releases/v3.0.0.md) | 2026-09-03 | **The single-file era.** The whole app is now one self-contained HTML file — no framework, no build for users, no service worker, zero dependencies. Offline is "save the file." Cryptography unchanged and gated in CI in both directions against the frozen reference. |
 
 ## 2.x
@@ -50,8 +51,9 @@ Detailed notes for these predate the `docs/releases/` files and live on the rele
 
 ### How releases are made
 
-Release names are dinosaur-themed. Each release bumps the version in `package.json`, the footer in `src/components/encryptor-tool.tsx`, and `CACHE_VERSION` in `public/sw.js`; adds a notes file at `docs/releases/vX.Y.Z.md`; adds a row to this file; and is published with:
+Release names are dinosaur-themed. Since [v3.0.0](docs/releases/v3.0.0.md) IttyBitz is a single static file, so each release: sets the footer version in `scripts/build/head.html` and runs `npm run build` to reassemble `site/index.html`; bumps the version in `package.json`; runs `npm run test:crypto` (must pass); adds a notes file at `docs/releases/vX.Y.Z.md`; adds a row to this file; repins the recovery download links in `README.md` and `Recover/README.md`; then is published with the two HTML files as verified assets:
 
 ```bash
-gh release create vX.Y.Z --title "vX.Y.Z 🦕 Name" --notes-file docs/releases/vX.Y.Z.md --latest
+gh release create vX.Y.Z --title "vX.Y.Z 🦕 Name" --notes-file docs/releases/vX.Y.Z.md --latest \
+  ittybitz.html ittybitz-recovery.html
 ```

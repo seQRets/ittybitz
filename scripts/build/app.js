@@ -8,6 +8,28 @@
   'use strict';
   var $ = function (id) { return document.getElementById(id); };
 
+  // ---- Migrate installed-PWA users to the downloadable file ----
+  // Opening the retired installed app puts the page in standalone display mode.
+  // Nudge those users once toward saving the single file for offline use. The
+  // migration service worker (public /sw.js) handles the offline case; this is
+  // the gentle online prompt. Non-standalone (normal browser) visitors never
+  // see it.
+  (function () {
+    var standalone =
+      (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+      window.navigator.standalone === true;
+    if (!standalone) return;
+    try { if (localStorage.getItem('ib-pwa-notice') === '1') return; } catch (e) {}
+    var n = document.getElementById('pwa-notice');
+    if (!n) return;
+    n.classList.add('show');
+    var x = document.getElementById('pwa-x');
+    if (x) x.onclick = function () {
+      n.classList.remove('show');
+      try { localStorage.setItem('ib-pwa-notice', '1'); } catch (e) {}
+    };
+  })();
+
   // ---- Web Crypto secure-context guard (same posture as the recovery file) ----
   if (!(window.crypto && window.crypto.subtle && window.crypto.getRandomValues)) {
     document.querySelector('.card').innerHTML =
