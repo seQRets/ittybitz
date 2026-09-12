@@ -45,13 +45,37 @@ const EXECUTABLE_TYPE = /^(?:$|module$|text\/javascript$|application\/javascript
 const META_RE =
   /(<meta http-equiv="Content-Security-Policy"\s+content=")([^"]*)(">)/i;
 
+// Walk the markup the way the HTML parser does: an HTML comment hides
+// everything up to its "-->", and a <script> body runs to the first
+// "</script>" regardless of what it contains. A naive regex would treat a
+// literal "<script>" inside a comment as a real block and hash the wrong bytes
+// — which pins a hash the browser never matches and silently kills the page.
+function inlineScriptBlocks(html) {
+  const blocks = [];
+  const next = /<!--|<script\b/gi;
+  let pos = 0;
+  let m;
+  while ((m = next.exec(html)) !== null) {
+    if (m[0] === '<!--') {
+      const end = html.indexOf('-->', m.index + 4);
+      if (end < 0) break; // unterminated comment hides the rest of the file
+      pos = end + 3;
+    } else {
+      const open = html.indexOf('>', m.index);
+      if (open < 0) break;
+      const close = html.indexOf('</script>', open + 1);
+      if (close < 0) break;
+      blocks.push({ attrs: html.slice(m.index + 7, open), body: html.slice(open + 1, close) });
+      pos = close + 9;
+    }
+    next.lastIndex = pos;
+  }
+  return blocks;
+}
+
 function inlineScriptHashes(html) {
   const hashes = new Set();
-  const re = /<script\b([^>]*)>([\s\S]*?)<\/script>/gi;
-  let m;
-  while ((m = re.exec(html)) !== null) {
-    const attrs = m[1];
-    const body = m[2];
+  for (const { attrs, body } of inlineScriptBlocks(html)) {
     if (!body) continue; // external or empty
     if (/\bsrc\s*=/i.test(attrs)) continue; // external
     const type = attrs.match(/\btype\s*=\s*["']([^"']*)["']/i);

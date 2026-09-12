@@ -1,8 +1,8 @@
 /* ── IttyBitz single-file UI ──────────────────────────────────────────────
    All presentation and wiring. The cryptography lives in the DOM-free
    ittybitz-crypto-core block above; this layer only reads files, calls it,
-   and renders results. Mirrors the behaviour of the React app in
-   src/components/encryptor-tool.tsx.
+   and renders results. Assembled into site/index.html by
+   scripts/build-app.mjs; edit this file, not the built page.
    ───────────────────────────────────────────────────────────────────────── */
 (function () {
   'use strict';
@@ -97,7 +97,7 @@
   var qrRevealed = false;
 
   var MAX_FILE_SIZE = 100 * 1024 * 1024;
-  var QR_MAX_CHARS = 2953;
+  var QR_MAX_BYTES = 2953; // version 40-L, byte mode
   var BAD_NAME = /[\u0000-\u001f\u202a-\u202e\u2066-\u2069]/;
   var GEN_CHARSET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+~`|}{[]:;?><,./-=";
   var SYMBOL_RE = /[!@#$%^&*()_+~`|}{[\]:;?><,.\/=-]/;
@@ -167,7 +167,9 @@
     var a = document.createElement('a');
     a.href = url; a.download = filename;
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    // Revoke on a delay: Safari can cancel a download whose object URL is
+    // revoked before the download has actually started.
+    setTimeout(function () { URL.revokeObjectURL(url); }, 10000);
   }
 
   function status(cls, text) {
@@ -192,6 +194,14 @@
   }
 
   // ---- QR rendering (vendored qrcode-generator → canvas) ----
+  // The library's default string encoder keeps only the low byte of each
+  // UTF-16 code unit, which silently corrupts anything outside Latin-1
+  // (accents on many scanners, emoji, Cyrillic, CJK). Use its UTF-8 encoder so
+  // a QR of decrypted text scans back to exactly what was decrypted.
+  qrcode.stringToBytes = qrcode.stringToBytesFuncs['UTF-8'];
+  // Byte-mode capacity is measured in UTF-8 bytes, not JS string length.
+  function fitsQR(text) { return new TextEncoder().encode(text).length <= QR_MAX_BYTES; }
+
   function drawQR(canvas, text, numeric, targetPx, margin) {
     margin = margin == null ? 4 : margin;
     var qr = qrcode(0, 'L');
@@ -379,13 +389,26 @@
   });
 
   // ---- Password field ----
+  // The moment a password is accepted for encryption (the border turns green)
+  // is the moment to tell people to save it: the field is cleared after a
+  // successful encrypt, and the password is the only way back in. Warning
+  // afterwards would be too late. The notice fires once per password, not on
+  // every keystroke.
+  var SAVE_PW_NOTICE = 'Save this password somewhere secure now. It is the only way to decrypt the result, and it will be cleared from this field after you encrypt.';
+  var pwNoticed = false;
   function refreshPasswordButtons() {
     var pw = $('p').value;
     $('p-copy').disabled = !pw;
     $('p-clear').disabled = !pw;
     $('p').classList.remove('ok-border', 'bad-border');
-    if (mode === 'encrypt' && pw) {
-      $('p').classList.add(isPasswordStrong(pw) ? 'ok-border' : 'bad-border');
+    var strong = !!pw && mode === 'encrypt' && isPasswordStrong(pw);
+    if (pw && mode === 'encrypt') $('p').classList.add(strong ? 'ok-border' : 'bad-border');
+    if (strong && !pwNoticed) { pwNoticed = true; status('ok', 'Password accepted. ' + SAVE_PW_NOTICE); }
+    else if (!strong && pwNoticed) {
+      // No longer accepted (edited below the bar, or cleared): withdraw the
+      // notice — but only if it is still what the status box is showing.
+      pwNoticed = false;
+      if ($('status').textContent.indexOf(SAVE_PW_NOTICE) >= 0) clearStatus();
     }
   }
   $('p').addEventListener('input', refreshPasswordButtons);
@@ -396,7 +419,12 @@
   };
   $('p-copy').onclick = function () { copyText($('p').value); };
   $('p-clear').onclick = function () { $('p').value = ''; refreshPasswordButtons(); };
-  $('p-gen').onclick = function () { $('p').value = generatePassword(); refreshPasswordButtons(); status('ok', 'A new secure password has been generated.'); };
+  $('p-gen').onclick = function () {
+    $('p').value = generatePassword();
+    pwNoticed = true; // this handler shows the notice itself
+    refreshPasswordButtons();
+    status('ok', 'A new secure password has been generated. ' + SAVE_PW_NOTICE);
+  };
 
   // ---- Key file toggle ----
   $('kf-switch').onclick = function () {
@@ -419,7 +447,11 @@
     $('out').classList.toggle('blurred', !showDecrypted);
     setEyeIcon($('out-reveal'), !showDecrypted, 'result');
   };
-  $('out-qr').onclick = function () { if (qrState) openQr(); };
+  $('out-qr').onclick = function () {
+    if (!qrState) return;
+    try { openQr(); }
+    catch (e) { closeQr(); status('err', 'This text is too long to fit in a QR code.'); }
+  };
 
   // ---- QR overlay ----
   function openQr() {
@@ -514,16 +546,16 @@
           var encName = mainFile.name + '.ibitz';
           download(ct, encName);
           mainFile = null; clearMainZone();
-          status('ok', 'File encrypted — downloaded as "' + encName + '".');
+          status('ok', 'File encrypted — downloaded as "' + encName + '".\n\nStore your saved password securely. It is the only way to open this file.');
         } else {
           var b64 = bytesToB64(ct);
           showResult(b64, false);
           $('t').value = ''; $('t').classList.remove('ok-border', 'bad-border');
-          if (b64.length <= QR_MAX_CHARS) {
+          if (fitsQR(b64)) {
             qrState = { getValue: function () { return b64; }, numeric: false, kind: 'plain' };
             $('out-qr').style.display = '';
           }
-          status('ok', 'Text encrypted. Copy the Base64 result, or show it as a QR.');
+          status('ok', 'Text encrypted. Copy the Base64 result, or show it as a QR.\n\nStore your saved password securely. It is the only way to decrypt this text.');
         }
       } else {
         var encBytes;
@@ -561,13 +593,13 @@
               if (fp) showFp('dec', fp);
             } else {
               if (res.seedShaped) $('out').classList.add('bad-border');
-              if (text.length <= QR_MAX_CHARS) {
+              if (fitsQR(text)) {
                 qrState = { getValue: function () { return text; }, numeric: false, kind: 'plain' };
                 $('out-qr').style.display = '';
               }
             }
           } catch (e2) {
-            if (text.length <= QR_MAX_CHARS) {
+            if (fitsQR(text)) {
               qrState = { getValue: function () { return text; }, numeric: false, kind: 'plain' };
               $('out-qr').style.display = '';
             }

@@ -6,12 +6,15 @@
 <title>IttyBitz Recovery — offline decryption</title>
 <!-- Enforces the "no network" promise rather than merely asserting it: this
      page cannot fetch, load, or send anything anywhere. default-src 'none'
-     blocks every network destination; the two 'unsafe-inline' allowances
-     cover only this file's own inline style and script blocks. blob: is
-     permitted so a decrypted file can be handed to the browser's download
-     mechanism, which never touches the network. -->
+     blocks every network destination. script-src lists the SHA-256 hash of
+     each of this file's own inline script blocks (pinned by
+     scripts/update-csp-hashes.mjs), so the browser runs exactly those blocks
+     and refuses any injected or altered script. style-src 'unsafe-inline'
+     covers only this file's own stylesheet and inline style attributes.
+     A decrypted file is handed to the browser's download mechanism as a
+     blob: URL, which never touches the network. -->
 <meta http-equiv="Content-Security-Policy"
-      content="default-src 'none'; script-src 'sha256-BVmDpGXlS5zPFhwENBr1kSpTwrkiWmGeGQB6w1MymoY=' 'sha256-tOlKT0expY1rq2tHr40C2UeyujlfrG4plvq8ZgnCsuY='; style-src 'unsafe-inline'; connect-src 'none'; img-src 'none'; form-action 'none'; base-uri 'none'">
+      content="default-src 'none'; script-src 'sha256-BVmDpGXlS5zPFhwENBr1kSpTwrkiWmGeGQB6w1MymoY=' 'sha256-MxTZrbCO1I7nSrEcs5l5j9Qu1DPLjORW6GsCGqCwf1Q='; style-src 'unsafe-inline'; connect-src 'none'; img-src 'none'; form-action 'none'; base-uri 'none'">
 <!--
   ═══════════════════════════════════════════════════════════════════════
   IttyBitz Recovery Tool — standalone offline decryption
@@ -556,7 +559,9 @@ async function ittybitzDecrypt(bytes, password, keyFileBytes) {
         var a = document.createElement('a');
         a.href = url; a.download = outName;
         document.body.appendChild(a); a.click(); document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        // Revoke on a delay: Safari can cancel a download whose object URL is
+        // revoked before the download has actually started.
+        setTimeout(function () { URL.revokeObjectURL(url); }, 10000);
         show('ok', 'Decrypted successfully \u2014 downloaded as "' + outName + '".');
       }
       // Best-effort erase now that the plaintext has been handed off (the

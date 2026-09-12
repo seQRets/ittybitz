@@ -358,8 +358,8 @@ async function main() {
   // file it reimplements the container parsing and key derivation, so it is
   // gated the same way — but in BOTH directions: ciphertext it produces must
   // open under crypto.ts, and ciphertext crypto.ts produces must open under
-  // it. That two-way guarantee is exactly what a bundled copy of the React
-  // app cannot give by inspection, and it is why this file is trustworthy.
+  // it. That two-way guarantee is something no amount of reading the page
+  // can give by inspection, and it is why this file is trustworthy.
   console.log("\nStandalone two-way app (site/index.html):");
 
   const appHtml = readFileSync(join(HERE, "..", "site", "index.html"), "utf8");
