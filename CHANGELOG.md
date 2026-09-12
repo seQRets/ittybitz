@@ -8,6 +8,7 @@ Every IttyBitz release, newest first. Full notes for each version live in [`docs
 
 | Version | Date | Summary |
 |---|---|---|
+| [**3.0.4** 🦕 Iguanodon](docs/releases/v3.0.4.md) | 2026-09-12 | Security hardening: hash-pinned CSP (`script-src 'sha256-…'`, no `unsafe-inline`) in both files; JS anti-framing guard; published `SHA256SUMS.txt` + `update-csp-hashes.mjs`. No behavior or crypto changes. |
 | [**3.0.3** 🦕 Iguanodon](docs/releases/v3.0.3.md) | 2026-09-08 | Permanent **Download app** link in the footer, so getting the file no longer depends on the dismissible banner; it serves the published release asset rather than a "Save Page As" copy, which is unverifiable against the release checksum. |
 | [**3.0.2** 🦕 Iguanodon](docs/releases/v3.0.2.md) | 2026-09-03 | BIP-39 master fingerprint (encrypt, decrypt, and beside the SeedQR); QR modal shows a blurred QR instead of a blank box; shorter SeedQR modal; horizontal non-overlapping result/secret controls; action-based eye icons; readable secret font + copy button; offline-download banner. |
 | [**3.0.1** 🦕 Iguanodon](docs/releases/v3.0.1.md) | 2026-09-03 | Inline favicon; footer centered on mobile; gentle migration worker retires the old PWA — online it loads the single-file app, offline it points installed users to the download. |
@@ -53,9 +54,11 @@ Detailed notes for these predate the `docs/releases/` files and live on the rele
 
 ### How releases are made
 
-Release names are dinosaur-themed. Since [v3.0.0](docs/releases/v3.0.0.md) IttyBitz is a single static file, so each release: sets the footer version in `scripts/build/head.html` and runs `npm run build` to reassemble `site/index.html`; bumps the version in `package.json`; runs `npm run test:crypto` (must pass); adds a notes file at `docs/releases/vX.Y.Z.md`; adds a row to this file; repins the recovery download links in `README.md` and `Recover/README.md`; then is published with the two HTML files as verified assets:
+Release names are dinosaur-themed. Since [v3.0.0](docs/releases/v3.0.0.md) IttyBitz is a single static file, so each release: sets the footer version in `scripts/build/head.html` and runs `npm run build` (which reassembles `site/index.html`, pins each inline `<script>` block into both shipped files' CSP as a `'sha256-…'` source, and regenerates `SHA256SUMS.txt`); bumps the version in `package.json`; runs `npm run test:crypto` (must pass); adds a notes file at `docs/releases/vX.Y.Z.md`; adds a row to this file; repins the recovery download links in `README.md` and `Recover/README.md`; then publishes the two HTML files **and `SHA256SUMS.txt`** as verified assets. Copy the built files to their release-asset names first so they match `SHA256SUMS.txt` (which the `sw.js` migration page and offline banner point users to):
 
 ```bash
+cp site/index.html ittybitz.html
+cp site/ittybitz-recovery.html ittybitz-recovery.html
 gh release create vX.Y.Z --title "vX.Y.Z 🦕 Name" --notes-file docs/releases/vX.Y.Z.md --latest \
-  ittybitz.html ittybitz-recovery.html
+  ittybitz.html ittybitz-recovery.html SHA256SUMS.txt
 ```

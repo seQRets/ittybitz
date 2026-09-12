@@ -1,5 +1,39 @@
 # IttyBitz Security Audit
 
+> ## ⚠️ Addendum — architecture change since this audit (2026-09)
+>
+> **This audit reviewed v2.8.1, which was a Next.js/React static export.** As of
+> **v3.0.0 "Iguanodon"** IttyBitz was rebuilt as a **single self-contained HTML
+> file** (`site/index.html`, plus the decrypt-only `site/ittybitz-recovery.html`):
+> no framework, no bundler, no service worker for the app, and **zero runtime or
+> build dependencies**. The audit below has **not** been re-run against v3.x; this
+> note maps its findings onto the new architecture.
+>
+> **Still applies:**
+> - **PBKDF2 vs. Argon2id key-derivation tradeoff.** The cryptographic core is
+>   byte-for-byte unchanged from the audited version (PBKDF2-SHA256 @ 1,000,000
+>   iterations, AES-256-GCM), so the accepted tradeoff — PBKDF2 for universal Web
+>   Crypto support and long-term recoverability, rather than the more
+>   memory-hard Argon2id — carries over verbatim. See the finding below.
+> - Any finding about the crypto container format, key derivation, or BIP-39/
+>   SeedQR logic — that code was carried over intact and is still gated by
+>   `scripts/crypto-regression.mts`.
+>
+> **Obsolete (the subject no longer exists in v3.x):**
+> - **Next.js / React** items — `next.config.js`, `src/app/layout.tsx`, static
+>   export, `dangerouslySetInnerHTML`, `NODE_ENV`/CSP-tag gating: all removed.
+> - **Build-time / bundle items** — no bundler, no `_next/static` chunks, no
+>   `package-lock.json`; `npm audit` is moot because there are no dependencies.
+> - **CI/supply-chain items** specific to `npm ci` in the deploy workflow — the
+>   deploy now publishes the static `site/` directory verbatim with no install
+>   or build step.
+>
+> **New in v3.x (not covered by the v2.8.1 review):** hash-pinned CSP
+> (`script-src 'sha256-…'`) applied by `scripts/update-csp-hashes.mjs`, a
+> JS anti-framing guard in both files, and published `SHA256SUMS.txt` checksums.
+> The `default-src 'none'` / `connect-src 'none'` posture and "zero outbound
+> requests" property are unchanged.
+
 **Date:** August 25, 2026
 **Scope:** Full codebase review of IttyBitz v2.8.1 "Triceratops" (client-side encryption tool)
 **Files reviewed:** `src/lib/crypto.ts`, `src/lib/bip39.ts`, `src/components/encryptor-tool.tsx`, `src/app/layout.tsx`, `scripts/apply-csp-hashes.mjs`, `scripts/crypto-regression.mts`, `public/sw.js`, `public/manifest.json`, `next.config.js`, `package.json`, `package-lock.json`, `.github/workflows/deploy.yml`, `.github/workflows/crypto-regression.yml`, `README.md`

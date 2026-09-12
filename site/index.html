@@ -11,7 +11,7 @@
      render to <canvas> (no img-src needed) and downloads use blob:/data: which
      are not network fetches. Nothing here can phone home. -->
 <meta http-equiv="Content-Security-Policy"
-      content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; font-src 'none'; form-action 'none'; base-uri 'none'">
+      content="default-src 'none'; script-src 'sha256-4GSOHG1PWgpqNwON0DpmpOBDoMdMXoBzQI2KhDuK9js=' 'sha256-SJVUXJNlOay+2TG0PE+o+T46Wt7Qxe1B1XpRTxfVTCE=' 'sha256-W+IzleLCL30nXjyiCRp8Rl3j2GFDMC9KAJFnnygxQ8c=' 'sha256-XlgOklfvkE1YTG+BSxN2kJFwnn+L4EhXLVb01Ma4YsM=' 'sha256-zjtuj0G0zb+MQIUTFZEPt9tiqNlUTTU432Go6EzKS7I='; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; font-src 'none'; form-action 'none'; base-uri 'none'">
 <!--
   ═══════════════════════════════════════════════════════════════════════
   IttyBitz — single-file client-side encryption
@@ -452,7 +452,7 @@
       <a class="accent" href="https://github.com/seQRets/ittybitz/releases/latest/download/ittybitz.html" title="Download this app as one file — the exact published build, verifiable by checksum">Download app</a>
       <a class="accent" href="./ittybitz-recovery.html" title="Standalone offline decryption tool">Recovery tool</a>
       <a href="https://github.com/seQRets/ittybitz" target="_blank" rel="noopener noreferrer">GitHub</a>
-      <span id="version">v3.0.3 🦕 Iguanodon</span>
+      <span id="version">v3.0.4 🦕 Iguanodon</span>
     </div>
   </footer>
 </div>
@@ -3123,6 +3123,27 @@ async function masterFingerprint(words) { return fingerprintOfSeed(await bip39Se
    ───────────────────────────────────────────────────────────────────────── */
 (function () {
   'use strict';
+
+  // ---- Anti-framing guard ----
+  // IttyBitz is meant to be opened directly, never embedded in another page.
+  // A <meta> CSP cannot set frame-ancestors, so the check is enforced here: if
+  // we are inside a frame — cross-origin access to window.top throws, which we
+  // treat as framed — refuse to initialize and say so, so a hostile wrapper
+  // can never present the app while intercepting input.
+  var framed;
+  try { framed = window.top !== window.self; } catch (e) { framed = true; }
+  if (framed) {
+    try {
+      document.body.innerHTML =
+        '<div style="max-width:30rem;margin:14vh auto 0;padding:0 1.5rem;text-align:center;' +
+        'color:#f4f4f5;font:16px/1.6 system-ui,-apple-system,sans-serif">' +
+        '<h1 style="font-size:1.4rem;font-weight:600;margin:0 0 .75rem">IttyBitz won’t run inside a frame</h1>' +
+        '<p style="color:#a1a1aa;margin:0">For your security it refuses to run embedded in another page. ' +
+        'Open it directly — go to <strong>ittybitz.app</strong>, or open your saved copy of the file.</p></div>';
+    } catch (e) { /* ignore */ }
+    return;
+  }
+
   var $ = function (id) { return document.getElementById(id); };
 
   // ---- Migrate installed-PWA users to the downloadable file ----

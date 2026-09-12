@@ -101,7 +101,7 @@ The current audit findings and accepted tradeoffs are tracked in-repo: [SECURITY
 
 ## 🪶 Recovery tool — decrypt without IttyBitz
 
-**[⬇️ Download it](https://github.com/seQRets/ittybitz/releases/download/v3.0.3/ittybitz-recovery.html)** (26 KB, one file) · [open it in your browser](https://ittybitz.app/ittybitz-recovery.html) · [how to save and use it](Recover/)
+**[⬇️ Download it](https://github.com/seQRets/ittybitz/releases/download/v3.0.4/ittybitz-recovery.html)** (26 KB, one file) · [open it in your browser](https://ittybitz.app/ittybitz-recovery.html) · [how to save and use it](Recover/)
 
 A standalone page that decrypts your IttyBitz files with **no dependencies, no network, no installation and no build step**. Save it alongside your encrypted data — on the same USB stick, the same backup drive, the same safe.
 
@@ -147,24 +147,41 @@ npm run dev   # serves site/ at http://localhost:9002
 
 Once you have the file it works with the network disconnected — Web Crypto runs in your browser, and nothing is fetched, uploaded, or logged. A `Content-Security-Policy` in the file enforces that: it cannot make a network request even if it tried.
 
-**Verify it before you trust it** (recommended for a security tool):
+### 🔎 Verify your download
+
+Recommended for a security tool. Every [release](https://github.com/seQRets/ittybitz/releases/latest) ships a **`SHA256SUMS.txt`** alongside `ittybitz.html` and `ittybitz-recovery.html`. Put the file(s) you downloaded in the same folder as `SHA256SUMS.txt`, then:
+
+**macOS / Linux**
 
 ```bash
-shasum -a 256 ittybitz.html
+shasum -a 256 -c SHA256SUMS.txt      # or: sha256sum -c SHA256SUMS.txt
 ```
 
-Compare against the checksum published with the [release](CHANGELOG.md). The file is byte-identical wherever you got it — the website, the release asset, or this repository's `site/index.html`.
+Expect `ittybitz.html: OK` (and `ittybitz-recovery.html: OK`).
+
+**Windows (PowerShell)**
+
+```powershell
+certutil -hashfile ittybitz.html SHA256
+```
+
+…then compare the printed hash against the matching line in `SHA256SUMS.txt`.
+
+The file is byte-identical wherever you got it — the website, the release asset, or this repository's `site/index.html` / `site/ittybitz-recovery.html`.
 
 ### 🧰 Build from source (contributors only)
 
 You never need this to *use* IttyBitz — the shipped [`site/index.html`](site/index.html) is the product. The build exists so that file is reproducible from small, auditable parts.
 
 ```bash
-npm run build        # reassembles site/index.html from scripts/build/*
-npm run test:crypto  # crypto regression gate (zero dependencies)
+npm run build              # reassemble site/index.html, pin CSP hashes, regenerate SHA256SUMS.txt
+npm run test:crypto        # crypto regression gate (zero dependencies)
+npm run update-csp-hashes  # re-pin CSP hashes + SHA256SUMS after editing a shipped HTML file
 ```
 
-`build` concatenates the hand-written page, the vendored [`qrcode-generator`](https://github.com/kazuhikoarase/qrcode-generator) (MIT), the DOM-free crypto core, and a BIP-39 core generated from `src/lib/bip39.ts` (so the wordlist can never drift). `test:crypto` proves the assembled file both decrypts every historical ciphertext **and** round-trips against the frozen reference implementation in [`src/lib/crypto.ts`](src/lib/crypto.ts) — in both directions, with and without key files.
+`build` concatenates the hand-written page, the vendored [`qrcode-generator`](https://github.com/kazuhikoarase/qrcode-generator) (MIT), the DOM-free crypto core, and a BIP-39 core generated from `src/lib/bip39.ts` (so the wordlist can never drift), then runs `update-csp-hashes` to lock each inline `<script>` block into the `Content-Security-Policy` as a `'sha256-…'` source and regenerate `SHA256SUMS.txt`. `test:crypto` proves the assembled file both decrypts every historical ciphertext **and** round-trips against the frozen reference implementation in [`src/lib/crypto.ts`](src/lib/crypto.ts) — in both directions, with and without key files.
+
+> **After editing `site/ittybitz-recovery.html` by hand (or anything under `scripts/build/`), run `npm run update-csp-hashes` before committing.** It recomputes the inline-script hashes, rewrites both files' CSP meta tags in place, and regenerates `SHA256SUMS.txt`. It is idempotent — a second run with unchanged scripts writes nothing. Skipping it after a change would leave a stale hash in the CSP and the browser would refuse to run the edited script.
 
 There are **no runtime or build dependencies**: `node` (22.6+, for native TypeScript stripping) and Python 3 (only for `npm run dev`'s static server) are all that is used.
 

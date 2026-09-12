@@ -11,7 +11,7 @@
      permitted so a decrypted file can be handed to the browser's download
      mechanism, which never touches the network. -->
 <meta http-equiv="Content-Security-Policy"
-      content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'none'; img-src 'none'; form-action 'none'; base-uri 'none'">
+      content="default-src 'none'; script-src 'sha256-BVmDpGXlS5zPFhwENBr1kSpTwrkiWmGeGQB6w1MymoY=' 'sha256-tOlKT0expY1rq2tHr40C2UeyujlfrG4plvq8ZgnCsuY='; style-src 'unsafe-inline'; connect-src 'none'; img-src 'none'; form-action 'none'; base-uri 'none'">
 <!--
   ═══════════════════════════════════════════════════════════════════════
   IttyBitz Recovery Tool — standalone offline decryption
@@ -340,6 +340,25 @@ async function ittybitzDecrypt(bytes, password, keyFileBytes) {
 </script>
 <script>
 (function () {
+  // ---- Anti-framing guard ----
+  // The recovery tool is meant to be opened directly, never embedded. A <meta>
+  // CSP cannot set frame-ancestors, so enforce it here: if we are inside a
+  // frame (cross-origin access to window.top throws, treated as framed), refuse
+  // to initialize so a hostile wrapper can never harvest a password or key file.
+  var framed;
+  try { framed = window.top !== window.self; } catch (e) { framed = true; }
+  if (framed) {
+    try {
+      document.body.innerHTML =
+        '<div style="max-width:30rem;margin:14vh auto 0;padding:0 1.5rem;text-align:center;' +
+        'color:#f4f4f5;font:16px/1.6 system-ui,-apple-system,sans-serif">' +
+        '<h1 style="font-size:1.4rem;font-weight:600;margin:0 0 .75rem">IttyBitz Recovery won\u2019t run inside a frame</h1>' +
+        '<p style="color:#a1a1aa;margin:0">For your security it refuses to run embedded in another page. ' +
+        'Open this file directly in your browser instead.</p></div>';
+    } catch (e) { /* ignore */ }
+    return;
+  }
+
   var $ = function (id) { return document.getElementById(id); };
   var mode = 'file';
   var mainFile = null;

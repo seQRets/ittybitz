@@ -6,6 +6,27 @@
    ───────────────────────────────────────────────────────────────────────── */
 (function () {
   'use strict';
+
+  // ---- Anti-framing guard ----
+  // IttyBitz is meant to be opened directly, never embedded in another page.
+  // A <meta> CSP cannot set frame-ancestors, so the check is enforced here: if
+  // we are inside a frame — cross-origin access to window.top throws, which we
+  // treat as framed — refuse to initialize and say so, so a hostile wrapper
+  // can never present the app while intercepting input.
+  var framed;
+  try { framed = window.top !== window.self; } catch (e) { framed = true; }
+  if (framed) {
+    try {
+      document.body.innerHTML =
+        '<div style="max-width:30rem;margin:14vh auto 0;padding:0 1.5rem;text-align:center;' +
+        'color:#f4f4f5;font:16px/1.6 system-ui,-apple-system,sans-serif">' +
+        '<h1 style="font-size:1.4rem;font-weight:600;margin:0 0 .75rem">IttyBitz won’t run inside a frame</h1>' +
+        '<p style="color:#a1a1aa;margin:0">For your security it refuses to run embedded in another page. ' +
+        'Open it directly — go to <strong>ittybitz.app</strong>, or open your saved copy of the file.</p></div>';
+    } catch (e) { /* ignore */ }
+    return;
+  }
+
   var $ = function (id) { return document.getElementById(id); };
 
   // ---- Migrate installed-PWA users to the downloadable file ----

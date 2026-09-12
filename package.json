@@ -1,11 +1,12 @@
 {
   "name": "ittybitz",
-  "version": "3.0.3",
+  "version": "3.0.4",
   "private": true,
   "description": "Single-file, client-side AES-256 encryption. No dependencies, no build for users, no network.",
   "license": "SEE LICENSE IN LICENSE",
   "scripts": {
-    "build": "node scripts/build-app.mjs",
+    "build": "node scripts/build-app.mjs && node scripts/update-csp-hashes.mjs",
+    "update-csp-hashes": "node scripts/update-csp-hashes.mjs",
     "test:crypto": "node scripts/crypto-regression.mts",
     "dev": "cd site && python3 -m http.server 9002"
   }
