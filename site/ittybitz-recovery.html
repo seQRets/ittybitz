@@ -183,6 +183,11 @@
   .hint { font-size: 12px; color: #6e6e77; margin-top: .625rem; }
   .note { font-size: 13px; color: var(--muted-foreground); text-align: center; margin-top: 2rem; line-height: 1.7; }
   .note code { color: var(--foreground); font-size: 12px; }
+  /* Printing or "Save as PDF" writes the screen to a file: blank anything that can hold a secret. */
+  @media print { #t, #out, #p { visibility: hidden !important; } }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+  }
 </style>
 </head>
 <body>
@@ -235,12 +240,12 @@
 
     <div class="row" id="pane-text" style="display:none">
       <label for="t">Encrypted text</label>
-      <textarea id="t" placeholder="Paste the Base64 output from IttyBitz&#8230;" spellcheck="false"></textarea>
+      <textarea id="t" placeholder="Paste the Base64 output from IttyBitz&#8230;" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off"></textarea>
     </div>
 
     <div class="row">
       <label for="p">Password</label>
-      <input type="password" id="p" autocomplete="off" spellcheck="false" placeholder="Enter decryption password">
+      <input type="password" id="p" autocomplete="new-password" spellcheck="false" placeholder="Enter decryption password">
     </div>
 
     <div class="row">
@@ -267,7 +272,7 @@
     </button>
 
     <div class="out" id="out"></div>
-    <div class="hint" id="hint"></div>
+    <div class="hint" id="hint" role="status" aria-live="polite"></div>
   </section>
 
   <p class="note">

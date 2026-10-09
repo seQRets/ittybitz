@@ -282,6 +282,16 @@
   #pwa-x, #offline-x { background: none; border: 0; color: var(--muted-foreground); font-size: 20px; line-height: 1; cursor: pointer; padding: 0 .25rem; }
   #pwa-x:hover, #offline-x:hover { color: var(--foreground); }
   @media (max-width: 640px) { .pwa-inner { flex-wrap: wrap; justify-content: center; text-align: center; } .pwa-inner span { flex-basis: 100%; } }
+  /* Printing (or "Save as PDF") writes whatever is on screen to paper or a
+     file — a revealed secret, the password while shown, a QR. None of that
+     belongs in a print: blank every field that can hold a secret. */
+  @media print {
+    #t, #out, #p, #qr-canvas, .qrbox, #enc-fp-code, #dec-fp-code, #qr-fp-code { visibility: hidden !important; }
+    .overlay { display: none !important; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+  }
   /* Center the footer on narrow screens (it wraps to two stacked rows). */
   @media (max-width: 640px) {
     footer { flex-direction: column; align-items: center; text-align: center; }
@@ -359,7 +369,7 @@
     <div class="row" id="pane-text" role="tabpanel" aria-labelledby="pill-text" style="display:none">
       <label for="t" id="text-label">Secret text</label>
       <div class="field">
-        <textarea id="t" placeholder="Enter text to encrypt&#8230;" spellcheck="false"></textarea>
+        <textarea id="t" placeholder="Enter text to encrypt&#8230;" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off"></textarea>
         <div class="out-actions" id="t-actions">
           <button type="button" class="toggle-btn icon" id="t-toggle" aria-label="Hide secret text" title="Hide secret text"></button>
           <button type="button" class="toggle-btn icon" id="t-copy" title="Copy"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></button>
@@ -375,7 +385,7 @@
     <div class="row">
       <label for="p">Password <span class="muted" id="pw-hint" style="color:var(--faint);font-weight:400">· min 24 chars, upper, lower, number, symbol</span></label>
       <div class="field">
-        <input type="password" id="p" class="pw" autocomplete="off" spellcheck="false" placeholder="Enter a strong password">
+        <input type="password" id="p" class="pw" autocomplete="new-password" spellcheck="false" placeholder="Enter a strong password">
         <button type="button" class="toggle-btn" id="p-toggle">Show</button>
       </div>
       <div class="btnrow">
@@ -423,7 +433,7 @@
       </div>
     </div>
 
-    <div class="status" id="status"></div>
+    <div class="status" id="status" role="status" aria-live="polite"></div>
 
     <button class="go" id="go">
       <span id="go-icon"></span><span id="go-label">Encrypt</span>
