@@ -288,7 +288,20 @@
   @media print {
     #t, #out, #p, #qr-canvas, .qrbox, #enc-fp-code, #dec-fp-code, #qr-fp-code { visibility: hidden !important; }
     .overlay { display: none !important; }
+    /* Card mode: the page is replaced by the one-page emergency card. */
+    body.print-card > :not(#card) { display: none !important; }
+    body.print-card { background: #fff !important; color: #000 !important; padding: 0 !important; }
+    body.print-card #card { display: block !important; }
   }
+  #card { display: none; max-width: 17cm; margin: 0 auto; padding: 1.5cm 0; font: 12pt/1.5 Georgia, "Times New Roman", serif; color: #000; }
+  #card h1 { font: 700 20pt/1.2 system-ui, sans-serif; margin: 0 0 .25rem; color: #000; -webkit-text-fill-color: #000; background: none; }
+  #card .card-when { margin: 0 0 1rem; color: #444; font-size: 10pt; }
+  #card .card-qr { text-align: center; margin: 0 0 1rem; }
+  #card .card-qr canvas { width: 8cm; height: 8cm; image-rendering: pixelated; }
+  #card pre { font: 8.5pt/1.35 ui-monospace, Menlo, Consolas, monospace; white-space: pre-wrap; word-break: break-all; border: 1px solid #000; padding: .6rem; margin: 0 0 1rem; }
+  #card ol { padding-left: 1.3rem; margin: 0 0 1rem; }
+  #card li { margin: 0 0 .4rem; }
+  #card .card-foot { font-size: 10pt; color: #444; margin: 0; }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
   }
@@ -492,11 +505,28 @@
       <div class="modal-actions">
         <button class="btn" id="qr-reveal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>Reveal</button>
         <button class="btn" id="qr-download" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="m7 10 5 5 5-5"/><path d="M21 21H3"/></svg>Download PNG</button>
+        <button class="btn" id="qr-print" style="display:none" title="Print a one-page card: this QR, the encrypted text, and how to decrypt it — for a safe, a drawer or a notary. The password is not on it."><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6"/><rect x="4" y="9" width="16" height="8" rx="2"/><path d="M6 14h12v7H6z"/></svg>Print card</button>
       </div>
     </div>
     <button class="closebtn" id="qr-close">Close</button>
   </div>
 </div>
+
+<!-- Emergency card: print-only, filled when "Print card" is pressed and emptied
+     right after, so nothing sits in the document otherwise. It carries the
+     ENCRYPTED text and how to open it — never the password, never a plaintext. -->
+<section id="card" aria-hidden="true">
+  <h1>Encrypted with IttyBitz</h1>
+  <p class="card-when" id="card-when"></p>
+  <div class="card-qr"><canvas id="card-canvas" width="1" height="1"></canvas></div>
+  <pre id="card-text"></pre>
+  <ol>
+    <li>Open <b>https://ittybitz.app</b> — or, if that site is gone, the file <b>ittybitz-recovery.html</b> kept with this card (also at github.com/seQRets/ittybitz).</li>
+    <li>Choose <b>Decrypt → Text</b>, then scan the code above with the phone, or type the text exactly as printed.</li>
+    <li>Enter the password<span id="card-kf"></span>. <b>The password is not on this card</b>; it was kept separately by the person who made this.</li>
+  </ol>
+  <p class="card-foot">Everything happens in the browser; nothing is sent anywhere. This card can be lost or copied without harm — without the password it opens nothing.</p>
+</section>
 
 <!-- Donate overlay -->
 <div class="overlay" id="donate-overlay">

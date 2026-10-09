@@ -522,9 +522,40 @@
       $('qr-caption').style.display = 'none';
       $('qr-fp').style.display = 'none';
     }
+    // The card is for ENCRYPTED text only: a ciphertext is made to be kept on
+    // paper, a decrypted text or a seed never is. The button simply does not
+    // exist for those.
+    $('qr-print').style.display = (qrState.kind === 'plain' && mode === 'encrypt') ? '' : 'none';
     $('qr-overlay').classList.add('show');
   }
   function closeQr() { $('qr-overlay').classList.remove('show'); }
+
+  // ---- Emergency card ----
+  // Fill the print-only card, print, then empty it again so the ciphertext
+  // does not stay in the document (a copy saved later would carry it).
+  function fillCard() {
+    var text = qrState.getValue();
+    drawQR($('card-canvas'), text, false, 1024, 2);
+    $('card-text').textContent = text;
+    $('card-when').textContent = 'Made on ' + new Date().toISOString().slice(0, 10) + ' · ' + text.length + ' characters of Base64 · format IBTZ v1 · AES-256-GCM, PBKDF2 1,000,000';
+    $('card-kf').textContent = useKeyFile && keyFile ? ' and the key file (' + keyFile.name + ', kept separately as well)' : '';
+  }
+  function clearCard() {
+    $('card-text').textContent = ''; $('card-when').textContent = ''; $('card-kf').textContent = '';
+    var c = $('card-canvas'); c.width = 1; c.height = 1;
+    document.body.classList.remove('print-card');
+  }
+  $('qr-print').onclick = function () {
+    if (!qrState || qrState.kind !== 'plain' || mode !== 'encrypt') return;
+    fillCard();
+    document.body.classList.add('print-card');
+    var done = function () { window.removeEventListener('afterprint', done); clearCard(); };
+    window.addEventListener('afterprint', done);
+    window.print();
+    // Browsers that never fire afterprint (or a cancelled dialog in some) still
+    // get the card cleared, a moment after the dialog has had its chance.
+    setTimeout(done, 1500);
+  };
   $('qr-close').onclick = closeQr;
   $('qr-overlay').addEventListener('click', function (e) { if (e.target === this) closeQr(); });
   $('qr-reveal').onclick = function () {
