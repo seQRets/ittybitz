@@ -241,6 +241,9 @@
       if (!file) return;
       if (!validName(file.name)) { status('err', 'That filename contains characters that are not allowed.'); return; }
       if (file.size > MAX_FILE_SIZE) { status('err', 'File is too large. Maximum size is 100MB.'); return; }
+      // An empty key file adds nothing to the key: the result is the same as
+      // using no key file at all, while looking protected by one. Refuse it.
+      if (zoneId === 'drop-key' && file.size === 0) { status('err', 'That key file is empty (0 bytes), so it would add nothing to the key. Choose another file, or turn "Use key file" off.'); return; }
       onPick(file);
       desc.textContent = file.name; desc.className = 'picked';
       clear.style.display = '';
@@ -567,6 +570,7 @@
       status('err', 'Weak password. Use at least 24 characters with uppercase, lowercase, numbers, and symbols.'); return;
     }
     if (useKeyFile && !keyFile) { status('err', '"Use key file" is on but no key file is selected. Choose one, or turn the option off.'); return; }
+    if (useKeyFile && keyFile && keyFile.size === 0) { status('err', 'That key file is empty (0 bytes), so it would add nothing to the key. Choose another file, or turn "Use key file" off.'); return; }
 
     btn.disabled = true;
     $('go-icon').innerHTML = ICON_SPIN;
@@ -615,7 +619,18 @@
           download(plain, outName);
           status('ok', 'Decrypted successfully — downloaded as "' + outName + '".');
         } else {
-          var text = new TextDecoder().decode(plain);
+          // Decrypted bytes that are not UTF-8 are a file, not text — someone
+          // pasted a file's ciphertext into the text box. Showing them as text
+          // would render replacement marks and look like corruption; hand the
+          // bytes over as a download instead.
+          var text;
+          try { text = new TextDecoder('utf-8', { fatal: true }).decode(plain); }
+          catch (eNotText) {
+            download(plain, 'decrypted.bin');
+            status('ok', 'Decrypted successfully, but the result is not text — it looks like an encrypted file. Downloaded as "decrypted.bin"; rename it to what it was. Next time, use "Decrypt a File".');
+            plain.fill(0);
+            return;
+          }
           showResult(text, true);
           // Seed detection for border + SeedQR
           try {
