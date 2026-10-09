@@ -14,7 +14,7 @@
      A decrypted file is handed to the browser's download mechanism as a
      blob: URL, which never touches the network. -->
 <meta http-equiv="Content-Security-Policy"
-      content="default-src 'none'; script-src 'sha256-BVmDpGXlS5zPFhwENBr1kSpTwrkiWmGeGQB6w1MymoY=' 'sha256-CntT61tyvoiTvRYyIj4QCZS3AZx5yVom1xSYUnz7VW0='; style-src 'unsafe-inline'; connect-src 'none'; img-src 'none'; form-action 'none'; base-uri 'none'">
+      content="default-src 'none'; script-src 'sha256-BVmDpGXlS5zPFhwENBr1kSpTwrkiWmGeGQB6w1MymoY=' 'sha256-Xq/8FDHSOAAzPMjUyRpMvsKeI6KUtUQy/7HXc+eA7lk='; style-src 'unsafe-inline'; connect-src 'none'; img-src 'none'; form-action 'none'; base-uri 'none'">
 <!--
   ═══════════════════════════════════════════════════════════════════════
   IttyBitz Recovery Tool — standalone offline decryption
@@ -245,7 +245,7 @@
 
     <div class="row">
       <label for="p">Password</label>
-      <input type="password" id="p" autocomplete="new-password" spellcheck="false" placeholder="Enter decryption password">
+      <input type="password" id="p" autocomplete="off" spellcheck="false" placeholder="Enter decryption password">
     </div>
 
     <div class="row">
@@ -289,7 +289,7 @@
     <!-- Tracks the IttyBitz release, so this page and the app always show the
          same number. Every release re-stamps this file; SHA256SUMS.txt for
          the release named here is the checksum to verify a copy against. -->
-    <span id="recovery-version">IttyBitz Recovery v3.0.15</span>
+    <span id="recovery-version">IttyBitz Recovery v3.0.16</span>
   </p>
 </div>
 <script id="ittybitz-decrypt-core">
@@ -459,6 +459,20 @@ async function ittybitzDecrypt(bytes, password, keyFileBytes) {
       desc.textContent = file.name;
       desc.className = 'picked';
       clear.style.display = '';
+      // A key file shows its fingerprint (first 8 hex of its SHA-256), the
+      // same one IttyBitz shows and prints on an emergency card, so the right
+      // file can be recognised without its name. The bytes read for it are
+      // wiped once hashed.
+      if (zoneId === 'drop-key') {
+        readBytes(file).then(function (b) {
+          return crypto.subtle.digest('SHA-256', b).then(function (d) {
+            b.fill(0);
+            var h = new Uint8Array(d), fp = '';
+            for (var i = 0; i < 4; i++) fp += (h[i] < 16 ? '0' : '') + h[i].toString(16);
+            if (desc.textContent === file.name) desc.textContent = file.name + ' \u00b7 fingerprint [' + fp + ']';
+          }, function () { b.fill(0); });
+        }).catch(function () {});
+      }
     }
 
     zone.addEventListener('click', function () { input.click(); });

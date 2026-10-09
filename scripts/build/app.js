@@ -275,7 +275,12 @@
       // recognised later (and the generated one matched to its download notice).
       if (zoneId === 'drop-key') {
         var name = files[0].name;
-        readBytes(files[0]).then(keyFingerprint).then(function (fp) {
+        readBytes(files[0]).then(function (b) {
+          // The bytes read for the fingerprint are key material too: wipe them
+          // once hashed, whether or not hashing succeeded.
+          return keyFingerprint(b).then(function (fp) { b.fill(0); return fp; },
+                                        function (e) { b.fill(0); throw e; });
+        }).then(function (fp) {
           if (desc.textContent === name) desc.textContent = name + ' \u00b7 fingerprint [' + fp + ']';
         }).catch(function () {});
       }
@@ -358,6 +363,10 @@
     $('t-actions').style.display = enc ? '' : 'none';
     $('p-gen').style.display = enc ? '' : 'none';
     $('pw-saved-row').style.display = enc ? '' : 'none';
+    // Encrypting sets a new password (a manager may offer to generate or save
+    // one); decrypting enters an existing one, where "new-password" would make
+    // a manager offer to generate a fresh password that cannot decrypt.
+    $('p').setAttribute('autocomplete', enc ? 'new-password' : 'off');
     $('go-icon').innerHTML = enc ? ICON_LOCK : ICON_UNLOCK;
     $('go-label').textContent = enc ? 'Encrypt' : 'Decrypt';
     // Encrypt-side secret text is a human passphrase (sans font, blur toggle);
@@ -388,13 +397,16 @@
   $('pill-file').onclick = function () { setInputType('file'); };
   $('pill-text').onclick = function () { setInputType('text'); };
 
-  // Tabs per WAI-ARIA: one tab stop per tablist (roving tabindex), Left/Right
-  // (and Home/End) move between tabs and activate the one landed on.
+  // Tabs per WAI-ARIA, with MANUAL activation: Left/Right (and Home/End) only
+  // move focus between tabs; Enter or Space (native button behaviour) or a
+  // click activates. Switching mode clears the form, so activating on arrow
+  // keys would wipe a half-typed secret on a single stray key press. The
+  // selected tab keeps the one tab stop (tabindex 0); the others are reached
+  // with the arrows.
   function wireTablist(ids) {
     function focusTab(i) {
       i = (i + ids.length) % ids.length;
-      ids.forEach(function (id, j) { $(id).setAttribute('tabindex', j === i ? '0' : '-1'); });
-      $(ids[i]).focus(); $(ids[i]).click();
+      $(ids[i]).focus();
     }
     ids.forEach(function (id, i) {
       $(id).addEventListener('keydown', function (e) {
@@ -519,6 +531,7 @@
     // never lands as "ittybitz-key (1).bin" beside the first.
     var keyName = 'ittybitz-key-[' + fp + '].bin';
     download(key, keyName);
+    key.fill(0); // the Blob made its own copy; this one is no longer needed
     status('ok', 'Key file downloaded as "' + keyName + '". Whenever you select it, IttyBitz shows its fingerprint, ['
       + fp + '], even if the file has been renamed. You need both this key file and your password to decrypt.');
   };
@@ -537,13 +550,18 @@
   };
 
   // ---- QR overlay ----
+  // An encrypted-text QR holds only ciphertext, which is already on screen in
+  // the result box and can be printed on the card without revealing. Only a
+  // QR of a decrypted text or a seed needs the deliberate Reveal before it
+  // can be saved.
+  function qrIsCiphertext() { return !!qrState && qrState.kind === 'plain' && mode === 'encrypt'; }
   function openQr() {
     qrRevealed = false;
     $('qr-box').classList.add('qr-blur');
     // Draw the QR right away but blurred, so it clearly reads as a QR — a blank
     // white box looks broken. The Reveal button below just removes the blur.
     drawQR($('qr-canvas'), qrState.getValue(), qrState.numeric, 512, 4);
-    $('qr-download').disabled = true;
+    $('qr-download').disabled = !qrIsCiphertext();
     $('qr-reveal').lastChild.textContent = 'Reveal';
     if (qrState.kind === 'seed') {
       $('qr-title').textContent = 'Standard SeedQR';
@@ -567,7 +585,7 @@
     // The card is for ENCRYPTED text only: a ciphertext is made to be kept on
     // paper, a decrypted text or a seed never is. The button simply does not
     // exist for those.
-    $('qr-print').style.display = (qrState.kind === 'plain' && mode === 'encrypt') ? '' : 'none';
+    $('qr-print').style.display = qrIsCiphertext() ? '' : 'none';
     $('qr-overlay').classList.add('show');
   }
   function closeQr() { $('qr-overlay').classList.remove('show'); }
@@ -577,19 +595,34 @@
   // does not stay in the document (a copy saved later would carry it).
   function fillCard() {
     var text = qrState.getValue();
+    // Pick a size tier by length; the stylesheet (#card[data-tier]) holds the
+    // sizes. Typical texts print large; only long ones step down to stay on
+    // one US Letter page.
+    var n = text.length;
+    $('card').setAttribute('data-tier', n <= 400 ? '0' : n <= 1000 ? '1' : n <= 1800 ? '2' : '3');
     drawQR($('card-canvas'), text, false, 1024, 2);
     $('card-text').textContent = text;
-    $('card-when').textContent = 'Made on ' + new Date().toISOString().slice(0, 10) + ' · ' + text.length + ' characters of Base64 · format IBTZ v1 · AES-256-GCM, PBKDF2 1,000,000';
-    $('card-kf').textContent = useKeyFile && keyFile ? ' and the key file (' + keyFile.name + ', kept separately as well)' : '';
+    $('card-when').textContent = 'Made ' + new Date().toISOString().slice(0, 10) + ' · ' + n + ' characters · IBTZ v1 · AES-256-GCM · PBKDF2-SHA256, 1,000,000 rounds';
+    // Whether a key file is needed is a fact about THIS ciphertext, recorded
+    // when it was encrypted — not whatever the key-file switch shows now. It is
+    // named by fingerprint, never by file name: a finder of the card must not
+    // learn which file to look for; the owner recognises the fingerprint,
+    // which both IttyBitz and the recovery tool show when a key file is chosen.
+    var fp = qrState.keyFp;
+    $('card-kf').textContent = fp ? ' and choose the key file. The right one shows the fingerprint [' + fp + '] when selected' : '';
+    $('card-kept').textContent = fp ? 'Neither the password nor the key file is on this card' : 'The password is not on this card';
   }
   function clearCard() {
     $('card-text').textContent = ''; $('card-when').textContent = ''; $('card-kf').textContent = '';
+    $('card').removeAttribute('data-tier');
     var c = $('card-canvas'); c.width = 1; c.height = 1;
     document.body.classList.remove('print-card');
+    $('card-page').media = 'not all';
   }
   $('qr-print').onclick = function () {
-    if (!qrState || qrState.kind !== 'plain' || mode !== 'encrypt') return;
+    if (!qrIsCiphertext()) return;
     fillCard();
+    $('card-page').media = 'print';
     document.body.classList.add('print-card');
     var done = function () { window.removeEventListener('afterprint', done); clearCard(); };
     window.addEventListener('afterprint', done);
@@ -604,18 +637,20 @@
     // The QR is already drawn (blurred); reveal just toggles the blur.
     qrRevealed = !qrRevealed;
     $('qr-box').classList.toggle('qr-blur', !qrRevealed);
-    $('qr-download').disabled = !qrRevealed;
+    $('qr-download').disabled = !qrRevealed && !qrIsCiphertext();
     this.lastChild.textContent = qrRevealed ? 'Hide' : 'Reveal';
   };
   $('qr-download').onclick = function () {
-    if (!qrRevealed || !qrState) return;
+    if (!qrState || (!qrRevealed && !qrIsCiphertext())) return;
     var off = document.createElement('canvas');
     drawQR(off, qrState.getValue(), qrState.numeric, 1024, 4);
     var url = off.toDataURL('image/png').replace('image/png', 'image/octet-stream');
     var a = document.createElement('a');
     a.href = url; a.download = qrState.kind === 'seed' ? 'ittybitz-seedqr.png' : 'ittybitz-qr.png';
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    status('ok', '1024×1024 PNG downloaded. It encodes your secret — store it as carefully as the secret itself.');
+    status('ok', qrIsCiphertext()
+      ? '1024×1024 PNG downloaded. It encodes your encrypted text; without the password it opens nothing.'
+      : '1024×1024 PNG downloaded. It encodes your secret — store it as carefully as the secret itself.');
   };
 
   // ---- Donate ----
@@ -709,7 +744,8 @@
           $('t').value = ''; $('t').classList.remove('ok-border', 'bad-border');
           encFpToken++; hideFp('enc'); // the secret is gone from the field; its fingerprint goes with it
           if (fitsQR(b64)) {
-            qrState = { getValue: function () { return b64; }, numeric: false, kind: 'plain' };
+            var usedKeyFp = kfBytes ? await keyFingerprint(kfBytes) : null; // before kfBytes is wiped below
+            qrState = { getValue: function () { return b64; }, numeric: false, kind: 'plain', keyFp: usedKeyFp };
             $('out-qr').style.display = '';
           }
           status('ok', 'Text encrypted. Copy the Base64 result, or show it as a QR.');

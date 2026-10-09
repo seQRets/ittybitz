@@ -292,18 +292,36 @@
     .overlay { display: none !important; }
     /* Card mode: the page is replaced by the one-page emergency card. */
     body.print-card > :not(#card) { display: none !important; }
-    body.print-card { background: #fff !important; color: #000 !important; padding: 0 !important; }
-    body.print-card #card { display: block !important; }
+    body.print-card { background: #fff !important; color: #000 !important; padding: 0 !important; margin: 0 !important; min-height: 0 !important; }
+    body.print-card #card { break-inside: avoid; }
+    /* The app's dark colour scheme would otherwise paint the page margins
+       black whenever background graphics are printed. */
+    :root:has(body.print-card) { color-scheme: light; background: #fff !important; }
+    body.print-card #card { display: flex !important; }
   }
-  #card { display: none; max-width: 17cm; margin: 0 auto; padding: 1.5cm 0; font: 12pt/1.5 Georgia, "Times New Roman", serif; color: #000; }
-  #card h1 { font: 700 20pt/1.2 system-ui, sans-serif; margin: 0 0 .25rem; color: #000; -webkit-text-fill-color: #000; background: none; }
-  #card .card-when { margin: 0 0 1rem; color: #444; font-size: 10pt; }
-  #card .card-qr { text-align: center; margin: 0 0 1rem; }
-  #card .card-qr canvas { width: 8cm; height: 8cm; image-rendering: pixelated; }
-  #card pre { font: 8.5pt/1.35 ui-monospace, Menlo, Consolas, monospace; white-space: pre-wrap; word-break: break-all; border: 1px solid #000; padding: .6rem; margin: 0 0 1rem; }
-  #card ol { padding-left: 1.3rem; margin: 0 0 1rem; }
-  #card li { margin: 0 0 .4rem; }
-  #card .card-foot { font-size: 10pt; color: #444; margin: 0; }
+  /* The card is laid out for one US Letter page (see #card-page below):
+     compact sans-serif type, and a QR the script enlarges for long
+     ciphertexts so a denser code still scans. */
+  /* A column as tall as the Letter page's printable area (254 mm, less a
+     little slack): the title sits at the top, the footer at the bottom, and
+     the spare height is shared out between the sections. */
+  #card { display: none; flex-direction: column; justify-content: space-between; min-height: 250mm; margin: 0; padding: 0; font: 14pt/1.4 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; color: #000; letter-spacing: 0; }
+  #card h1 { font: 700 24pt/1.15 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; letter-spacing: -0.01em; margin: 0; color: #000; -webkit-text-fill-color: #000; background: none; }
+  #card .card-when { margin: 1.5mm 0 0; color: #444; font-size: 11pt; }
+  #card .card-qr { text-align: center; margin: var(--gap) 0; }
+  #card .qr-frame { display: inline-block; line-height: 0; padding: 5mm; border: 0.4mm solid #000; border-radius: 3mm; }
+  #card .card-qr canvas { display: block; width: var(--qr); height: var(--qr); image-rendering: pixelated; }
+  #card pre { font: var(--pre)/var(--pre-lh) ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: pre-wrap; word-break: break-all; border: 0.3mm solid #000; border-radius: 1.5mm; padding: 3mm 4mm; margin: 0 0 var(--gap); }
+  #card ol { font-size: var(--steps); padding-left: 7mm; margin: 0 0 var(--gap); }
+  #card li { margin: 0 0 2.5mm; }
+  #card .card-foot { font-size: 11pt; color: #444; margin: 0; }
+  /* Size tiers, picked by the script from the ciphertext's length. Longer
+     texts make a denser QR and a longer block of characters, so the text
+     steps down to keep the card on one page; typical texts stay large. */
+  #card, #card[data-tier="0"] { --qr: 7cm; --pre: 12pt;  --pre-lh: 1.35; --steps: 14pt; --gap: 6mm; }
+  #card[data-tier="1"]        { --qr: 7cm; --pre: 9pt;   --pre-lh: 1.35; --steps: 14pt; --gap: 6mm; }
+  #card[data-tier="2"]        { --qr: 7cm; --pre: 7.5pt; --pre-lh: 1.3;  --steps: 13pt; --gap: 5mm; }
+  #card[data-tier="3"]        { --qr: 7cm; --pre: 6.5pt; --pre-lh: 1.2;  --steps: 12pt; --gap: 4mm; }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
   }
@@ -313,6 +331,10 @@
     footer .grp { justify-content: center; flex-wrap: wrap; }
   }
 </style>
+<!-- Paper for the emergency card: US Letter, half-inch margins. Dormant
+     (media="not all") until "Print card" switches it to print and back, so
+     printing the app itself keeps the printer's own paper size. -->
+<style id="card-page" media="not all">@page { size: letter; margin: 0.5in; }</style>
 </head>
 <body>
 <div id="pwa-notice">
@@ -491,7 +513,7 @@
            "Recoverable without us" card; this is the way to open the tool. -->
       <a class="accent" href="./ittybitz-recovery.html" title="Open the standalone recovery tool">Recovery tool</a>
       <a class="accent" href="https://github.com/seQRets/ittybitz" target="_blank" rel="noopener noreferrer">GitHub</a>
-      <span id="version">v3.0.15 🦕 Iguanodon</span>
+      <span id="version">v3.0.16 🦕 Iguanodon</span>
     </div>
   </footer>
 </div>
@@ -520,14 +542,16 @@
      right after, so nothing sits in the document otherwise. It carries the
      ENCRYPTED text and how to open it — never the password, never a plaintext. -->
 <section id="card" aria-hidden="true">
-  <h1>Encrypted with IttyBitz</h1>
-  <p class="card-when" id="card-when"></p>
-  <div class="card-qr"><canvas id="card-canvas" width="1" height="1"></canvas></div>
+  <div class="card-head">
+    <h1>Encrypted with IttyBitz</h1>
+    <p class="card-when" id="card-when"></p>
+  </div>
+  <div class="card-qr"><span class="qr-frame"><canvas id="card-canvas" width="1" height="1"></canvas></span></div>
   <pre id="card-text"></pre>
   <ol>
     <li>Open <b>https://ittybitz.app</b> — or, if that site is gone, the file <b>ittybitz-recovery.html</b> kept with this card (also at github.com/seQRets/ittybitz).</li>
     <li>Choose <b>Decrypt → Text</b>, then scan the code above with the phone, or type the text exactly as printed.</li>
-    <li>Enter the password<span id="card-kf"></span>. <b>The password is not on this card</b>; it was kept separately by the person who made this.</li>
+    <li>Enter the password<span id="card-kf"></span>. <b id="card-kept">The password is not on this card</b>; it was kept separately by the person who made this.</li>
   </ol>
   <p class="card-foot">Everything happens in the browser; nothing is sent anywhere. This card can be lost or copied without harm — without the password it opens nothing.</p>
 </section>
