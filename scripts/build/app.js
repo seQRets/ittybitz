@@ -276,7 +276,7 @@
       if (zoneId === 'drop-key') {
         var name = files[0].name;
         readBytes(files[0]).then(keyFingerprint).then(function (fp) {
-          if (desc.textContent === name) desc.textContent = name + ' \u00b7 fingerprint ' + fp;
+          if (desc.textContent === name) desc.textContent = name + ' \u00b7 fingerprint [' + fp + ']';
         }).catch(function () {});
       }
     }
@@ -510,10 +510,14 @@
     var key = new Uint8Array(64);
     crypto.getRandomValues(key);
     var fp = await keyFingerprint(key);
-    download(key, 'ittybitz-key.bin');
-    status('ok', 'A new key file has been generated and downloaded as "ittybitz-key.bin" \u2014 fingerprint ' + fp + '. '
+    // The fingerprint goes in the file name, so the file can be matched to
+    // the fingerprint shown when it is picked, and a second generated key
+    // never lands as "ittybitz-key (1).bin" beside the first.
+    var keyName = 'ittybitz-key-[' + fp + '].bin';
+    download(key, keyName);
+    status('ok', 'A new key file has been generated and downloaded as "' + keyName + '" \u2014 fingerprint [' + fp + ']. '
       + 'You will see the same fingerprint whenever you pick this file, so you can tell it from any other. '
-      + 'Keep it with your password: both are needed to decrypt.');
+      + 'You need both this key file and your password to decrypt.');
   };
 
   // ---- Output actions ----

@@ -15,7 +15,7 @@
      canvas and downloads use blob:/data:, none of which are network fetches.
      Nothing here can phone home. -->
 <meta http-equiv="Content-Security-Policy"
-      content="default-src 'none'; script-src 'sha256-4GSOHG1PWgpqNwON0DpmpOBDoMdMXoBzQI2KhDuK9js=' 'sha256-SJVUXJNlOay+2TG0PE+o+T46Wt7Qxe1B1XpRTxfVTCE=' 'sha256-W+IzleLCL30nXjyiCRp8Rl3j2GFDMC9KAJFnnygxQ8c=' 'sha256-XlgOklfvkE1YTG+BSxN2kJFwnn+L4EhXLVb01Ma4YsM=' 'sha256-4CsFrbtrcf162tEB8tlbFrEoqOsYpHE4x5hADivUxg0='; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; font-src 'none'; form-action 'none'; base-uri 'none'">
+      content="default-src 'none'; script-src 'sha256-4GSOHG1PWgpqNwON0DpmpOBDoMdMXoBzQI2KhDuK9js=' 'sha256-SJVUXJNlOay+2TG0PE+o+T46Wt7Qxe1B1XpRTxfVTCE=' 'sha256-W+IzleLCL30nXjyiCRp8Rl3j2GFDMC9KAJFnnygxQ8c=' 'sha256-XlgOklfvkE1YTG+BSxN2kJFwnn+L4EhXLVb01Ma4YsM=' 'sha256-hcW/1L94Qet8lekUkxYnSnGuFboXCxUZhb7twCngB44='; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; font-src 'none'; form-action 'none'; base-uri 'none'">
 <!--
   ═══════════════════════════════════════════════════════════════════════
   IttyBitz — single-file client-side encryption
@@ -3445,7 +3445,7 @@ async function masterFingerprint(words) { return fingerprintOfSeed(await bip39Se
       if (zoneId === 'drop-key') {
         var name = files[0].name;
         readBytes(files[0]).then(keyFingerprint).then(function (fp) {
-          if (desc.textContent === name) desc.textContent = name + ' \u00b7 fingerprint ' + fp;
+          if (desc.textContent === name) desc.textContent = name + ' \u00b7 fingerprint [' + fp + ']';
         }).catch(function () {});
       }
     }
@@ -3679,10 +3679,14 @@ async function masterFingerprint(words) { return fingerprintOfSeed(await bip39Se
     var key = new Uint8Array(64);
     crypto.getRandomValues(key);
     var fp = await keyFingerprint(key);
-    download(key, 'ittybitz-key.bin');
-    status('ok', 'A new key file has been generated and downloaded as "ittybitz-key.bin" \u2014 fingerprint ' + fp + '. '
+    // The fingerprint goes in the file name, so the file can be matched to
+    // the fingerprint shown when it is picked, and a second generated key
+    // never lands as "ittybitz-key (1).bin" beside the first.
+    var keyName = 'ittybitz-key-[' + fp + '].bin';
+    download(key, keyName);
+    status('ok', 'A new key file has been generated and downloaded as "' + keyName + '" \u2014 fingerprint [' + fp + ']. '
       + 'You will see the same fingerprint whenever you pick this file, so you can tell it from any other. '
-      + 'Keep it with your password: both are needed to decrypt.');
+      + 'You need both this key file and your password to decrypt.');
   };
 
   // ---- Output actions ----
