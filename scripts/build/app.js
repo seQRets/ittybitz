@@ -357,6 +357,7 @@
     $('pw-hint').style.display = enc ? '' : 'none';
     $('t-actions').style.display = enc ? '' : 'none';
     $('p-gen').style.display = enc ? '' : 'none';
+    $('pw-saved-row').style.display = enc ? '' : 'none';
     $('go-icon').innerHTML = enc ? ICON_LOCK : ICON_UNLOCK;
     $('go-label').textContent = enc ? 'Encrypt' : 'Decrypt';
     // Encrypt-side secret text is a human passphrase (sans font, blur toggle);
@@ -470,6 +471,9 @@
   var SAVE_PW_NOTICE = 'Save this password somewhere secure now. It is the only way to decrypt the result, and it will be cleared from this field after you encrypt.';
   var pwNoticed = false;
   function refreshPasswordButtons() {
+    // The saved-password confirmation belongs to one password: any change to
+    // the field (typing, Clear, Generate, the wipe after encrypting) unticks it.
+    $('pw-saved').checked = false;
     var pw = $('p').value;
     $('p-copy').disabled = !pw;
     $('p-clear').disabled = !pw;
@@ -640,6 +644,12 @@
     }
     if (useKeyFile && !keyFile) { status('err', '"Use key file" is on but no key file is selected. Choose one, or turn the option off.'); return; }
     if (useKeyFile && keyFile && keyFile.size === 0) { status('err', 'That key file is empty (0 bytes), so it would add nothing to the key. Choose another file, or turn "Use key file" off.'); return; }
+    // The password is cleared the moment encryption runs, so make sure it has
+    // been recorded first: otherwise the result is locked for good.
+    if (mode === 'encrypt' && !$('pw-saved').checked) {
+      status('err', 'Tick "I have saved this password" first. The password is cleared as soon as you encrypt, and nothing can recover it.');
+      $('pw-saved').focus(); return;
+    }
 
     btn.disabled = true;
     $('go-icon').innerHTML = ICON_SPIN;

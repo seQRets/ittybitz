@@ -15,7 +15,7 @@
      canvas and downloads use blob:/data:, none of which are network fetches.
      Nothing here can phone home. -->
 <meta http-equiv="Content-Security-Policy"
-      content="default-src 'none'; script-src 'sha256-4GSOHG1PWgpqNwON0DpmpOBDoMdMXoBzQI2KhDuK9js=' 'sha256-SJVUXJNlOay+2TG0PE+o+T46Wt7Qxe1B1XpRTxfVTCE=' 'sha256-W+IzleLCL30nXjyiCRp8Rl3j2GFDMC9KAJFnnygxQ8c=' 'sha256-XlgOklfvkE1YTG+BSxN2kJFwnn+L4EhXLVb01Ma4YsM=' 'sha256-qC9WakTFtcWJUcyqdCdj6hRJdIBqQAn7KGaw+vPLfOk='; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; font-src 'none'; form-action 'none'; base-uri 'none'">
+      content="default-src 'none'; script-src 'sha256-4GSOHG1PWgpqNwON0DpmpOBDoMdMXoBzQI2KhDuK9js=' 'sha256-SJVUXJNlOay+2TG0PE+o+T46Wt7Qxe1B1XpRTxfVTCE=' 'sha256-W+IzleLCL30nXjyiCRp8Rl3j2GFDMC9KAJFnnygxQ8c=' 'sha256-XlgOklfvkE1YTG+BSxN2kJFwnn+L4EhXLVb01Ma4YsM=' 'sha256-h2WbL8Q7h5BJvkbC6jb//PiQT4vYiZKtRZPfI1VeDXk='; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; font-src 'none'; form-action 'none'; base-uri 'none'">
 <!--
   ═══════════════════════════════════════════════════════════════════════
   IttyBitz — single-file client-side encryption
@@ -211,6 +211,8 @@
   /* Result + status */
   .result { margin-top: 1.25rem; }
   .result .field textarea { padding-right: 6rem; }
+  .ack { display: flex; gap: .5rem; align-items: flex-start; margin: 1rem 0 0; color: var(--foreground); font-weight: 400; cursor: pointer; }
+  .ack input { accent-color: var(--accent); margin: .15rem 0 0; flex: none; }
   .status { margin-top: 1rem; padding: .75rem .875rem; border-radius: 10px; font-size: 13px; display: none; white-space: pre-wrap; word-break: break-word; }
   .status.show { display: block; }
   .status.ok { background: rgba(44,221,150,.06); border: 1px solid rgba(44,221,150,.35); color: var(--success); }
@@ -445,6 +447,8 @@
         <code id="dec-fp-code">—</code>
       </div>
     </div>
+
+    <label class="ack" id="pw-saved-row"><input type="checkbox" id="pw-saved"> I have saved this password somewhere safe.</label>
 
     <div class="status" id="status" role="status" aria-live="polite"></div>
 
@@ -3526,6 +3530,7 @@ async function masterFingerprint(words) { return fingerprintOfSeed(await bip39Se
     $('pw-hint').style.display = enc ? '' : 'none';
     $('t-actions').style.display = enc ? '' : 'none';
     $('p-gen').style.display = enc ? '' : 'none';
+    $('pw-saved-row').style.display = enc ? '' : 'none';
     $('go-icon').innerHTML = enc ? ICON_LOCK : ICON_UNLOCK;
     $('go-label').textContent = enc ? 'Encrypt' : 'Decrypt';
     // Encrypt-side secret text is a human passphrase (sans font, blur toggle);
@@ -3639,6 +3644,9 @@ async function masterFingerprint(words) { return fingerprintOfSeed(await bip39Se
   var SAVE_PW_NOTICE = 'Save this password somewhere secure now. It is the only way to decrypt the result, and it will be cleared from this field after you encrypt.';
   var pwNoticed = false;
   function refreshPasswordButtons() {
+    // The saved-password confirmation belongs to one password: any change to
+    // the field (typing, Clear, Generate, the wipe after encrypting) unticks it.
+    $('pw-saved').checked = false;
     var pw = $('p').value;
     $('p-copy').disabled = !pw;
     $('p-clear').disabled = !pw;
@@ -3809,6 +3817,12 @@ async function masterFingerprint(words) { return fingerprintOfSeed(await bip39Se
     }
     if (useKeyFile && !keyFile) { status('err', '"Use key file" is on but no key file is selected. Choose one, or turn the option off.'); return; }
     if (useKeyFile && keyFile && keyFile.size === 0) { status('err', 'That key file is empty (0 bytes), so it would add nothing to the key. Choose another file, or turn "Use key file" off.'); return; }
+    // The password is cleared the moment encryption runs, so make sure it has
+    // been recorded first: otherwise the result is locked for good.
+    if (mode === 'encrypt' && !$('pw-saved').checked) {
+      status('err', 'Tick "I have saved this password" first. The password is cleared as soon as you encrypt, and nothing can recover it.');
+      $('pw-saved').focus(); return;
+    }
 
     btn.disabled = true;
     $('go-icon').innerHTML = ICON_SPIN;

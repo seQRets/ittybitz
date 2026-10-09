@@ -51,7 +51,7 @@ At the top, you’ll find two simple tabs:  **Encrypt**  and **Decrypt**.
 |	2.	Ensure the File option is selected.	|	2.	Choose the Text option.|
 |	3.	Select or drop the file(s) you wish to encrypt. Nothing is uploaded; the files stay on your device.|	3.	Enter your text in the provided box.|
 |	4.	Enter a strong password. For extra security, toggle "Use Key File" to either select an existing file or generate and download a new one. |	4.	Enter a password. For extra security, toggle "Use Key File" to add a key file.|
-|	5.	Click Encrypt and download the encrypted file for safekeeping.|	5.	After encrypting, you can copy the text, or click the **QR code icon** to view and download the encrypted output as a PNG file for easy, secure sharing.|
+|	5.	Tick "I have saved this password somewhere safe", then click Encrypt and download the encrypted file for safekeeping.|	5.	Tick "I have saved this password somewhere safe" and click Encrypt. You can then copy the text, or click the **QR code icon** to view and download the encrypted output as a PNG file for easy, secure sharing.|
 
 - In **Decrypt** mode, you simply unlock your protected content and get it back instantly—only if you hold the right key.
 
@@ -74,7 +74,7 @@ The security of your data is the highest priority. Here is a summary of the secu
 - **Strong encryption standard:** IttyBitz uses **AES-256-GCM**, a modern authenticated encryption cipher that provides both confidentiality and data integrity.
 - **Strong key derivation:** your password is not used directly as the encryption key. Instead, it is run through the **PBKDF2** (Password-Based Key Derivation Function 2) algorithm with **1,000,000 iterations**. This makes brute-force attacks against your password extremely slow and computationally expensive, even for weak passwords.
 - **Cryptographically secure randomness:** the application uses `window.crypto.getRandomValues()` to generate the salt for key derivation, the Initialization Vector (IV) for AES-GCM, the random characters for the password generator, and the data for the key file generator. This is a cryptographically secure pseudo-random number generator (CSPRNG) that is suitable for security-sensitive applications.
-- **Enforced password strength:** IttyBitz refuses to encrypt unless the password is at least 24 characters long and mixes uppercase, lowercase, numbers and symbols. The password field turns green as soon as it qualifies.
+- **Enforced password strength:** IttyBitz refuses to encrypt unless the password is at least 24 characters long and mixes uppercase, lowercase, numbers and symbols. The password field turns green as soon as it qualifies. Because the password is cleared from the page the moment you encrypt, you must first tick **I have saved this password somewhere safe**; the box unticks itself whenever the password changes.
 - **Best-effort memory clearing:** once a result has been handed over, the application overwrites the decrypted data and the key file's bytes in memory. The derived encryption key is created as non-extractable, so the browser never exposes it to the page at all. Note: JavaScript's garbage collector may retain copies of data elsewhere in the heap, so this is a best-effort mitigation rather than a guarantee.
 - **No user tracking:** the application does not use cookies, analytics, or trackers. Your activity is your own.
 
