@@ -8,6 +8,7 @@ Every IttyBitz release, newest first. Full notes for each version live in [`docs
 
 | Version | Date | Summary |
 |---|---|---|
+| [**3.0.15** 🦕 Iguanodon](docs/releases/v3.0.15.md) | 2026-10-09 | Encrypting now requires ticking **I have saved this password somewhere safe** (the password is cleared on encrypt; the box unticks when the password changes); shorter post-encrypt and key-file messages; README corrections. Cryptography untouched. |
 | [**3.0.14** 🦕 Iguanodon](docs/releases/v3.0.14.md) | 2026-10-09 | Generated key files are named by their fingerprint (`ittybitz-key-[0e64cc39].bin`); key-file fingerprints shown in square brackets; the notice no longer advises keeping the key file with the password. Cryptography untouched. |
 | [**3.0.13** 🦕 Iguanodon](docs/releases/v3.0.13.md) | 2026-10-09 | Faint hint grey raised to `#838391` to meet WCAG AA contrast (was 3.9:1) in the app, the Recovery tool and the old-PWA offline notice. Found by Dean Rie. No file changes size; cryptography untouched. |
 | [**3.0.12** 🦕 Iguanodon](docs/releases/v3.0.12.md) | 2026-10-09 | Review fixes from Dean Rie: several files at once, key-file fingerprint, printable emergency card for encrypted text, empty key files refused, keyboard tabs and other accessibility and privacy fixes, CI reproducibility check. Sizes corrected (Recovery tool 30 KB). Cryptography untouched. |
