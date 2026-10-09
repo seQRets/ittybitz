@@ -30,6 +30,20 @@ jobs:
         with:
           node-version: 24
 
+      # Reproducibility gate. site/index.html is the shipped artifact and is
+      # committed, but it is supposed to be a pure function of scripts/build/*
+      # and src/lib/bip39.ts. Rebuild it here and fail if the committed copy
+      # (or the CSP hashes / SHA256SUMS.txt derived from it) differs — so a
+      # hand edit to the built page, or a source edit without `npm run build`,
+      # can never ship. The build is plain Node with zero dependencies.
+      - name: Rebuild site/index.html and verify it matches the commit
+        run: |
+          npm run build
+          if ! git diff --exit-code -- site/ SHA256SUMS.txt; then
+            echo "::error::site/index.html, site/ittybitz-recovery.html or SHA256SUMS.txt is not reproducible from source. Run 'npm run build' and commit the result."
+            exit 1
+          fi
+
       # No `npm ci` — the suite imports src/lib/crypto.ts directly and that
       # module has zero dependencies, so nothing needs installing. This also
       # means no untrusted install scripts run in this job.
