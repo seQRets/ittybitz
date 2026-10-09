@@ -8,6 +8,7 @@ Every IttyBitz release, newest first. Full notes for each version live in [`docs
 
 | Version | Date | Summary |
 |---|---|---|
+| [**3.0.12** 🦕 Iguanodon](docs/releases/v3.0.12.md) | 2026-10-09 | Review fixes from Dean Rie: several files at once, key-file fingerprint, printable emergency card for encrypted text, empty key files refused, keyboard tabs and other accessibility and privacy fixes, CI reproducibility check. Sizes corrected (Recovery tool 30 KB). Cryptography untouched. |
 | [**3.0.11** 🦕 Iguanodon](docs/releases/v3.0.11.md) | 2026-09-26 | The Recovery tool's subtitle carries a **Download this tool** link, visible before scrolling. |
 | [**3.0.10** 🦕 Iguanodon](docs/releases/v3.0.10.md) | 2026-09-26 | The live Recovery tool offers its own download (**Download this tool** in its footer), and its version label now tracks the app release instead of the file's own version. |
 | [**3.0.9** 🦕 Iguanodon](docs/releases/v3.0.9.md) | 2026-09-26 | Footer: **Recovery tool** opens the live tool again (the hero line and feature card keep the download); **Download app** renamed **Download IttyBitz app**. Recovery tool unchanged. |
