@@ -352,6 +352,30 @@
   $('pill-file').onclick = function () { setInputType('file'); };
   $('pill-text').onclick = function () { setInputType('text'); };
 
+  // Tabs per WAI-ARIA: one tab stop per tablist (roving tabindex), Left/Right
+  // (and Home/End) move between tabs and activate the one landed on.
+  function wireTablist(ids) {
+    function focusTab(i) {
+      i = (i + ids.length) % ids.length;
+      ids.forEach(function (id, j) { $(id).setAttribute('tabindex', j === i ? '0' : '-1'); });
+      $(ids[i]).focus(); $(ids[i]).click();
+    }
+    ids.forEach(function (id, i) {
+      $(id).addEventListener('keydown', function (e) {
+        if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); focusTab(i + 1); }
+        else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); focusTab(i - 1); }
+        else if (e.key === 'Home') { e.preventDefault(); focusTab(0); }
+        else if (e.key === 'End') { e.preventDefault(); focusTab(ids.length - 1); }
+      });
+      // A click (or Enter/Space on a focused tab) also moves the tab stop.
+      $(id).addEventListener('click', function () {
+        ids.forEach(function (o, j) { $(o).setAttribute('tabindex', j === i ? '0' : '-1'); });
+      });
+    });
+  }
+  wireTablist(['tab-enc', 'tab-dec']);
+  wireTablist(['pill-file', 'pill-text']);
+
   // ---- Text secret blur (encrypt) + BIP-39 border ----
   function updateTextBlur() {
     var t = $('t');
@@ -549,9 +573,9 @@
     resetResult();
     status('ok', (mode === 'encrypt' ? 'Encrypting' : 'Deriving key') + ' (1,000,000 PBKDF2 iterations — this takes a moment)…');
 
-    var plain = null;
+    var plain = null, kfBytes = null;
     try {
-      var kfBytes = keyFile ? await readBytes(keyFile) : null;
+      kfBytes = keyFile ? await readBytes(keyFile) : null;
 
       if (mode === 'encrypt') {
         var inputBytes = inputType === 'file' ? await readBytes(mainFile) : new TextEncoder().encode($('t').value);
@@ -627,6 +651,8 @@
       resetResult();
       status('err', err && err.message ? err.message : String(err));
     } finally {
+      // The key file is key material: same best-effort erase as the plaintext.
+      if (kfBytes) kfBytes.fill(0);
       btn.disabled = false;
       $('go-icon').innerHTML = mode === 'encrypt' ? ICON_LOCK : ICON_UNLOCK;
       $('p').value = ''; refreshPasswordButtons(); // never leave the password in the field
