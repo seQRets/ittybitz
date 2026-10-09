@@ -688,9 +688,8 @@
         mainFiles = []; clearMainZone();
         var verb = mode === 'encrypt' ? 'encrypted' : 'decrypted';
         var summary = done.length + ' of ' + nFiles + ' files ' + verb + (done.length ? ' — downloaded as: ' + done.join(', ') : '') + '.';
-        if (failed.length) summary += '\n\nNot ' + verb + ': ' + failed.join('; ') + '.';
-        if (done.length > 1) summary += '\n\nIf your browser asked whether to allow several downloads from this page, allow it; nothing is downloaded from anywhere else.';
-        if (mode === 'encrypt' && done.length) summary += '\n\nStore your saved password securely. It is the only way to open these files.';
+        if (failed.length) summary += '\nNot ' + verb + ': ' + failed.join('; ') + '.';
+        if (done.length > 1) summary += '\nIf your browser asked whether to allow several downloads from this page, allow it; nothing is downloaded from anywhere else.';
         status(failed.length ? 'err' : 'ok', summary);
         return;
       }
@@ -703,7 +702,7 @@
           var encName = mainFile.name + '.ibitz';
           download(ct, encName);
           mainFiles = []; clearMainZone();
-          status('ok', 'File encrypted — downloaded as "' + encName + '".\n\nStore your saved password securely. It is the only way to open this file.');
+          status('ok', 'File encrypted — downloaded as "' + encName + '".');
         } else {
           var b64 = bytesToB64(ct);
           showResult(b64, false);
@@ -713,7 +712,7 @@
             qrState = { getValue: function () { return b64; }, numeric: false, kind: 'plain' };
             $('out-qr').style.display = '';
           }
-          status('ok', 'Text encrypted. Copy the Base64 result, or show it as a QR.\n\nStore your saved password securely. It is the only way to decrypt this text.');
+          status('ok', 'Text encrypted. Copy the Base64 result, or show it as a QR.');
         }
       } else {
         var encBytes;
