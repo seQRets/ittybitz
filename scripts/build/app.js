@@ -87,7 +87,7 @@
   // ---- State ----
   var mode = 'encrypt';       // 'encrypt' | 'decrypt'
   var inputType = 'file';     // 'file' | 'text'
-  var mainFile = null, keyFile = null;
+  var mainFiles = [], keyFile = null;  // the main zone takes several files; the key zone one
   var useKeyFile = false;
   var showTextSecret = false; // encrypt-side reveal toggle: the secret is blurred as soon as it has content
   var showDecrypted = false;  // decrypt-side reveal toggle
@@ -233,25 +233,57 @@
   }
 
   // ---- Drop-zone wiring (mirrors the recovery file) ----
-  function wireDrop(zoneId, inputId, descId, clearId, onPick) {
+  function fmtSize(n) {
+    return n < 1024 ? n + ' B' : n < 1048576 ? (n / 1024).toFixed(0) + ' KB' : (n / 1048576).toFixed(1) + ' MB';
+  }
+  // A short, one-way fingerprint of a key file (first 8 hex of its SHA-256):
+  // enough to recognise the right file months later, reveals nothing about it.
+  async function keyFingerprint(bytes) {
+    var h = new Uint8Array(await crypto.subtle.digest('SHA-256', bytes));
+    var out = '';
+    for (var i = 0; i < 4; i++) out += (h[i] < 16 ? '0' : '') + h[i].toString(16);
+    return out;
+  }
+
+  // `multiple`: the zone accepts several files and hands onPick an array; a
+  // single-file zone hands it one File (or null). Each file is validated on
+  // its own; a bad one is named and skipped, the rest are kept.
+  function wireDrop(zoneId, inputId, descId, clearId, onPick, multiple) {
     var zone = $(zoneId), input = $(inputId), desc = $(descId), clear = $(clearId);
     var defaultText = desc.textContent;
 
-    function pick(file) {
-      if (!file) return;
-      if (!validName(file.name)) { status('err', 'That filename contains characters that are not allowed.'); return; }
-      if (file.size > MAX_FILE_SIZE) { status('err', 'File is too large. Maximum size is 100MB.'); return; }
-      // An empty key file adds nothing to the key: the result is the same as
-      // using no key file at all, while looking protected by one. Refuse it.
-      if (zoneId === 'drop-key' && file.size === 0) { status('err', 'That key file is empty (0 bytes), so it would add nothing to the key. Choose another file, or turn "Use key file" off.'); return; }
-      onPick(file);
-      desc.textContent = file.name; desc.className = 'picked';
+    function pick(fileList) {
+      var files = [];
+      for (var i = 0; fileList && i < fileList.length; i++) {
+        var f = fileList[i];
+        if (!validName(f.name)) { status('err', 'The filename "' + f.name + '" contains characters that are not allowed; that file was skipped.'); continue; }
+        if (f.size > MAX_FILE_SIZE) { status('err', '"' + f.name + '" is too large (maximum 100 MB); that file was skipped.'); continue; }
+        if (zoneId === 'drop-key' && f.size === 0) { status('err', 'That key file is empty (0 bytes), so it would add nothing to the key. Choose another file, or turn "Use key file" off.'); continue; }
+        files.push(f);
+        if (!multiple) break;
+      }
+      if (!files.length) return;
+      onPick(multiple ? files : files[0]);
+      if (files.length === 1) desc.textContent = files[0].name;
+      else {
+        var total = 0; files.forEach(function (f) { total += f.size; });
+        desc.textContent = files.length + ' files \u00b7 ' + fmtSize(total);
+      }
+      desc.className = 'picked';
       clear.style.display = '';
+      // The key zone also shows the file's fingerprint, so the same file can be
+      // recognised later (and the generated one matched to its download notice).
+      if (zoneId === 'drop-key') {
+        var name = files[0].name;
+        readBytes(files[0]).then(keyFingerprint).then(function (fp) {
+          if (desc.textContent === name) desc.textContent = name + ' \u00b7 fingerprint ' + fp;
+        }).catch(function () {});
+      }
     }
 
     zone.addEventListener('click', function () { input.click(); });
     zone.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.click(); } });
-    input.addEventListener('change', function () { pick(input.files && input.files[0]); });
+    input.addEventListener('change', function () { pick(input.files); });
     ['dragenter', 'dragover'].forEach(function (ev) {
       zone.addEventListener(ev, function (e) { e.preventDefault(); e.stopPropagation(); zone.classList.add('dragging'); });
     });
@@ -259,11 +291,11 @@
       zone.addEventListener(ev, function (e) { e.preventDefault(); e.stopPropagation(); zone.classList.remove('dragging'); });
     });
     zone.addEventListener('drop', function (e) {
-      if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) pick(e.dataTransfer.files[0]);
+      if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) pick(e.dataTransfer.files);
     });
 
     function resetZone() {
-      onPick(null); input.value = '';
+      onPick(multiple ? [] : null); input.value = '';
       desc.textContent = defaultText; desc.className = '';
       clear.style.display = 'none';
     }
@@ -271,8 +303,8 @@
     return resetZone;
   }
 
-  var clearMainZone = wireDrop('drop-main', 'f', 'main-desc', 'main-clear', function (f) { mainFile = f; });
-  var clearKeyZone = wireDrop('drop-key', 'k', 'key-desc', 'key-clear', function (f) { keyFile = f; });
+  var clearMainZone = wireDrop('drop-main', 'f', 'main-desc', 'main-clear', function (fs) { mainFiles = fs; }, true);
+  var clearKeyZone = wireDrop('drop-key', 'k', 'key-desc', 'key-clear', function (f) { keyFile = f; }, false);
 
   // Swallow stray drops so the browser never navigates away and loses input.
   ['dragover', 'drop'].forEach(function (ev) { window.addEventListener(ev, function (e) { e.preventDefault(); }, false); });
@@ -301,7 +333,7 @@
   }
 
   function fullReset() {
-    mainFile = null; keyFile = null;
+    mainFiles = []; keyFile = null;
     clearMainZone(); clearKeyZone();
     $('p').value = '';
     $('t').value = '';
@@ -474,11 +506,14 @@
     $('kf-pane').style.display = useKeyFile ? '' : 'none';
     if (!useKeyFile) { keyFile = null; clearKeyZone(); }
   };
-  $('k-gen').onclick = function () {
+  $('k-gen').onclick = async function () {
     var key = new Uint8Array(64);
     crypto.getRandomValues(key);
+    var fp = await keyFingerprint(key);
     download(key, 'ittybitz-key.bin');
-    status('ok', 'A new key file has been generated and downloaded.');
+    status('ok', 'A new key file has been generated and downloaded as "ittybitz-key.bin" \u2014 fingerprint ' + fp + '. '
+      + 'You will see the same fingerprint whenever you pick this file, so you can tell it from any other. '
+      + 'Keep it with your password: both are needed to decrypt.');
   };
 
   // ---- Output actions ----
@@ -593,7 +628,7 @@
     var btn = this;
     clearStatus();
 
-    var hasInput = inputType === 'file' ? !!mainFile : !!$('t').value.trim();
+    var hasInput = inputType === 'file' ? mainFiles.length > 0 : !!$('t').value.trim();
     if (!hasInput) { status('err', inputType === 'file' ? 'Provide a file to process.' : 'Provide text to process.'); return; }
     var pw = $('p').value;
     if (!pw) { status('err', 'A password is required.'); return; }
@@ -606,19 +641,55 @@
     btn.disabled = true;
     $('go-icon').innerHTML = ICON_SPIN;
     resetResult();
-    status('ok', (mode === 'encrypt' ? 'Encrypting' : 'Deriving key') + ' (1,000,000 PBKDF2 iterations — this takes a moment)…');
+    var nFiles = inputType === 'file' ? mainFiles.length : 0;
+    status('ok', (mode === 'encrypt' ? 'Encrypting' : 'Deriving key') + ' (1,000,000 PBKDF2 iterations — this takes a moment'
+      + (nFiles > 1 ? ' per file' : '') + ')…');
 
     var plain = null, kfBytes = null;
     try {
       kfBytes = keyFile ? await readBytes(keyFile) : null;
 
+      // Several files: each is processed on its own — its own salt, its own
+      // key derivation, its own download — and a failure in one does not stop
+      // the others. The summary names what succeeded and what did not.
+      if (inputType === 'file' && nFiles > 1) {
+        var done = [], failed = [];
+        for (var fi = 0; fi < mainFiles.length; fi++) {
+          var f = mainFiles[fi];
+          status('ok', (mode === 'encrypt' ? 'Encrypting' : 'Decrypting') + ' file ' + (fi + 1) + ' of ' + nFiles + ': "' + f.name + '"…');
+          try {
+            var bytes = await readBytes(f);
+            if (mode === 'encrypt') {
+              download(await ittybitzEncrypt(bytes, pw, kfBytes), f.name + '.ibitz');
+              done.push(f.name + '.ibitz');
+            } else {
+              var pt;
+              try { pt = await ittybitzDecrypt(bytes, pw, kfBytes); }
+              catch (e) { throw (e instanceof DOMException) ? new Error('wrong password or key file, or corrupted') : e; }
+              var name = /\.ibitz$/i.test(f.name) ? f.name.replace(/\.ibitz$/i, '') : 'decrypted-' + f.name;
+              download(pt, name || 'decrypted'); pt.fill(0);
+              done.push(name || 'decrypted');
+            }
+          } catch (eOne) { failed.push(f.name + ' (' + (eOne && eOne.message ? eOne.message : String(eOne)) + ')'); }
+        }
+        mainFiles = []; clearMainZone();
+        var verb = mode === 'encrypt' ? 'encrypted' : 'decrypted';
+        var summary = done.length + ' of ' + nFiles + ' files ' + verb + (done.length ? ' — downloaded as: ' + done.join(', ') : '') + '.';
+        if (failed.length) summary += '\n\nNot ' + verb + ': ' + failed.join('; ') + '.';
+        if (done.length > 1) summary += '\n\nIf your browser asked whether to allow several downloads from this page, allow it; nothing is downloaded from anywhere else.';
+        if (mode === 'encrypt' && done.length) summary += '\n\nStore your saved password securely. It is the only way to open these files.';
+        status(failed.length ? 'err' : 'ok', summary);
+        return;
+      }
+
+      var mainFile = mainFiles[0] || null;
       if (mode === 'encrypt') {
         var inputBytes = inputType === 'file' ? await readBytes(mainFile) : new TextEncoder().encode($('t').value);
         var ct = await ittybitzEncrypt(inputBytes, pw, kfBytes);
         if (inputType === 'file') {
           var encName = mainFile.name + '.ibitz';
           download(ct, encName);
-          mainFile = null; clearMainZone();
+          mainFiles = []; clearMainZone();
           status('ok', 'File encrypted — downloaded as "' + encName + '".\n\nStore your saved password securely. It is the only way to open this file.');
         } else {
           var b64 = bytesToB64(ct);
