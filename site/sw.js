@@ -31,7 +31,7 @@ const MIGRATION_HTML =
   '<a href="https://github.com/seQRets/ittybitz/releases/latest/download/ittybitz.html" ' +
   'style="display:inline-block;background:linear-gradient(to bottom right,#fbbf24,#f97316,#ef4444);color:#000;' +
   'font-weight:600;text-decoration:none;padding:.7rem 1.25rem;border-radius:12px">Download IttyBitz</a>' +
-  '<p style="color:#6e6e77;font-size:13px;margin:1.25rem 0 0">Or open ' +
+  '<p style="color:#838391;font-size:13px;margin:1.25rem 0 0">Or open ' +
   '<a href="https://ittybitz.app" style="color:#f59e0b">ittybitz.app</a> in your browser.</p>' +
   '</div></body></html>';
 
