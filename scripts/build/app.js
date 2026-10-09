@@ -515,9 +515,8 @@
     // never lands as "ittybitz-key (1).bin" beside the first.
     var keyName = 'ittybitz-key-[' + fp + '].bin';
     download(key, keyName);
-    status('ok', 'A new key file has been generated and downloaded as "' + keyName + '" \u2014 fingerprint [' + fp + ']. '
-      + 'You will see the same fingerprint whenever you pick this file, so you can tell it from any other. '
-      + 'You need both this key file and your password to decrypt.');
+    status('ok', 'Key file downloaded as "' + keyName + '". Whenever you select it, IttyBitz shows its fingerprint, ['
+      + fp + '], even if the file has been renamed. You need both this key file and your password to decrypt.');
   };
 
   // ---- Output actions ----

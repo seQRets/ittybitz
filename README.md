@@ -49,7 +49,7 @@ At the top, you’ll find two simple tabs:  **Encrypt**  and **Decrypt**.
 |---	|---	|
 |	1.	Select the Encrypt tab.|	1.	Select the Encrypt tab.|   	
 |	2.	Ensure the File option is selected.	|	2.	Choose the Text option.|
-|	3.	Upload the file you wish to encrypt.|	3.	Enter your text in the provided box.|
+|	3.	Select or drop the file(s) you wish to encrypt. Nothing is uploaded; the files stay on your device.|	3.	Enter your text in the provided box.|
 |	4.	Enter a strong password. For extra security, toggle "Use Key File" to either select an existing file or generate and download a new one. |	4.	Enter a password. For extra security, toggle "Use Key File" to add a key file.|
 |	5.	Click Encrypt and download the encrypted file for safekeeping.|	5.	After encrypting, you can copy the text, or click the **QR code icon** to view and download the encrypted output as a PNG file for easy, secure sharing.|
 
@@ -59,7 +59,7 @@ At the top, you’ll find two simple tabs:  **Encrypt**  and **Decrypt**.
 |---	|---	|
 |	1.	Select the Decrypt tab.|	1.	Select the Decrypt tab.|   	
 |	2.	Ensure the File option is selected.|	2.	Choose the Text option.|
-|	3.	Upload the encrypted file.|		3.	Paste your encrypted text into the box.|
+|	3.	Select or drop the encrypted file(s).|		3.	Paste your encrypted text into the box.|
 |	4.	Enter the same password (and the key file, if used) and click Decrypt.|		4.	Enter the password (and optional key file).|
 |	5.	Download the decrypted file.|	5.	Copy the decrypted text output.|
 
@@ -74,8 +74,8 @@ The security of your data is the highest priority. Here is a summary of the secu
 - **Strong encryption standard:** IttyBitz uses **AES-256-GCM**, a modern authenticated encryption cipher that provides both confidentiality and data integrity.
 - **Strong key derivation:** your password is not used directly as the encryption key. Instead, it is run through the **PBKDF2** (Password-Based Key Derivation Function 2) algorithm with **1,000,000 iterations**. This makes brute-force attacks against your password extremely slow and computationally expensive, even for weak passwords.
 - **Cryptographically secure randomness:** the application uses `window.crypto.getRandomValues()` to generate the salt for key derivation, the Initialization Vector (IV) for AES-GCM, the random characters for the password generator, and the data for the key file generator. This is a cryptographically secure pseudo-random number generator (CSPRNG) that is suitable for security-sensitive applications.
-- **Password strength indicator:** to encourage strong security practices, the UI provides real-time feedback, guiding users to create passwords that are at least 24 characters long and contain a mix of character types.
-- **Best-effort memory clearing:** after an encryption or decryption operation is complete, the application overwrites sensitive variables (like the derived key and salt) in memory. Note: JavaScript's garbage collector may retain copies of data elsewhere in the heap, so this is a best-effort mitigation rather than a guarantee.
+- **Enforced password strength:** IttyBitz refuses to encrypt unless the password is at least 24 characters long and mixes uppercase, lowercase, numbers and symbols. The password field turns green as soon as it qualifies.
+- **Best-effort memory clearing:** once a result has been handed over, the application overwrites the decrypted data and the key file's bytes in memory. The derived encryption key is created as non-extractable, so the browser never exposes it to the page at all. Note: JavaScript's garbage collector may retain copies of data elsewhere in the heap, so this is a best-effort mitigation rather than a guarantee.
 - **No user tracking:** the application does not use cookies, analytics, or trackers. Your activity is your own.
 
 <br/>
@@ -85,7 +85,7 @@ The security of your data is the highest priority. Here is a summary of the secu
 ### **Independent security review**
 This application has undergone a detailed security analysis. You can view the full report here: [Security analysis report](https://claude.ai/public/artifacts/f4bb6437-1130-4fd3-bc56-74b2399274f9) 🔗
 
-The current audit findings and accepted tradeoffs are tracked in-repo: [SECURITY-AUDIT.md](SECURITY-AUDIT.md)
+An in-repo audit of v2.8.1, the last version before the v3.0.0 single-file rewrite, is in [SECURITY-AUDIT.md](SECURITY-AUDIT.md). It has not been re-run against v3.x; an addendum at the top maps its findings onto the current architecture.
 
 ### **Open source advantage**
 - **Transparent code**: every line of security code is publicly auditable
@@ -181,7 +181,7 @@ npm run update-csp-hashes  # re-pin CSP hashes + SHA256SUMS after editing a ship
 
 `build` concatenates the hand-written page, the vendored [`qrcode-generator`](https://github.com/kazuhikoarase/qrcode-generator) (MIT), the DOM-free crypto core, and a BIP-39 core generated from `src/lib/bip39.ts` (so the wordlist can never drift), then runs `update-csp-hashes` to lock each inline `<script>` block into the `Content-Security-Policy` as a `'sha256-…'` source and regenerate `SHA256SUMS.txt`. `test:crypto` proves the assembled file both decrypts every historical ciphertext **and** round-trips against the frozen reference implementation in [`src/lib/crypto.ts`](src/lib/crypto.ts) — in both directions, with and without key files.
 
-> **After editing `site/ittybitz-recovery.html` by hand (or anything under `scripts/build/`), run `npm run update-csp-hashes` before committing.** It recomputes the inline-script hashes, rewrites both files' CSP meta tags in place, and regenerates `SHA256SUMS.txt`. It is idempotent — a second run with unchanged scripts writes nothing. Skipping it after a change would leave a stale hash in the CSP and the browser would refuse to run the edited script.
+> **After editing anything under `scripts/build/`, run `npm run build` before committing; after editing `site/ittybitz-recovery.html` by hand, `npm run update-csp-hashes` is enough.** `update-csp-hashes` (which `build` also runs) recomputes the inline-script hashes, rewrites both files' CSP meta tags in place, and regenerates `SHA256SUMS.txt`. CI rebuilds everything from source and fails if the committed files differ. It is idempotent — a second run with unchanged scripts writes nothing. Skipping it after a change would leave a stale hash in the CSP and the browser would refuse to run the edited script.
 
 There are **no runtime or build dependencies**: `node` (22.6+, for native TypeScript stripping) and Python 3 (only for `npm run dev`'s static server) are all that is used.
 
