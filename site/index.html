@@ -15,7 +15,7 @@
      canvas and downloads use blob:/data:, none of which are network fetches.
      Nothing here can phone home. -->
 <meta http-equiv="Content-Security-Policy"
-      content="default-src 'none'; script-src 'sha256-4GSOHG1PWgpqNwON0DpmpOBDoMdMXoBzQI2KhDuK9js=' 'sha256-SJVUXJNlOay+2TG0PE+o+T46Wt7Qxe1B1XpRTxfVTCE=' 'sha256-W+IzleLCL30nXjyiCRp8Rl3j2GFDMC9KAJFnnygxQ8c=' 'sha256-XlgOklfvkE1YTG+BSxN2kJFwnn+L4EhXLVb01Ma4YsM=' 'sha256-jwl8GouGrktmOdekxV+snelDLxbycPIIfHTLk7Pw7Vc='; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; font-src 'none'; form-action 'none'; base-uri 'none'">
+      content="default-src 'none'; script-src 'sha256-4GSOHG1PWgpqNwON0DpmpOBDoMdMXoBzQI2KhDuK9js=' 'sha256-SJVUXJNlOay+2TG0PE+o+T46Wt7Qxe1B1XpRTxfVTCE=' 'sha256-W+IzleLCL30nXjyiCRp8Rl3j2GFDMC9KAJFnnygxQ8c=' 'sha256-XlgOklfvkE1YTG+BSxN2kJFwnn+L4EhXLVb01Ma4YsM=' 'sha256-FDq/g5Bz2M6l8mRm9tSctP/i6EC/E6MhtGL129AbRLI='; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; font-src 'none'; form-action 'none'; base-uri 'none'">
 <!--
   ═══════════════════════════════════════════════════════════════════════
   IttyBitz — single-file client-side encryption
@@ -513,7 +513,7 @@
            "Recoverable without us" card; this is the way to open the tool. -->
       <a class="accent" href="./ittybitz-recovery.html" title="Open the standalone recovery tool">Recovery tool</a>
       <a class="accent" href="https://github.com/seQRets/ittybitz" target="_blank" rel="noopener noreferrer">GitHub</a>
-      <span id="version">v3.0.16 🦕 Iguanodon</span>
+      <span id="version">v3.0.17 🦕 Iguanodon</span>
     </div>
   </footer>
 </div>
@@ -549,11 +549,12 @@
   <div class="card-qr"><span class="qr-frame"><canvas id="card-canvas" width="1" height="1"></canvas></span></div>
   <pre id="card-text"></pre>
   <ol>
-    <li>Open <b>https://ittybitz.app</b> — or, if that site is gone, the file <b>ittybitz-recovery.html</b> kept with this card (also at github.com/seQRets/ittybitz).</li>
-    <li>Choose <b>Decrypt → Text</b>, then scan the code above with the phone, or type the text exactly as printed.</li>
-    <li>Enter the password<span id="card-kf"></span>. <b id="card-kept">The password is not on this card</b>; it was kept separately by the person who made this.</li>
+    <li>Open <b>https://ittybitz.app</b> in a web browser. If the website is not available, open the IttyBitz Recovery tool, <b>ittybitz-recovery.html</b>, instead. It runs in any browser, even offline, and can be downloaded from github.com/seQRets/ittybitz.</li>
+    <li>Choose <b>Decrypt Text</b> (on ittybitz.app, choose <b>Decrypt</b> first). Then enter the encrypted text above: copy and paste it from a digital copy of this card, scan the QR code with a phone camera, or type it exactly as printed.</li>
+    <!-- Filled at print time: this step says plainly whether a key file is needed. -->
+    <li><span id="card-kf"></span> <b id="card-kept"></b></li>
   </ol>
-  <p class="card-foot">Everything happens in the browser; nothing is sent anywhere. This card can be lost or copied without harm — without the password it opens nothing.</p>
+  <p class="card-foot">Everything happens in the browser; nothing is sent anywhere. The QR code and encrypted text above reveal nothing about the secret hidden beneath.</p>
 </section>
 
 <!-- Donate overlay -->
@@ -3806,11 +3807,15 @@ async function masterFingerprint(words) { return fingerprintOfSeed(await bip39Se
     // learn which file to look for; the owner recognises the fingerprint,
     // which both IttyBitz and the recovery tool show when a key file is chosen.
     var fp = qrState.keyFp;
-    $('card-kf').textContent = fp ? ' and choose the key file. The right one shows the fingerprint [' + fp + '] when selected' : '';
-    $('card-kept').textContent = fp ? 'Neither the password nor the key file is on this card' : 'The password is not on this card';
+    // Say it either way: a card that is silent about the key file could send
+    // someone searching for years for a file that was never used.
+    $('card-kf').textContent = fp
+      ? 'Enter the password and choose the key file. The right key file shows the fingerprint [' + fp + '] when selected.'
+      : 'Enter the password. No key file is needed.';
+    $('card-kept').textContent = fp ? 'Neither the password nor the key file is on this card.' : 'The password is not on this card.';
   }
   function clearCard() {
-    $('card-text').textContent = ''; $('card-when').textContent = ''; $('card-kf').textContent = '';
+    $('card-text').textContent = ''; $('card-when').textContent = ''; $('card-kf').textContent = ''; $('card-kept').textContent = '';
     $('card').removeAttribute('data-tier');
     var c = $('card-canvas'); c.width = 1; c.height = 1;
     document.body.classList.remove('print-card');

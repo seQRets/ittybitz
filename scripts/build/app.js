@@ -609,11 +609,15 @@
     // learn which file to look for; the owner recognises the fingerprint,
     // which both IttyBitz and the recovery tool show when a key file is chosen.
     var fp = qrState.keyFp;
-    $('card-kf').textContent = fp ? ' and choose the key file. The right one shows the fingerprint [' + fp + '] when selected' : '';
-    $('card-kept').textContent = fp ? 'Neither the password nor the key file is on this card' : 'The password is not on this card';
+    // Say it either way: a card that is silent about the key file could send
+    // someone searching for years for a file that was never used.
+    $('card-kf').textContent = fp
+      ? 'Enter the password and choose the key file. The right key file shows the fingerprint [' + fp + '] when selected.'
+      : 'Enter the password. No key file is needed.';
+    $('card-kept').textContent = fp ? 'Neither the password nor the key file is on this card.' : 'The password is not on this card.';
   }
   function clearCard() {
-    $('card-text').textContent = ''; $('card-when').textContent = ''; $('card-kf').textContent = '';
+    $('card-text').textContent = ''; $('card-when').textContent = ''; $('card-kf').textContent = ''; $('card-kept').textContent = '';
     $('card').removeAttribute('data-tier');
     var c = $('card-canvas'); c.width = 1; c.height = 1;
     document.body.classList.remove('print-card');
