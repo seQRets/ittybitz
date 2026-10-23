@@ -269,5 +269,44 @@
       "plaintext": "The quick brown fox jumps over the lazy dog 0123456789",
       "base64": "SUJUWgHoZ9qGEYZvupvMx/Hv5jo2vP5ONAhqWJPUutBlDl2scTsTbRJnOz9pJx9krC/O0DtWcClBWDP+NI4Id5ZSWYS4mMsGJmfld21u+r44K7EvqUhMZpxD52wWXVU8huqEv2MdjQ=="
     }
+  ],
+  "_commentV2": [
+    "fixturesV2: IBTZ v2 (Argon2id) ciphertexts made by the site/index.html crypto core of the release named in",
+    "\"version\", with the test password and key file above. crypto.ts predates v2; the suite opens these with",
+    "the app, the recovery file and an independent Node implementation. Append new entries; never modify or remove old ones."
+  ],
+  "fixturesV2": [
+    {
+      "version": "v3.1.0",
+      "format": "v2",
+      "payload": "seed12",
+      "keyFile": false,
+      "plaintext": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about",
+      "base64": "SUJUWgIAAAEAAwE9BipAguUsrSyRfhgjMeLfH22hFoK+kg/trd4VclDStcRNU0Rtn9D9b1E/BHC9kwYok9A1nz8lzWCL/REf5xRvjZqpI7jrn63VbXVzc/LyjjdfhqDUNOvAYOVJZi3pZrJcQ8HpbGkPDDuiTy0okJGXFx+mkH6uyD/9L8GQZtIK6hCQ0rzSbn9f+A=="
+    },
+    {
+      "version": "v3.1.0",
+      "format": "v2",
+      "payload": "seed12",
+      "keyFile": true,
+      "plaintext": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about",
+      "base64": "SUJUWgIAAAEAAwFMTrMh4avzWvI+/g7+Kx7UWbMNOsiwUT3BRRP/errJUookGDd88uTYItTRPBr4tC+OXwR4e6Nr0shdBUTHz2jBuAONfWLfzs49b7ieGcR5+tmF7lIc+CigbQMO+6bySKX0oKnaCviefrWBV+2TGFy0BkqnA4HaOfJR1dfTMPB7Yq7SOeGLsS8Qfg=="
+    },
+    {
+      "version": "v3.1.0",
+      "format": "v2",
+      "payload": "unicode",
+      "keyFile": false,
+      "plaintext": "秘密 · émoji 🔐🦖 · Ω≈ç√ · naïve café — “quoted”",
+      "base64": "SUJUWgIAAAEAAwG5LbDpWpDKSNFj4kiGUEaAp72cRpxVl1btFc5PdcJRwTeJxBK1q77hUF5KnIolx810mrdPT9y/oVHijY2j9osci8wZA0T8EghsJOTGPd6RPPR0yk91Xr9g3VFO/A+DjmYe9HY8OouiWadmI44Q+J7T6tTeUg=="
+    },
+    {
+      "version": "v3.1.0",
+      "format": "v2",
+      "payload": "unicode",
+      "keyFile": true,
+      "plaintext": "秘密 · émoji 🔐🦖 · Ω≈ç√ · naïve café — “quoted”",
+      "base64": "SUJUWgIAAAEAAwFjuMLA2vG39HTEbVasjJn1t5oj5mitknJoGm+RfWFWkIou0i4IrGHUJEMo827K3etkj5aaT6hAQYTpiBxRwz0V97Dxv4husJzdItZQHk7KLe2yGvAi+2KU6MySVeemVNCxew8Mjh1faOfiUmpFYqqfrX2NqQ=="
+    }
   ]
 }

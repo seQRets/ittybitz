@@ -1,8 +1,8 @@
 # 🪶 IttyBitz Recovery
 
-### ⬇️ [**Download the Recovery tool**](https://github.com/seQRets/ittybitz/releases/download/v3.0.17/ittybitz-recovery.html)
+### ⬇️ [**Download the Recovery tool**](https://github.com/seQRets/ittybitz/releases/download/v3.1.0/ittybitz-recovery.html)
 
-*Saves `ittybitz-recovery.html` to your computer · 30 KB · no installation · works offline, with no dependencies on this project*
+*Saves `ittybitz-recovery.html` to your computer · 43 KB · no installation · works offline, with no dependencies on this project*
 
 Or **[open it in your browser](https://ittybitz.app/ittybitz-recovery.html)** to use it right now without saving — but a copy on your own disk is the whole point.
 
@@ -68,6 +68,6 @@ Compare the result against the checksum published with the [release](../CHANGELO
 ## What makes it trustworthy
 
 - **Decrypt-only.** Half the code to audit. Create new secrets with the full app; this one only opens what you already have.
-- **Verified against every release.** CI replays 32 real ciphertexts from v1.0 onward through this exact file on every change. If it ever disagreed with the main implementation about a real ciphertext, the build fails.
+- **Verified against every release.** CI replays real ciphertexts from every format, v1.0 onward, through this exact file on every change. If it ever disagreed with the main implementation about a real ciphertext, the build fails.
 - **Enforced offline.** Its `Content-Security-Policy` blocks all network access outright. "Nothing is sent" is structurally true here, not a promise you have to take on faith.
 - **Self-documenting.** The container format and key derivation are written into the file's own source, so your data stays recoverable even if the page itself never runs.

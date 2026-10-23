@@ -15,13 +15,20 @@
  * cannot: encrypt and decrypt changing together in a way that stays
  * self-consistent but can no longer read what already shipped.
  *
- * Two wire formats exist in the wild and both are covered:
+ * Three wire formats exist in the wild and all are covered:
  *   v0  salt(16) || IV(12) || ciphertext                    (v1.0 – v1.4.0)
- *   v1  "IBTZ" || 0x01 || salt(16) || IV(12) || ciphertext  (v2.0.0 – now)
+ *   v1  "IBTZ" || 0x01 || salt(16) || IV(12) || ciphertext  (v2.0.0 – v3.0.17)
+ *   v2  "IBTZ" || 0x02 || m || t || p || salt || IV || ct   (v3.1.0 – now)
  *
- * Key derivation has never changed: PBKDF2-SHA256 @ 1,000,000 iterations,
- * AES-256-GCM, password bytes UTF-8, optional key file appended after the
- * password bytes. Verified identical from v1.0 to HEAD.
+ * v0 and v1 use PBKDF2-SHA256 @ 1,000,000 iterations, AES-256-GCM, password
+ * bytes UTF-8, optional key file appended after the password bytes —
+ * identical from v1.0 to HEAD, and what src/lib/crypto.ts implements.
+ *
+ * v2 uses Argon2id (RFC 9106) with the key file's SHA-256 as Argon2's secret
+ * input and the 39-byte header as AES-GCM additional data. crypto.ts does not
+ * know v2, so section 8 holds it to an INDEPENDENT implementation built here
+ * from Node's own Argon2id (OpenSSL) and Web Crypto, in both directions.
+ * Node 24.7+ is needed for crypto.argon2Sync.
  *
  * Adding fixtures: APPEND to crypto-fixtures.json. Never modify or delete an
  * existing entry — each one is a promise that a real user's file still opens.
@@ -37,7 +44,7 @@ import { readFileSync } from "node:fs";
 import { createContext, runInContext } from "node:vm";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { webcrypto } from "node:crypto";
+import { webcrypto, argon2Sync, createHash } from "node:crypto";
 import { encryptFile, decryptFile } from "../src/lib/crypto.ts";
 import { validateBip39, toStandardSeedQR } from "../src/lib/bip39.ts";
 
@@ -69,6 +76,52 @@ function hexToArrayBuffer(hex: string): ArrayBuffer {
   for (let i = 0; i < out.length; i++) out[i] = parseInt(hex.substr(i * 2, 2), 16);
   return out.buffer as ArrayBuffer;
 }
+
+// ---- An independent IBTZ v2 implementation ---------------------------------
+// Built only from Node's Argon2id (OpenSSL) and Web Crypto, sharing no code
+// with the pages under test, so agreement in both directions means the pages
+// implement the documented format rather than merely agreeing with
+// themselves.
+const V2_HEADER = 39;
+
+function v2Key(password: string, salt: Uint8Array, keyFile: Uint8Array | null, m: number, t: number, p: number): Uint8Array {
+  const secret = keyFile && keyFile.length ? createHash("sha256").update(keyFile).digest() : Buffer.alloc(0);
+  return new Uint8Array(argon2Sync("argon2id", {
+    message: Buffer.from(password, "utf8"), nonce: Buffer.from(salt), secret,
+    parallelism: p, tagLength: 32, memory: m, passes: t,
+  }));
+}
+
+async function nodeV2Encrypt(plain: Uint8Array, password: string, keyFile: Uint8Array | null,
+                             m = 65536, t = 3, p = 1): Promise<Uint8Array> {
+  const head = new Uint8Array(V2_HEADER);
+  head.set([0x49, 0x42, 0x54, 0x5a, 0x02]);
+  new DataView(head.buffer).setUint32(5, m, true);
+  head[9] = t; head[10] = p;
+  head.set(webcrypto.getRandomValues(new Uint8Array(16)), 11);
+  head.set(webcrypto.getRandomValues(new Uint8Array(12)), 27);
+  const key = await webcrypto.subtle.importKey("raw", v2Key(password, head.slice(11, 27), keyFile, m, t, p),
+    "AES-GCM", false, ["encrypt"]);
+  const ct = new Uint8Array(await webcrypto.subtle.encrypt(
+    { name: "AES-GCM", iv: head.slice(27, V2_HEADER), additionalData: head }, key, plain));
+  const out = new Uint8Array(V2_HEADER + ct.length);
+  out.set(head); out.set(ct, V2_HEADER);
+  return out;
+}
+
+async function nodeV2Decrypt(input: Uint8Array, password: string, keyFile: Uint8Array | null): Promise<Uint8Array> {
+  const bytes = Uint8Array.from(input); // also copies vm-realm arrays into this realm
+  if (bytes[4] !== 2) throw new Error("not an IBTZ v2 container");
+  const m = new DataView(bytes.buffer).getUint32(5, true), t = bytes[9]!, p = bytes[10]!;
+  const key = await webcrypto.subtle.importKey("raw", v2Key(password, bytes.slice(11, 27), keyFile, m, t, p),
+    "AES-GCM", false, ["decrypt"]);
+  return new Uint8Array(await webcrypto.subtle.decrypt(
+    { name: "AES-GCM", iv: bytes.slice(27, V2_HEADER), additionalData: bytes.slice(0, V2_HEADER) },
+    key, bytes.slice(V2_HEADER)));
+}
+
+// Globals the extracted page blocks need, beyond Web Crypto.
+const pageGlobals = () => ({ crypto: webcrypto, TextEncoder, TextDecoder, console, WebAssembly, atob });
 
 async function main() {
   console.log("\nIttyBitz crypto regression\n");
@@ -283,12 +336,17 @@ async function main() {
     /<script id="ittybitz-decrypt-core">([\s\S]*?)<\/script>/
   );
   check(!!coreMatch, "decrypt core block found in the recovery HTML");
+  const recoveryArgonMatch = recoveryHtml.match(/<script id="ittybitz-argon2">([\s\S]*?)<\/script>/);
+  check(!!recoveryArgonMatch, "Argon2id block found in the recovery HTML");
 
-  if (coreMatch) {
-    const sandbox: any = { crypto: webcrypto, TextEncoder, TextDecoder, console };
+  let recoveryDecryptFn: any = null;
+  if (coreMatch && recoveryArgonMatch) {
+    const sandbox: any = pageGlobals();
     createContext(sandbox);
+    runInContext(recoveryArgonMatch[1]!, sandbox);
     runInContext(coreMatch[1]!, sandbox);
     const recoveryDecrypt = sandbox.ittybitzDecrypt;
+    recoveryDecryptFn = recoveryDecrypt;
     check(typeof recoveryDecrypt === "function", "recovery core exposes ittybitzDecrypt()");
 
     // The recovery file must state the same PBKDF2 iteration count. A
@@ -356,21 +414,27 @@ async function main() {
   // ---- 7. Standalone two-way app (site/index.html) ----
   // The full single-file IttyBitz encrypts AND decrypts. Like the recovery
   // file it reimplements the container parsing and key derivation, so it is
-  // gated the same way — but in BOTH directions: ciphertext it produces must
-  // open under crypto.ts, and ciphertext crypto.ts produces must open under
-  // it. That two-way guarantee is something no amount of reading the page
-  // can give by inspection, and it is why this file is trustworthy.
+  // gated the same way — but in BOTH directions: everything crypto.ts
+  // produces must open under it, and what it produces (format v2) must open
+  // under the independent implementation above. That two-way guarantee is
+  // something no amount of reading the page can give by inspection, and it is
+  // why this file is trustworthy.
   console.log("\nStandalone two-way app (site/index.html):");
 
   const appHtml = readFileSync(join(HERE, "..", "site", "index.html"), "utf8");
   const appCoreMatch = appHtml.match(/<script id="ittybitz-crypto-core">([\s\S]*?)<\/script>/);
   const appBip39Match = appHtml.match(/<script id="ittybitz-bip39">([\s\S]*?)<\/script>/);
+  const appArgonMatch = appHtml.match(/<script id="ittybitz-argon2">([\s\S]*?)<\/script>/);
   check(!!appCoreMatch, "crypto core block found in ittybitz.html");
   check(!!appBip39Match, "bip39 block found in ittybitz.html");
+  check(!!appArgonMatch, "Argon2id block found in ittybitz.html");
 
-  if (appCoreMatch && appBip39Match) {
-    const box: any = { crypto: webcrypto, TextEncoder, TextDecoder, console };
+  let appBox: any = null;
+  if (appCoreMatch && appBip39Match && appArgonMatch) {
+    const box: any = pageGlobals();
+    appBox = box;
     createContext(box);
+    runInContext(appArgonMatch[1]!, box);
     runInContext(appCoreMatch[1]!, box);
     runInContext(appBip39Match[1]!, box);
     const appEncrypt = box.ittybitzEncrypt;
@@ -409,20 +473,18 @@ async function main() {
         const kfHex = FIXTURES.keyFileHex;
         const suffix = withKey ? "key file" : "password only";
 
-        const appMsg = "app->crypto.ts " + withKey;
+        // What the app writes now (v2) must open under the independent
+        // implementation; crypto.ts predates v2 and cannot read it.
+        const appMsg = "app->independent v2 " + withKey;
         const appCt = await appEncrypt(
           enc.encode(appMsg),
           FIXTURES.password,
           withKey ? new Uint8Array(hexToArrayBuffer(kfHex)) : null
         );
-        // appEncrypt runs in a vm realm, so appCt.buffer is that realm's
-        // ArrayBuffer and fails crypto.ts's `instanceof ArrayBuffer` guard.
-        // Uint8Array.from copies the bytes into a main-realm buffer.
-        const appCtBuf = Uint8Array.from(appCt).buffer as ArrayBuffer;
         const appCtPt = dec.decode(
-          await decryptFile(appCtBuf, FIXTURES.password, withKey ? hexToArrayBuffer(kfHex) : null)
+          await nodeV2Decrypt(appCt, FIXTURES.password, withKey ? new Uint8Array(hexToArrayBuffer(kfHex)) : null)
         );
-        check(appCtPt === appMsg, `app-encrypted text opens under crypto.ts (${suffix})`);
+        check(appCtPt === appMsg, `app-encrypted text opens under the independent v2 implementation (${suffix})`);
 
         const tsMsg = "crypto.ts->app " + withKey;
         const tsCt = await encryptFile(
@@ -440,12 +502,18 @@ async function main() {
         check(tsCtPt === tsMsg, `crypto.ts-encrypted text opens under app (${suffix})`);
       }
 
-      // 7c. The app produces a well-formed v1 container.
+      // 7c. The app produces a well-formed v2 container with the documented
+      // Argon2id settings (64 MiB, 3 passes, 1 lane).
       const appHeader = await appEncrypt(enc.encode("header check"), FIXTURES.password, null);
       check(
         appHeader[0] === 0x49 && appHeader[1] === 0x42 && appHeader[2] === 0x54 &&
-          appHeader[3] === 0x5a && appHeader[4] === 0x01,
-        "app emits an IBTZ v1 header"
+          appHeader[3] === 0x5a && appHeader[4] === 0x02,
+        "app emits an IBTZ v2 header"
+      );
+      check(
+        new DataView(Uint8Array.from(appHeader).buffer).getUint32(5, true) === 65536 &&
+          appHeader[9] === 3 && appHeader[10] === 1,
+        "app v2 header carries Argon2id m=65536 KiB, t=3, p=1"
       );
 
       // 7d. Same rejections as crypto.ts.
@@ -487,6 +555,114 @@ async function main() {
         }
       }
     }
+  }
+
+  // ---- 8. Format v2: Argon2id ----
+  // The key derivation is checked on its own against Node's Argon2id and the
+  // RFC 9106 test vector, then whole v2 containers are swapped in every
+  // direction between the app, the recovery file and the independent
+  // implementation, and finally the pinned v2 fixtures are replayed.
+  console.log("\nFormat v2 (Argon2id):");
+
+  const recoveryArgon = recoveryHtml.match(/<script id="ittybitz-argon2">([\s\S]*?)<\/script>/)?.[1];
+  const appArgon = appHtml.match(/<script id="ittybitz-argon2">([\s\S]*?)<\/script>/)?.[1];
+  check(!!recoveryArgon && recoveryArgon === appArgon, "app and recovery carry byte-identical Argon2id blocks");
+
+  if (appBox && recoveryDecryptFn) {
+    const argon = appBox.ittybitzArgon2id;
+    const hex = (u: Uint8Array) => Buffer.from(u).toString("hex");
+    const ours = async (o: any) => hex(await argon(o.P, o.S, { m: o.m, t: o.t, p: o.p, T: o.T, secret: o.K, ad: o.X }));
+    const theirs = (o: any) => argon2Sync("argon2id", { message: o.P, nonce: o.S, secret: o.K, associatedData: o.X,
+      parallelism: o.p, tagLength: o.T, memory: o.m, passes: o.t }).toString("hex");
+
+    // 8a. RFC 9106 section 5.3 test vector.
+    check(
+      (await ours({ P: new Uint8Array(32).fill(1), S: new Uint8Array(16).fill(2), K: new Uint8Array(8).fill(3),
+                    X: new Uint8Array(12).fill(4), p: 4, T: 32, m: 32, t: 3 })) ===
+        "0d640df58d78766c08c037a34a8b53c9d01ef0452d75b65eb52520e96b01e659",
+      "Argon2id matches the RFC 9106 test vector"
+    );
+
+    // 8b. Agreement with Node's Argon2id across lanes, passes, memory sizes,
+    // tag lengths (both H' branches) and empty or present secret/AD inputs.
+    let agree = 0, cases = 0;
+    for (let i = 0; i < 24; i++) {
+      const p = 1 + (i % 4);
+      const o = {
+        P: webcrypto.getRandomValues(new Uint8Array(i % 70)), S: webcrypto.getRandomValues(new Uint8Array(8 + (i % 24))),
+        K: webcrypto.getRandomValues(new Uint8Array(i % 3 === 0 ? 0 : 32)),
+        X: webcrypto.getRandomValues(new Uint8Array(i % 5 === 0 ? 0 : i % 40)),
+        p, m: 8 * p + (i * 37) % 600, t: 1 + (i % 4), T: [32, 64, 4, 65, 100, 1024][i % 6]!,
+      };
+      cases++;
+      if ((await ours(o)) === theirs(o)) agree++;
+      else console.error(`  FAIL  Argon2id mismatch: p=${o.p} m=${o.m} t=${o.t} T=${o.T}`);
+    }
+    check(agree === cases, `Argon2id agrees with Node on ${cases} random parameter sets`);
+    const prod = { P: enc.encode(FIXTURES.password), S: webcrypto.getRandomValues(new Uint8Array(16)),
+                   K: new Uint8Array(0), X: new Uint8Array(0), p: 1, T: 32, m: 65536, t: 3 };
+    check((await ours(prod)) === theirs(prod), "Argon2id agrees with Node at the production settings (64 MiB, t=3, p=1)");
+
+    // 8c. Containers across every pair.
+    const appEncrypt = appBox.ittybitzEncrypt, appDecrypt = appBox.ittybitzDecrypt;
+    const kf = () => new Uint8Array(hexToArrayBuffer(FIXTURES.keyFileHex));
+    for (const withKey of [false, true]) {
+      const suffix = withKey ? "key file" : "password only";
+      const msg = "v2 cross-check " + suffix + " · émoji 🔐";
+      const nodeCt = await nodeV2Encrypt(enc.encode(msg), FIXTURES.password, withKey ? kf() : null);
+      check(dec.decode(await appDecrypt(nodeCt, FIXTURES.password, withKey ? kf() : null)) === msg,
+        `independent v2 opens under the app (${suffix})`);
+      check(dec.decode(await recoveryDecryptFn(nodeCt, FIXTURES.password, withKey ? kf() : null)) === msg,
+        `independent v2 opens under the recovery file (${suffix})`);
+      const appCt = await appEncrypt(enc.encode(msg), FIXTURES.password, withKey ? kf() : null);
+      check(dec.decode(await recoveryDecryptFn(appCt, FIXTURES.password, withKey ? kf() : null)) === msg,
+        `app v2 opens under the recovery file (${suffix})`);
+    }
+
+    // 8d. Rejections, by both readers.
+    const good = await appEncrypt(enc.encode("reject me"), FIXTURES.password, kf());
+    const altered = (fn: (b: Uint8Array) => void) => { const b = Uint8Array.from(good); fn(b); return b; };
+    const both = async (label: string, bytes: Uint8Array, pw: string, key: Uint8Array | null, msg?: RegExp) => {
+      for (const [who, fn] of [["app", appDecrypt], ["recovery file", recoveryDecryptFn]] as const) {
+        try {
+          await fn(bytes, pw, key);
+          check(false, `${who} ${label} (unexpectedly succeeded)`);
+        } catch (err) {
+          check(!msg || msg.test((err as Error).message), `${who} ${label}`);
+        }
+      }
+    };
+    await both("rejects a wrong password (v2)", good, FIXTURES.password + "x", kf());
+    await both("rejects a missing key file (v2)", good, FIXTURES.password, null);
+    await both("rejects a wrong key file (v2)", good, FIXTURES.password, webcrypto.getRandomValues(new Uint8Array(64)));
+    await both("rejects a changed pass count in the header (v2)", altered((b) => { b[9] = 4; }), FIXTURES.password, kf());
+    await both("rejects a changed salt byte (v2)", altered((b) => { b[11] ^= 1; }), FIXTURES.password, kf());
+    await both("rejects a changed ciphertext byte (v2)", altered((b) => { b[b.length - 1] ^= 1; }), FIXTURES.password, kf());
+    await both("refuses an absurd memory setting before deriving (v2)",
+      altered((b) => { b[5] = 0; b[6] = 0; b[7] = 0; b[8] = 0x40; }), FIXTURES.password, kf(), /settings IttyBitz does not accept/);
+    await both("refuses a newer format version (v3)", altered((b) => { b[4] = 3; }), FIXTURES.password, kf(), /newer version/);
+    await both("rejects a truncated v2 container", good.slice(0, 39), FIXTURES.password, kf(), /too short/);
+
+    // 8e. Pinned v2 fixtures: ciphertexts made by the v3.1.0 app, which must
+    // open under the app, the recovery file and the independent
+    // implementation forever. APPEND only.
+    const v2fx: any[] = FIXTURES.fixturesV2 ?? [];
+    let v2ok = 0;
+    for (const fx of v2fx) {
+      const ct = new Uint8Array(b64ToArrayBuffer(fx.base64));
+      const key = fx.keyFile ? kf() : null;
+      try {
+        const a = dec.decode(await appDecrypt(ct, FIXTURES.password, key));
+        const r = dec.decode(await recoveryDecryptFn(ct, FIXTURES.password, key));
+        const n = dec.decode(await nodeV2Decrypt(ct, FIXTURES.password, key));
+        if (a === fx.plaintext && r === fx.plaintext && n === fx.plaintext) v2ok++;
+        else console.error(`  FAIL  v2 fixture mismatch: ${fx.version} ${fx.payload}`);
+      } catch (err) {
+        console.error(`  FAIL  v2 fixture threw: ${fx.version} ${fx.payload}: ${(err as Error).message}`);
+      }
+    }
+    check(v2fx.length > 0 && v2ok === v2fx.length,
+      `all ${v2fx.length} pinned v2 fixtures open under the app, the recovery file and the independent implementation`);
   }
 
   // ---- Summary ----

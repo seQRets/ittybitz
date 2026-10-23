@@ -45,6 +45,12 @@ const EXECUTABLE_TYPE = /^(?:$|module$|text\/javascript$|application\/javascript
 const META_RE =
   /(<meta http-equiv="Content-Security-Policy"\s+content=")([^"]*)(">)/i;
 
+// Source keywords carried over into the pinned script-src. 'wasm-unsafe-eval'
+// permits compiling the page's own embedded WebAssembly (the Argon2id core)
+// and nothing else — no eval(), no injected script — so it survives the
+// rewrite; 'unsafe-inline' and any stale hashes do not.
+const KEPT_SCRIPT_KEYWORDS = ["'wasm-unsafe-eval'"];
+
 // Walk the markup the way the HTML parser does: an HTML comment hides
 // everything up to its "-->", and a <script> body runs to the first
 // "</script>" regardless of what it contains. A naive regex would treat a
@@ -109,11 +115,13 @@ function tightenCsp(filePath) {
     .map((directive) => {
       if (!/^\s*script-src\b/.test(directive)) return directive;
       sawScriptSrc = true;
-      // Replace the ENTIRE script-src source list (whether it currently reads
+      // Replace the script-src source list (whether it currently reads
       // 'unsafe-inline' or an older set of hashes) with the freshly computed
-      // hashes — this is what makes re-running after an edit correct, and a
-      // no-op when nothing changed.
-      return directive.replace(/^(\s*script-src)\b.*$/, `$1 ${hashes.join(' ')}`);
+      // hashes, keeping only the allow-listed keywords above — this is what
+      // makes re-running after an edit correct, and a no-op when nothing
+      // changed.
+      const kept = KEPT_SCRIPT_KEYWORDS.filter((k) => directive.split(/\s+/).includes(k));
+      return directive.replace(/^(\s*script-src)\b.*$/, `$1 ${[...kept, ...hashes].join(' ')}`);
     })
     .join(';');
 

@@ -602,7 +602,7 @@
     $('card').setAttribute('data-tier', n <= 400 ? '0' : n <= 1000 ? '1' : n <= 1800 ? '2' : '3');
     drawQR($('card-canvas'), text, false, 1024, 2);
     $('card-text').textContent = text;
-    $('card-when').textContent = 'Made ' + new Date().toISOString().slice(0, 10) + ' · ' + n + ' characters · IBTZ v1 · AES-256-GCM · PBKDF2-SHA256, 1,000,000 rounds';
+    $('card-when').textContent = 'Made ' + new Date().toISOString().slice(0, 10) + ' · ' + n + ' characters · IBTZ v2 · AES-256-GCM · Argon2id, 64 MiB';
     // Whether a key file is needed is a fact about THIS ciphertext, recorded
     // when it was encrypted — not whatever the key-file switch shows now. It is
     // named by fingerprint, never by file name: a finder of the card must not
@@ -694,11 +694,13 @@
     $('go-icon').innerHTML = ICON_SPIN;
     resetResult();
     var nFiles = inputType === 'file' ? mainFiles.length : 0;
-    status('ok', (mode === 'encrypt' ? 'Encrypting' : 'Deriving key') + ' (1,000,000 PBKDF2 iterations — this takes a moment'
-      + (nFiles > 1 ? ' per file' : '') + ')…');
+    var what = inputType === 'text' ? 'secret' : nFiles > 1 ? 'files' : 'file';
+    status('ok', (mode === 'encrypt' ? 'Securing your ' : 'Unlocking your ') + what + '…');
 
     var plain = null, kfBytes = null;
     try {
+      // Let the message paint before the key derivation keeps the page busy.
+      await new Promise(function (r) { setTimeout(r, 30); });
       kfBytes = keyFile ? await readBytes(keyFile) : null;
 
       // Several files: each is processed on its own — its own salt, its own
@@ -708,7 +710,7 @@
         var done = [], failed = [];
         for (var fi = 0; fi < mainFiles.length; fi++) {
           var f = mainFiles[fi];
-          status('ok', (mode === 'encrypt' ? 'Encrypting' : 'Decrypting') + ' file ' + (fi + 1) + ' of ' + nFiles + ': "' + f.name + '"…');
+          status('ok', (mode === 'encrypt' ? 'Securing' : 'Unlocking') + ' file ' + (fi + 1) + ' of ' + nFiles + ': "' + f.name + '"…');
           try {
             var bytes = await readBytes(f);
             if (mode === 'encrypt') {

@@ -9,15 +9,20 @@
 > build dependencies**. The audit below has **not** been re-run against v3.x; this
 > note maps its findings onto the new architecture.
 >
+> **Addressed since:**
+> - **Low #1, PBKDF2 instead of a memory-hard KDF — resolved in v3.1.0.** New
+>   files use container format v2: Argon2id (RFC 9106) at 64 MiB, 3 passes,
+>   1 lane, with the key file bound as Argon2's secret input (its SHA-256) and
+>   the header authenticated as AES-GCM additional data. PBKDF2 remains only to
+>   read v0/v1 files. Argon2id is a small WebAssembly module assembled from
+>   readable source (`scripts/build/argon2.wat`) by a dependency-free assembler,
+>   and is held by `scripts/crypto-regression.mts` to the RFC 9106 test vector
+>   and to Node's own Argon2id. Not re-audited.
+>
 > **Still applies:**
-> - **PBKDF2 vs. Argon2id key-derivation tradeoff.** The cryptographic core is
->   byte-for-byte unchanged from the audited version (PBKDF2-SHA256 @ 1,000,000
->   iterations, AES-256-GCM), so the accepted tradeoff — PBKDF2 for universal Web
->   Crypto support and long-term recoverability, rather than the more
->   memory-hard Argon2id — carries over verbatim. See the finding below.
-> - Any finding about the crypto container format, key derivation, or BIP-39/
->   SeedQR logic — that code was carried over intact and is still gated by
->   `scripts/crypto-regression.mts`.
+> - Any finding about the v0/v1 container format, PBKDF2 key derivation, or
+>   BIP-39/SeedQR logic — that code was carried over intact and is still gated
+>   by `scripts/crypto-regression.mts`.
 >
 > **Obsolete (the subject no longer exists in v3.x):**
 > - **Next.js / React** items — `next.config.js`, `src/app/layout.tsx`, static
@@ -31,6 +36,9 @@
 > **New in v3.x (not covered by the v2.8.1 review):** hash-pinned CSP
 > (`script-src 'sha256-…'`) applied by `scripts/update-csp-hashes.mjs`, a
 > JS anti-framing guard in both files, and published `SHA256SUMS.txt` checksums.
+> From v3.1.0, `script-src` also carries `'wasm-unsafe-eval'`, which permits
+> compiling the page's own embedded WebAssembly and nothing else (no `eval()`,
+> no injected script).
 > The `default-src 'none'` / `connect-src 'none'` posture and "zero outbound
 > requests" property are unchanged.
 

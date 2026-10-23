@@ -24,8 +24,10 @@ jobs:
         with:
           persist-credentials: false
 
-      # Node 22.6+ is required: the suite is TypeScript run directly via
-      # native type stripping, which avoids adding a transpiler dependency.
+      # Node 24.7+ is required: the suite is TypeScript run directly via
+      # native type stripping, which avoids adding a transpiler dependency,
+      # and it checks IttyBitz's Argon2id against Node's built-in
+      # crypto.argon2Sync (OpenSSL) as an independent reference.
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24

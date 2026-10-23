@@ -19,7 +19,7 @@ IttyBitz offers a secure and private way to encrypt sensitive information direct
 >
 > **[⬇️ Get the Recovery tool →](Recover/)**
 >
-> One 30 KB HTML file that decrypts your IttyBitz data with **no installation, no network and no dependencies** — even if this website, this project and its author are all gone. Save it next to your encrypted files.
+> One 43 KB HTML file that decrypts your IttyBitz data with **no installation, no network and no dependencies** — even if this website, this project and its author are all gone. Save it next to your encrypted files.
 
 <br/>
 
@@ -72,7 +72,7 @@ The security of your data is the highest priority. Here is a summary of the secu
 - **Client-Side operations:** all encryption and decryption processes happen entirely within your browser. Your password, key files, and secret data are **never** transmitted over the internet or stored on any server.
 
 - **Strong encryption standard:** IttyBitz uses **AES-256-GCM**, a modern authenticated encryption cipher that provides both confidentiality and data integrity.
-- **Strong key derivation:** your password is not used directly as the encryption key. Instead, it is run through the **PBKDF2** (Password-Based Key Derivation Function 2) algorithm with **1,000,000 iterations**. This makes brute-force attacks against your password extremely slow and computationally expensive, even for weak passwords.
+- **Memory-hard key derivation:** your password is not used directly as the encryption key. Since 3.1.0 it is run through **Argon2id** (RFC 9106, winner of the Password Hashing Competition) with **64 MiB of memory and 3 passes**, so every guess an attacker makes costs 64 MiB of memory as well as time, which blunts the GPU and custom-hardware attacks that make simpler functions cheap to brute-force. A key file, if used, enters Argon2id as a secret input (its SHA-256). Files made before 3.1.0 used **PBKDF2** with **1,000,000 iterations**, and still decrypt exactly as before. Argon2id runs as a small WebAssembly module built from readable source in this repository; it needs a browser from 2022 or later (Chrome 97, Firefox 102, Safari 16).
 - **Cryptographically secure randomness:** the application uses `window.crypto.getRandomValues()` to generate the salt for key derivation, the Initialization Vector (IV) for AES-GCM, the random characters for the password generator, and the data for the key file generator. This is a cryptographically secure pseudo-random number generator (CSPRNG) that is suitable for security-sensitive applications.
 - **Enforced password strength:** IttyBitz refuses to encrypt unless the password is at least 24 characters long and mixes uppercase, lowercase, numbers and symbols. The password field turns green as soon as it qualifies. Because the password is cleared from the page the moment you encrypt, you must first tick **I have saved this password somewhere safe**; the box unticks itself whenever the password changes.
 - **Best-effort memory clearing:** once a result has been handed over, the application overwrites the decrypted data and the key file's bytes in memory. The derived encryption key is created as non-extractable, so the browser never exposes it to the page at all. Note: JavaScript's garbage collector may retain copies of data elsewhere in the heap, so this is a best-effort mitigation rather than a guarantee.
@@ -93,21 +93,21 @@ An in-repo audit of v2.8.1, the last version before the v3.0.0 single-file rewri
 - **No hidden backdoors**: impossible to hide security vulnerabilities
 
 ### **Industry-standard algorithms**
-- **FIPS-approved algorithms**: uses AES-256-GCM and PBKDF2-HMAC-SHA-256, which are approved under FIPS 140-2 (note: this app has not undergone formal FIPS certification)
-- **Strong key derivation**: 1,000,000 PBKDF2 iterations to resist brute-force attacks
+- **Standard algorithms**: AES-256-GCM for encryption, and Argon2id (RFC 9106) for key derivation. Files from before 3.1.0 use PBKDF2-HMAC-SHA-256, which IttyBitz still reads. AES-256-GCM is FIPS-approved; Argon2id is an IETF standard but not a FIPS algorithm (this app has not undergone formal FIPS certification either way)
+- **Memory-hard key derivation**: Argon2id with 64 MiB of memory per guess, to resist brute-force attacks on GPUs and custom hardware
 - **Privacy-focused design**: no accounts, no servers, no tracking — all operations stay in your browser
 
 <br/>
 
 ## 🪶 Recovery tool — decrypt without IttyBitz
 
-**[⬇️ Download it](https://github.com/seQRets/ittybitz/releases/download/v3.0.17/ittybitz-recovery.html)** (30 KB, one file) · [open it in your browser](https://ittybitz.app/ittybitz-recovery.html) · [how to save and use it](Recover/)
+**[⬇️ Download it](https://github.com/seQRets/ittybitz/releases/download/v3.1.0/ittybitz-recovery.html)** (43 KB, one file) · [open it in your browser](https://ittybitz.app/ittybitz-recovery.html) · [how to save and use it](Recover/)
 
 A standalone page that decrypts your IttyBitz files with **no dependencies, no network, no installation and no build step**. Save it alongside your encrypted data — on the same USB stick, the same backup drive, the same safe.
 
 It exists so that recovering your own data never depends on this website resolving, on GitHub Pages serving, on this project still being maintained, or on its author still being around. Open it in any browser, on an air-gapped machine, in twenty years.
 
-It is decrypt-only, its `Content-Security-Policy` blocks all network access outright, and CI replays 32 real ciphertexts from v1.0 onward through the exact published file on every change — so it cannot silently drift from the main implementation.
+It is decrypt-only, its `Content-Security-Policy` blocks all network access outright, and CI replays real ciphertexts from every format, v1.0 onward, through the exact published file on every change — so it cannot silently drift from the main implementation.
 
 **[`Recover/`](Recover/) covers the rest**: how to save it to your own disk, how to verify its checksum, why it can be trusted, and where the file lives in this repository.
 
@@ -117,7 +117,7 @@ It is decrypt-only, its `Content-Security-Policy` blocks all network access outr
 
 Every version, with what changed in each, is listed in the [**changelog**](CHANGELOG.md). Full notes per release live in [`docs/releases/`](docs/releases/).
 
-Cryptography has never changed across any release — anything encrypted with any version of IttyBitz still decrypts today, and that guarantee is enforced automatically in CI against real ciphertexts from every prior release.
+Nothing has ever stopped decrypting: anything encrypted with any version of IttyBitz still decrypts today, and that guarantee is enforced automatically in CI against real ciphertexts from every prior release. The cipher has always been AES-256-GCM. Since 3.1.0, new files derive their key with Argon2id instead of PBKDF2 (container format v2); files made earlier keep opening exactly as before.
 
 <br/>
 
@@ -179,11 +179,11 @@ npm run test:crypto        # crypto regression gate (zero dependencies)
 npm run update-csp-hashes  # re-pin CSP hashes + SHA256SUMS after editing a shipped HTML file
 ```
 
-`build` concatenates the hand-written page, the vendored [`qrcode-generator`](https://github.com/kazuhikoarase/qrcode-generator) (MIT), the DOM-free crypto core, and a BIP-39 core generated from `src/lib/bip39.ts` (so the wordlist can never drift), then runs `update-csp-hashes` to lock each inline `<script>` block into the `Content-Security-Policy` as a `'sha256-…'` source and regenerate `SHA256SUMS.txt`. `test:crypto` proves the assembled file both decrypts every historical ciphertext **and** round-trips against the frozen reference implementation in [`src/lib/crypto.ts`](src/lib/crypto.ts) — in both directions, with and without key files.
+`build` concatenates the hand-written page, the vendored [`qrcode-generator`](https://github.com/kazuhikoarase/qrcode-generator) (MIT), the Argon2id core, the DOM-free crypto core, and a BIP-39 core generated from `src/lib/bip39.ts` (so the wordlist can never drift), then runs `update-csp-hashes` to lock each inline `<script>` block into the `Content-Security-Policy` as a `'sha256-…'` source and regenerate `SHA256SUMS.txt`. The Argon2id core is plain JavaScript plus a 1.4 KB WebAssembly module that `build` assembles from the readable [`scripts/build/argon2.wat`](scripts/build/argon2.wat) with the dependency-free [`scripts/wat.mjs`](scripts/wat.mjs); `build` writes the same block into the recovery tool, so both files carry identical code and CI proves the embedded bytes come from that source. `test:crypto` proves the assembled files decrypt every historical ciphertext, round-trip against the frozen reference implementation in [`src/lib/crypto.ts`](src/lib/crypto.ts) for the older formats, and, for format v2, agree with an independent implementation built on Node's own Argon2id and the RFC 9106 test vector — in both directions, with and without key files.
 
 > **After editing anything under `scripts/build/`, run `npm run build` before committing; after editing `site/ittybitz-recovery.html` by hand, `npm run update-csp-hashes` is enough.** `update-csp-hashes` (which `build` also runs) recomputes the inline-script hashes, rewrites both files' CSP meta tags in place, and regenerates `SHA256SUMS.txt`. CI rebuilds everything from source and fails if the committed files differ. It is idempotent — a second run with unchanged scripts writes nothing. Skipping it after a change would leave a stale hash in the CSP and the browser would refuse to run the edited script.
 
-There are **no runtime or build dependencies**: `node` (22.6+, for native TypeScript stripping) and Python 3 (only for `npm run dev`'s static server) are all that is used.
+There are **no runtime or build dependencies**: `node` (24.7+, for native TypeScript stripping and the built-in `crypto.argon2` the test suite checks against) and Python 3 (only for `npm run dev`'s static server) are all that is used.
 
 ## ❤️ Support this project
 

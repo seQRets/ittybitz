@@ -9,13 +9,16 @@
      'none' blocks every network destination. script-src lists the SHA-256
      hash of each of this file's own inline script blocks (pinned by
      scripts/update-csp-hashes.mjs at build time), so the browser runs exactly
-     those blocks and refuses any injected or altered script. style-src
-     'unsafe-inline' covers only this file's own stylesheet and inline style
-     attributes. img-src data: is for the inline favicon; QR codes render to a
+     those blocks and refuses any injected or altered script.
+     'wasm-unsafe-eval' lets the page compile its own embedded WebAssembly
+     (the Argon2id core) and nothing else: it does not permit eval() or any
+     other script. style-src 'unsafe-inline' covers only this file's own
+     stylesheet and inline style attributes. img-src data: is for the inline
+     favicon; QR codes render to a
      canvas and downloads use blob:/data:, none of which are network fetches.
      Nothing here can phone home. -->
 <meta http-equiv="Content-Security-Policy"
-      content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; font-src 'none'; form-action 'none'; base-uri 'none'">
+      content="default-src 'none'; script-src 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; font-src 'none'; form-action 'none'; base-uri 'none'">
 <!--
   ═══════════════════════════════════════════════════════════════════════
   IttyBitz — single-file client-side encryption
@@ -26,10 +29,12 @@
   it in any modern browser — online at ittybitz.app, or saved to disk and
   run offline from anywhere, including an air-gapped machine.
 
-  It is byte-compatible with every version of IttyBitz: files it produces
-  open in the app and the recovery tool, and vice-versa. The container
-  format and key derivation mirror src/lib/crypto.ts exactly and are gated,
-  in both directions, by the project's crypto regression suite.
+  It opens everything any version of IttyBitz has ever produced. New files
+  use format v2 (Argon2id key derivation, since 3.1.0), which this file and
+  the recovery tool of the same release both read. The older v0/v1 formats
+  mirror src/lib/crypto.ts exactly; every format is gated by the project's
+  crypto regression suite, against historical ciphertexts and an
+  independent Argon2id implementation.
 
   Source & technical reference: https://github.com/seQRets/ittybitz
 
@@ -482,7 +487,7 @@
   <div class="features">
     <div class="feat">
       <div class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></svg></div>
-      <b>AES-256-GCM</b><p>Authenticated encryption, with a key derived from your password by 1,000,000 rounds of PBKDF2.</p>
+      <b>AES-256-GCM</b><p>Authenticated encryption, with a key derived from your password by Argon2id, which needs 64 MB of memory for every guess.</p>
     </div>
     <div class="feat">
       <div class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg></div>
@@ -490,7 +495,7 @@
     </div>
     <div class="feat">
       <div class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24"/><path d="m14.83 9.17 4.24-4.24"/><path d="m14.83 14.83 4.24 4.24"/><path d="m9.17 14.83-4.24 4.24"/><circle cx="12" cy="12" r="4"/></svg></div>
-      <b>Recoverable without us</b><p>A 30 KB decrypt-only file opens your data even if this site, this project and its author are gone. Save it next to your encrypted files.</p>
+      <b>Recoverable without us</b><p>A 43 KB decrypt-only file opens your data even if this site, this project and its author are gone. Save it next to your encrypted files.</p>
       <a href="https://github.com/seQRets/ittybitz/releases/latest/download/ittybitz-recovery.html" title="Download the standalone recovery tool">Download the recovery tool</a>
     </div>
   </div>
@@ -513,7 +518,7 @@
            "Recoverable without us" card; this is the way to open the tool. -->
       <a class="accent" href="./ittybitz-recovery.html" title="Open the standalone recovery tool">Recovery tool</a>
       <a class="accent" href="https://github.com/seQRets/ittybitz" target="_blank" rel="noopener noreferrer">GitHub</a>
-      <span id="version">v3.0.17 🦕 Iguanodon</span>
+      <span id="version">v3.1.0 🦕 Stegosaurus</span>
     </div>
   </footer>
 </div>
