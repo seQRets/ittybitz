@@ -1,0 +1,6 @@
+# Store and check out every text file with LF line endings, on every
+# platform. `npm run build` must reproduce the published files byte for byte,
+# and a Windows checkout that turned line endings into CRLF would not.
+* text=auto eol=lf
+*.png binary
+*.ico binary

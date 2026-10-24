@@ -101,7 +101,7 @@ An in-repo audit of v2.8.1, the last version before the v3.0.0 single-file rewri
 
 ## 🪶 Recovery tool — decrypt without IttyBitz
 
-**[⬇️ Download it](https://github.com/seQRets/ittybitz/releases/download/v3.1.1/ittybitz-recovery.html)** (44 KB, one file) · [open it in your browser](https://ittybitz.app/ittybitz-recovery.html) · [how to save and use it](Recover/)
+**[⬇️ Download it](https://github.com/seQRets/ittybitz/releases/download/v3.1.2/ittybitz-recovery.html)** (44 KB, one file) · [open it in your browser](https://ittybitz.app/ittybitz-recovery.html) · [how to save and use it](Recover/)
 
 A standalone page that decrypts your IttyBitz files with **no dependencies, no network, no installation and no build step**. Save it alongside your encrypted data — on the same USB stick, the same backup drive, the same safe.
 
@@ -139,7 +139,7 @@ IttyBitz is **one HTML file**. There is nothing to install, compile, or configur
 
 1. **Download it** from the [latest release](https://github.com/seQRets/ittybitz/releases/latest) — grab `ittybitz.html`, then double-click it. Done.
 2. **Save the page**: open [ittybitz.app](https://ittybitz.app), then *File → Save Page As…* (⌘S / Ctrl+S). If your browser asks, choose **"Web Page, HTML Only"** — it is a single file, so "Complete" only adds a folder you don't need.
-3. **Clone the repo** and open `site/index.html`, or serve it:
+3. **Clone the repo** and open `site/index.html`, or serve it with [Node.js](https://nodejs.org):
 
 ```bash
 git clone https://github.com/seQRets/ittybitz.git
@@ -171,21 +171,59 @@ certutil -hashfile ittybitz.html SHA256
 
 The file is byte-identical wherever you got it — the website, the release asset, or this repository's `site/index.html` / `site/ittybitz-recovery.html`.
 
-### 🧰 Build from source (contributors only)
+### 🧰 Build it yourself
 
-You never need this to *use* IttyBitz — the shipped [`site/index.html`](site/index.html) is the product. The build exists so that file is reproducible from small, auditable parts.
+You never need to do this to *use* IttyBitz. It is for anyone who wants to check, on their own computer, that the published files really are made from the code in this repository. It takes about five minutes.
+
+**Step 1 — Install Node.js.** Go to [nodejs.org](https://nodejs.org), download the version marked **LTS**, and install it like any other program. That is the only thing you need to install.
+
+**Step 2 — Download the source code.** Open the [latest release](https://github.com/seQRets/ittybitz/releases/latest), scroll down to **Assets**, and click **Source code (zip)**. Double-click the downloaded file to unzip it. You now have a folder with a name like `ittybitz-3.1.2`.
+
+**Step 3 — Open a terminal in that folder.**
+- **Mac:** open **Terminal** (in Applications → Utilities). Type `cd` and a space, drag the folder onto the Terminal window, and press Return.
+- **Windows:** open the folder, click the address bar at the top of the window, type `cmd`, and press Enter.
+
+**Step 4 — Build.** Type this and press Return (Enter on Windows):
 
 ```bash
-npm run build              # reassemble site/index.html, pin CSP hashes, regenerate SHA256SUMS.txt
-npm run test:crypto        # crypto regression gate (zero dependencies)
-npm run update-csp-hashes  # re-pin CSP hashes + SHA256SUMS after editing a shipped HTML file
+npm run build
 ```
 
-`build` concatenates the hand-written page, the vendored [`qrcode-generator`](https://github.com/kazuhikoarase/qrcode-generator) (MIT), the Argon2id core, the DOM-free crypto core, and a BIP-39 core generated from `src/lib/bip39.ts` (so the wordlist can never drift), then runs `update-csp-hashes` to lock each inline `<script>` block into the `Content-Security-Policy` as a `'sha256-…'` source and regenerate `SHA256SUMS.txt`. The Argon2id core is plain JavaScript plus a 1.4 KB WebAssembly module that `build` assembles from the readable [`scripts/build/argon2.wat`](scripts/build/argon2.wat) with the dependency-free [`scripts/wat.mjs`](scripts/wat.mjs); `build` writes the same block into the recovery tool, so both files carry identical code and CI proves the embedded bytes come from that source. `test:crypto` proves the assembled files decrypt every historical ciphertext, round-trip against the frozen reference implementation in [`src/lib/crypto.ts`](src/lib/crypto.ts) for the older formats, and, for format v2, agree with an independent implementation built on Node's own Argon2id and the RFC 9106 test vector — in both directions, with and without key files.
+After a second or two, the last line should say:
 
-> **After editing anything under `scripts/build/`, run `npm run build` before committing; after editing `site/ittybitz-recovery.html` by hand, `npm run update-csp-hashes` is enough.** (The recovery tool's `ittybitz-argon2` block is generated: change `scripts/build/argon2*` and run `npm run build` instead of editing it in place.) `update-csp-hashes` (which `build` also runs) recomputes the inline-script hashes, rewrites both files' CSP meta tags in place, and regenerates `SHA256SUMS.txt`. CI rebuilds everything from source and fails if the committed files differ. It is idempotent — a second run with unchanged scripts writes nothing. Skipping it after a change would leave a stale hash in the CSP and the browser would refuse to run the edited script.
+```
+Done. The files you built are identical, byte for byte, to the published ones listed in SHA256SUMS.txt.
+```
 
-There are **no runtime or build dependencies**: `node` (24.7+, for native TypeScript stripping and the built-in `crypto.argon2` the test suite checks against) and Python 3 (only for `npm run dev`'s static server) are all that is used.
+That is the proof: the app and the Recovery tool you just built from the source are exactly the files published with that release.
+
+**Optional — run the security tests.** Type `npm run test:crypto` and press Return. After about 15 seconds it should end with `All crypto regression checks passed.`
+
+**Optional — try your build.** Type `npm run dev`, then open [http://localhost:9002](http://localhost:9002) in your browser. Press Ctrl+C in the terminal when you are done.
+
+If you use Git, `git clone https://github.com/seQRets/ittybitz.git` and `cd ittybitz` replace steps 2 and 3.
+
+#### For contributors
+
+**What `npm run build` does.** It assembles `site/index.html` from the parts in [`scripts/build/`](scripts/build/): the page and its styles (`head.html`), the vendored [`qrcode-generator`](https://github.com/kazuhikoarase/qrcode-generator) (MIT), the Argon2id core (`argon2-core.template.js` plus a 1.4 KB WebAssembly module that [`scripts/wat.mjs`](scripts/wat.mjs), a dependency-free assembler, builds from the readable [`argon2.wat`](scripts/build/argon2.wat)), the crypto core (`crypto-core.js`), the BIP-39 core (with the wordlist copied from [`src/lib/bip39.ts`](src/lib/bip39.ts)), the seed-fingerprint code (`fingerprint-core.js`, vendored from myseedphrase.app), and the interface (`app.js`). It writes the same Argon2id block into the Recovery tool, then pins every inline script's hash in both files' `Content-Security-Policy` and regenerates `SHA256SUMS.txt`.
+
+**What `npm run test:crypto` proves.** The app and the Recovery tool decrypt real ciphertexts from every release and every format. For the older formats (v0 and v1), ciphertexts made by the frozen reference [`src/lib/crypto.ts`](src/lib/crypto.ts) open in the app; the app no longer writes those formats. For the current format (v2), Argon2id matches the RFC 9106 test vector and Node's built-in Argon2id, and whole files open in both directions between the app, the Recovery tool and an independent implementation built only from Node's own crypto, with and without key files.
+
+**When to rebuild.** After changing anything in `scripts/build/`, `scripts/wat.mjs` or `src/lib/bip39.ts`, run `npm run build` before committing. After editing `site/ittybitz-recovery.html` by hand, `npm run update-csp-hashes` is enough, except for its `ittybitz-argon2` block, which the build generates: change `scripts/build/argon2*` and run `npm run build` instead. Skipping this leaves a stale hash in a page's security policy, and the browser then refuses to run the edited script. CI rebuilds everything from source on every push and fails if the committed files differ.
+
+**Requirements.** Node.js 24.7 or newer and nothing else: no `npm install`, no dependencies. The tests need 24.7 for Node's built-in Argon2id, and `npm run test:crypto` says so plainly on an older Node.
+
+**What is where.**
+
+| Path | What it is |
+|---|---|
+| [`site/`](site/) | The published website: `index.html` (the app), `ittybitz-recovery.html`, `sw.js` (retires the old installed app), icons, `CNAME` |
+| [`scripts/build/`](scripts/build/) | The parts `site/index.html` is assembled from |
+| [`scripts/`](scripts/) | The build (`build-app.mjs`, `update-csp-hashes.mjs`, `wat.mjs`), the test suite (`crypto-regression.mts`, `crypto-fixtures.json`), the dev server (`serve.mjs`) and the Node version check (`check-node.mjs`) |
+| [`src/lib/`](src/lib/) | Frozen reference implementations the tests compare against ([why](src/lib/README.md)) |
+| [`Recover/`](Recover/) | Where to find, save and verify the Recovery tool |
+| [`docs/`](docs/) | Release notes for every version, and the image above |
+| [`.github/`](.github/) | CI (crypto tests and the reproducibility check), the GitHub Pages deploy, Dependabot |
 
 ## ❤️ Support this project
 

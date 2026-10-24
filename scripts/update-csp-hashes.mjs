@@ -2,13 +2,15 @@
 /**
  * CSP hash maintenance for the single-file build.
  *
- * Adapted from the v2.x post-build helper (scripts/apply-csp-hashes.mjs).
- * Each shipped HTML file carries a hand-written Content-Security-Policy whose
- * script-src is `'unsafe-inline'` in source so the file stays runnable on its
- * own. This script tightens the SHIPPED files by replacing the script-src
- * source list with the sha256 hashes of that file's actual inline <script>
- * blocks — the browser then executes only those exact blocks and blocks any
- * injected inline script (hash mismatch).
+ * Each shipped HTML file carries a Content-Security-Policy meta tag. This
+ * script replaces its script-src source list with the sha256 hashes of that
+ * file's actual inline <script> blocks — the browser then executes only those
+ * exact blocks and refuses any injected or altered script (hash mismatch).
+ * The source list it replaces can be 'unsafe-inline' (scripts/build/head.html
+ * is written that way, so the page also runs unbuilt) or an older set of
+ * hashes (site/ittybitz-recovery.html, which is edited in place). The one
+ * keyword kept is 'wasm-unsafe-eval', which lets the page compile its own
+ * embedded WebAssembly (the Argon2id core) and nothing else.
  *
  * It also (re)generates SHA256SUMS.txt in the repo root, covering the two
  * shipped artifacts under their release-asset names, so a downloader can
@@ -19,6 +21,10 @@
  * `npm run build` runs it automatically after assembling site/index.html.
  *
  * Idempotent: a second run with unchanged script blocks writes nothing.
+ * It ends by saying, in plain words, whether the files now in site/ are
+ * byte-for-byte the ones SHA256SUMS.txt already listed — which is how
+ * someone who downloads the source can confirm that the build reproduces
+ * the published IttyBitz exactly.
  * Plain Node, zero dependencies. It never touches the cryptographic logic,
  * container format, wordlist, or self-tests — only the CSP meta tag and the
  * checksums file.
@@ -160,13 +166,17 @@ function regenerateChecksums() {
   try { existing = readFileSync(target, 'utf8'); } catch { /* first run */ }
   if (existing === out) {
     console.log('update-csp-hashes: SHA256SUMS.txt — already current');
-  } else {
-    writeFileSync(target, out, 'utf8');
-    console.log('update-csp-hashes: SHA256SUMS.txt — regenerated');
+    return true;
   }
+  writeFileSync(target, out, 'utf8');
+  console.log('update-csp-hashes: SHA256SUMS.txt — regenerated');
+  return false;
 }
 
 for (const [filePath] of FILES) tightenCsp(filePath);
 for (const [filePath] of FILES) verifyNoUnsafeInline(filePath);
-regenerateChecksums();
-console.log('update-csp-hashes: done');
+const identical = regenerateChecksums();
+console.log(identical
+  ? '\nDone. The files you built are identical, byte for byte, to the published ones listed in SHA256SUMS.txt.\n'
+  : '\nDone. SHA256SUMS.txt was updated because the files in site/ changed. That is expected after editing\n' +
+    'the source. If you did not change anything, the build did not reproduce the published files.\n');
