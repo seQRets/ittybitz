@@ -80,11 +80,9 @@ The security of your data is the highest priority. Here is a summary of the secu
 
 <br/>
 
-## 🔬 Third-party validation
+## 🔬 Audit and transparency
 
-### **Independent security review**
-This application has undergone a detailed security analysis. You can view the full report here: [Security analysis report](https://claude.ai/public/artifacts/f4bb6437-1130-4fd3-bc56-74b2399274f9) 🔗
-
+### **Security audit**
 An in-repo audit of v2.8.1, the last version before the v3.0.0 single-file rewrite, is in [SECURITY-AUDIT.md](SECURITY-AUDIT.md). It has not been re-run against v3.x; an addendum at the top maps its findings onto the current architecture.
 
 ### **Open source advantage**
@@ -101,7 +99,7 @@ An in-repo audit of v2.8.1, the last version before the v3.0.0 single-file rewri
 
 ## 🪶 Recovery tool — decrypt without IttyBitz
 
-**[⬇️ Download it](https://github.com/seQRets/ittybitz/releases/download/v3.1.2/ittybitz-recovery.html)** (44 KB, one file) · [open it in your browser](https://ittybitz.app/ittybitz-recovery.html) · [how to save and use it](Recover/)
+**[⬇️ Download it](https://github.com/seQRets/ittybitz/releases/download/v3.1.3/ittybitz-recovery.html)** (44 KB, one file) · [open it in your browser](https://ittybitz.app/ittybitz-recovery.html) · [how to save and use it](Recover/)
 
 A standalone page that decrypts your IttyBitz files with **no dependencies, no network, no installation and no build step**. Save it alongside your encrypted data — on the same USB stick, the same backup drive, the same safe.
 
@@ -177,7 +175,7 @@ You never need to do this to *use* IttyBitz. It is for anyone who wants to check
 
 **Step 1 — Install Node.js.** Go to [nodejs.org](https://nodejs.org), download the version marked **LTS**, and install it like any other program. That is the only thing you need to install.
 
-**Step 2 — Download the source code.** Open the [latest release](https://github.com/seQRets/ittybitz/releases/latest), scroll down to **Assets**, and click **Source code (zip)**. Double-click the downloaded file to unzip it. You now have a folder with a name like `ittybitz-3.1.2`.
+**Step 2 — Download the source code.** Open the [latest release](https://github.com/seQRets/ittybitz/releases/latest), scroll down to **Assets**, and click **Source code (zip)**. Double-click the downloaded file to unzip it. You now have a folder with a name like `ittybitz-3.1.3`.
 
 **Step 3 — Open a terminal in that folder.**
 - **Mac:** open **Terminal** (in Applications → Utilities). Type `cd` and a space, drag the folder onto the Terminal window, and press Return.

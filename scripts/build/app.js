@@ -90,6 +90,13 @@
     };
   })();
 
+  // ---- Hero download button ----
+  // Someone running IttyBitz from a downloaded file already has it.
+  if (location.protocol === 'file:') {
+    var heroDl = document.getElementById('hero-dl');
+    if (heroDl) heroDl.style.display = 'none';
+  }
+
   // ---- Web Crypto secure-context guard (same posture as the recovery file) ----
   if (!(window.crypto && window.crypto.subtle && window.crypto.getRandomValues)) {
     document.querySelector('.card').innerHTML =

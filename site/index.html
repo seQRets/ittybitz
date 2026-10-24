@@ -18,7 +18,7 @@
      canvas and downloads use blob:/data:, none of which are network fetches.
      Nothing here can phone home. -->
 <meta http-equiv="Content-Security-Policy"
-      content="default-src 'none'; script-src 'wasm-unsafe-eval' 'sha256-4GSOHG1PWgpqNwON0DpmpOBDoMdMXoBzQI2KhDuK9js=' 'sha256-wfGbzEkL8W9ulC9Qqr9WMZOqlGGIX0xIm+QIlvPIwWc=' 'sha256-6956cg7x+IZEj+uYHjP5OJy7fvgqVWPXi8SwIiATHbg=' 'sha256-W+IzleLCL30nXjyiCRp8Rl3j2GFDMC9KAJFnnygxQ8c=' 'sha256-XlgOklfvkE1YTG+BSxN2kJFwnn+L4EhXLVb01Ma4YsM=' 'sha256-e19Z9FtB8nHXQTLNC8GFDZvJdju6oyzVXKtwZG4bIvs='; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; font-src 'none'; form-action 'none'; base-uri 'none'">
+      content="default-src 'none'; script-src 'wasm-unsafe-eval' 'sha256-4GSOHG1PWgpqNwON0DpmpOBDoMdMXoBzQI2KhDuK9js=' 'sha256-wfGbzEkL8W9ulC9Qqr9WMZOqlGGIX0xIm+QIlvPIwWc=' 'sha256-6956cg7x+IZEj+uYHjP5OJy7fvgqVWPXi8SwIiATHbg=' 'sha256-W+IzleLCL30nXjyiCRp8Rl3j2GFDMC9KAJFnnygxQ8c=' 'sha256-XlgOklfvkE1YTG+BSxN2kJFwnn+L4EhXLVb01Ma4YsM=' 'sha256-BWhv4iVfD+TB1HvEqydxasWhPQd0yjP2lqBXXphDBJ0='; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; font-src 'none'; form-action 'none'; base-uri 'none'">
 <!--
   ═══════════════════════════════════════════════════════════════════════
   IttyBitz — single-file client-side encryption
@@ -106,6 +106,16 @@
   .sub { color: var(--muted-foreground); font-size: 17px; line-height: 1.35; margin: 1rem auto 0; max-width: 30rem; }
   .sub a { color: var(--accent); text-decoration: none; }
   .sub a:hover { text-decoration: underline; }
+  /* The main way to get the app onto your own computer. */
+  .hero-dl {
+    display: inline-flex; align-items: center; gap: .45rem; margin-top: 1.25rem;
+    padding: .55rem 1.05rem; border-radius: 999px; text-decoration: none;
+    font-size: 14px; font-weight: 600; color: var(--accent);
+    background: rgba(245,158,11,.10); border: 1px solid rgba(245,158,11,.45); transition: background .15s;
+  }
+  .hero-dl:hover { background: rgba(245,158,11,.18); }
+  .hero-dl svg { width: 16px; height: 16px; }
+  .hero-dl small { font-size: 12px; font-weight: 500; color: var(--muted-foreground); }
 
   /* Card */
   .card {
@@ -389,7 +399,9 @@
     <p class="tagline">Encrypt everything. Trust nothing.</p>
     <p class="sub">Client-side encryption that never leaves your browser.
       <a href="https://github.com/seQRets/ittybitz" target="_blank" rel="noopener noreferrer">Open source</a>. No accounts. No servers.
-      <a href="https://github.com/seQRets/ittybitz/releases/latest/download/ittybitz-recovery.html" title="Download the standalone recovery tool">Recoverable without us</a>.</p>
+      Recoverable without us.</p>
+    <!-- Hidden by the script when the page already runs from a downloaded file. -->
+    <a class="hero-dl" id="hero-dl" href="https://github.com/seQRets/ittybitz/releases/latest/download/ittybitz.html" title="Download IttyBitz as one file — the exact published build, verifiable by checksum"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="m7 10 5 5 5-5"/><path d="M21 21H3"/></svg>Download IttyBitz <small>one file · runs offline</small></a>
   </div>
 
   <section class="card">
@@ -503,7 +515,8 @@
     </div>
     <div class="feat">
       <div class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg></div>
-      <b>100% Client-Side</b><p>Nothing leaves your browser. No servers, no uploads, no tracking.</p>
+      <b>100% Client-Side</b><p>Nothing leaves your browser. No servers, no uploads, no tracking. Download it once and it runs offline, too.</p>
+      <a href="https://github.com/seQRets/ittybitz/releases/latest/download/ittybitz.html" title="Download IttyBitz as one file">Download IttyBitz app</a>
     </div>
     <div class="feat">
       <div class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24"/><path d="m14.83 9.17 4.24-4.24"/><path d="m14.83 14.83 4.24 4.24"/><path d="m9.17 14.83-4.24 4.24"/><circle cx="12" cy="12" r="4"/></svg></div>
@@ -530,7 +543,7 @@
            "Recoverable without us" card; this is the way to open the tool. -->
       <a class="accent" href="./ittybitz-recovery.html" title="Open the standalone recovery tool">Recovery tool</a>
       <a class="accent" href="https://github.com/seQRets/ittybitz" target="_blank" rel="noopener noreferrer">GitHub</a>
-      <span id="version">v3.1.2 🦕 Stegosaurus</span>
+      <span id="version">v3.1.3 🦕 Stegosaurus</span>
     </div>
   </footer>
 </div>
@@ -3537,6 +3550,13 @@ async function masterFingerprint(words) { return fingerprintOfSeed(await bip39Se
       try { localStorage.setItem('ib-offline-tip', '1'); } catch (e) {}
     };
   })();
+
+  // ---- Hero download button ----
+  // Someone running IttyBitz from a downloaded file already has it.
+  if (location.protocol === 'file:') {
+    var heroDl = document.getElementById('hero-dl');
+    if (heroDl) heroDl.style.display = 'none';
+  }
 
   // ---- Web Crypto secure-context guard (same posture as the recovery file) ----
   if (!(window.crypto && window.crypto.subtle && window.crypto.getRandomValues)) {
