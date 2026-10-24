@@ -51,6 +51,23 @@
     };
   })();
 
+  // ---- What's new in 3.1 ----
+  // Tells everyone, once, that the key derivation changed and that new files
+  // need the 3.1 Recovery tool or later. Shown until dismissed; while it is
+  // up, the offline tip waits, so the page never stacks two banners.
+  var whatsNewShown = (function () {
+    try { if (localStorage.getItem('ib-whatsnew-3.1') === '1') return false; } catch (e) {}
+    var n = document.getElementById('whatsnew');
+    if (!n) return false;
+    n.classList.add('show');
+    var x = document.getElementById('whatsnew-x');
+    if (x) x.onclick = function () {
+      n.classList.remove('show');
+      try { localStorage.setItem('ib-whatsnew-3.1', '1'); } catch (e) {}
+    };
+    return true;
+  })();
+
   // ---- Offline option for hosted web visitors ----
   // Let people running the hosted page know they can download IttyBitz and run
   // it from their own disk. Hidden when already running from a local file
@@ -61,7 +78,7 @@
     var standalone =
       (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
       window.navigator.standalone === true;
-    if (isFile || standalone) return;
+    if (isFile || standalone || whatsNewShown) return;
     try { if (localStorage.getItem('ib-offline-tip') === '1') return; } catch (e) {}
     var n = document.getElementById('offline-tip');
     if (!n) return;

@@ -1,14 +1,16 @@
 # 🪶 IttyBitz Recovery
 
-### ⬇️ [**Download the Recovery tool**](https://github.com/seQRets/ittybitz/releases/download/v3.1.0/ittybitz-recovery.html)
+### ⬇️ [**Download the Recovery tool**](https://github.com/seQRets/ittybitz/releases/download/v3.1.1/ittybitz-recovery.html)
 
-*Saves `ittybitz-recovery.html` to your computer · 43 KB · no installation · works offline, with no dependencies on this project*
+*Saves `ittybitz-recovery.html` to your computer · 44 KB · no installation · works offline, with no dependencies on this project*
 
 Or **[open it in your browser](https://ittybitz.app/ittybitz-recovery.html)** to use it right now without saving — but a copy on your own disk is the whole point.
 
 <br/>
 
-This is the file that decrypts your IttyBitz data when nothing else is available.
+This is the file that decrypts your IttyBitz data when nothing else is available. It opens files from every version of IttyBitz.
+
+> **Saved a copy before 3.1?** Replace it with this one. Files encrypted with IttyBitz 3.1 or later use Argon2id key derivation, which older copies of this tool cannot open; they will say the file needs a newer version. The new tool opens everything older as well.
 
 It has no dependencies, makes no network requests, needs no build step and requires no installation. Open it in any browser — including on a machine that has never been online — and it decrypts your files and text.
 

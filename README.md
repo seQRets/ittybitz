@@ -19,7 +19,7 @@ IttyBitz offers a secure and private way to encrypt sensitive information direct
 >
 > **[⬇️ Get the Recovery tool →](Recover/)**
 >
-> One 43 KB HTML file that decrypts your IttyBitz data with **no installation, no network and no dependencies** — even if this website, this project and its author are all gone. Save it next to your encrypted files.
+> One 44 KB HTML file that decrypts your IttyBitz data with **no installation, no network and no dependencies**, without needing this website at all. It opens files from every version of IttyBitz. Save it next to your encrypted files.
 
 <br/>
 
@@ -32,9 +32,9 @@ Here’s what you can do with IttyBitz:
 - **QR code sharing**: easily share encrypted text snippets via a downloadable QR code — or **print a one-page emergency card**: the QR, the encrypted text in full, and three steps to decrypt it: open ittybitz.app (or the Recovery tool if the website is not available), enter the encrypted text by pasting, scanning or typing it, and enter the password. The card states whether a key file is needed and, if so, identifies it by fingerprint rather than by name. The password is never on the card, and the QR code and encrypted text reveal nothing about the secret without it. Only encrypted text can be printed this way; decrypted text and seed phrases never reach paper from this page.
 - **Hardware-wallet SeedQR export**: when decrypted text is a valid BIP-39 seed phrase, IttyBitz auto-detects it and can display a **Standard SeedQR** for direct import into hardware wallets (Coldcard, SeedSigner, Sparrow, Specter, Krux, Keystone, Jade). Any other decrypted text can be shown as a plain QR. Both are blurred until you deliberately reveal them.
 - **One self-contained file**: the entire app is a single HTML file — no dependencies, no build, no service worker. Save it (or *File → Save Page As…* from [ittybitz.app](https://ittybitz.app)) and it runs offline, on an air-gapped machine, from a USB stick, in twenty years.
-- **Privacy-focused UI**: the secret text field offers a show/hide blur toggle to prevent shoulder-surfing during input, and decrypted output is blurred by default until you tap to reveal.
+- **Privacy-focused UI**: the secret text field is blurred from the first character you type or paste, to prevent shoulder-surfing; the eye button reveals it. Decrypted output is blurred until you choose to reveal it, and nothing secret appears on a printout.
 - **Clipboard auto-clear**: copied passwords and output are wiped from the clipboard after 60 seconds. The clipboard is never read: if you leave the page or copy something else in the meantime, it is left alone.
-- **Backward-compatible file format**: encrypted payloads include an `IBTZ` version header so the app can evolve without breaking old files. Anything encrypted with prior versions still decrypts identically.
+- **Backward-compatible file format**: encrypted payloads include an `IBTZ` version header so the app can evolve without breaking old files. Since 3.1.0 new files use format v2 (Argon2id); anything encrypted with prior versions still decrypts identically.
 - **No accounts required**: works entirely without user accounts or sign-ins.
 
 <br/>
@@ -75,7 +75,7 @@ The security of your data is the highest priority. Here is a summary of the secu
 - **Memory-hard key derivation:** your password is not used directly as the encryption key. Since 3.1.0 it is run through **Argon2id** (RFC 9106, winner of the Password Hashing Competition) with **64 MiB of memory and 3 passes**, so every guess an attacker makes costs 64 MiB of memory as well as time, which blunts the GPU and custom-hardware attacks that make simpler functions cheap to brute-force. A key file, if used, enters Argon2id as a secret input (its SHA-256). Files made before 3.1.0 used **PBKDF2** with **1,000,000 iterations**, and still decrypt exactly as before. Argon2id runs as a small WebAssembly module built from readable source in this repository; it needs a browser from 2022 or later (Chrome 97, Firefox 102, Safari 16).
 - **Cryptographically secure randomness:** the application uses `window.crypto.getRandomValues()` to generate the salt for key derivation, the Initialization Vector (IV) for AES-GCM, the random characters for the password generator, and the data for the key file generator. This is a cryptographically secure pseudo-random number generator (CSPRNG) that is suitable for security-sensitive applications.
 - **Enforced password strength:** IttyBitz refuses to encrypt unless the password is at least 24 characters long and mixes uppercase, lowercase, numbers and symbols. The password field turns green as soon as it qualifies. Because the password is cleared from the page the moment you encrypt, you must first tick **I have saved this password somewhere safe**; the box unticks itself whenever the password changes.
-- **Best-effort memory clearing:** once a result has been handed over, the application overwrites the decrypted data and the key file's bytes in memory. The derived encryption key is created as non-extractable, so the browser never exposes it to the page at all. Note: JavaScript's garbage collector may retain copies of data elsewhere in the heap, so this is a best-effort mitigation rather than a guarantee.
+- **Best-effort memory clearing:** once a result has been handed over, the application overwrites the decrypted data, the key file's bytes and the 64 MiB of Argon2id working memory. The derived encryption key is created as non-extractable, so the browser never exposes it to the page at all. Note: JavaScript's garbage collector may retain copies of data elsewhere in the heap, so this is a best-effort mitigation rather than a guarantee.
 - **No user tracking:** the application does not use cookies, analytics, or trackers. Your activity is your own.
 
 <br/>
@@ -101,11 +101,13 @@ An in-repo audit of v2.8.1, the last version before the v3.0.0 single-file rewri
 
 ## 🪶 Recovery tool — decrypt without IttyBitz
 
-**[⬇️ Download it](https://github.com/seQRets/ittybitz/releases/download/v3.1.0/ittybitz-recovery.html)** (43 KB, one file) · [open it in your browser](https://ittybitz.app/ittybitz-recovery.html) · [how to save and use it](Recover/)
+**[⬇️ Download it](https://github.com/seQRets/ittybitz/releases/download/v3.1.1/ittybitz-recovery.html)** (44 KB, one file) · [open it in your browser](https://ittybitz.app/ittybitz-recovery.html) · [how to save and use it](Recover/)
 
 A standalone page that decrypts your IttyBitz files with **no dependencies, no network, no installation and no build step**. Save it alongside your encrypted data — on the same USB stick, the same backup drive, the same safe.
 
-It exists so that recovering your own data never depends on this website resolving, on GitHub Pages serving, on this project still being maintained, or on its author still being around. Open it in any browser, on an air-gapped machine, in twenty years.
+It exists so that recovering your own data never depends on this website, on GitHub Pages, or on this project being maintained. Open it in any browser, on an air-gapped machine, in twenty years.
+
+> **Saved a copy before 3.1?** Replace it. Files encrypted with IttyBitz 3.1 or later use Argon2id, which only the 3.1 Recovery tool and newer can open. The new tool still opens everything older, too.
 
 It is decrypt-only, its `Content-Security-Policy` blocks all network access outright, and CI replays real ciphertexts from every format, v1.0 onward, through the exact published file on every change — so it cannot silently drift from the main implementation.
 
@@ -181,7 +183,7 @@ npm run update-csp-hashes  # re-pin CSP hashes + SHA256SUMS after editing a ship
 
 `build` concatenates the hand-written page, the vendored [`qrcode-generator`](https://github.com/kazuhikoarase/qrcode-generator) (MIT), the Argon2id core, the DOM-free crypto core, and a BIP-39 core generated from `src/lib/bip39.ts` (so the wordlist can never drift), then runs `update-csp-hashes` to lock each inline `<script>` block into the `Content-Security-Policy` as a `'sha256-…'` source and regenerate `SHA256SUMS.txt`. The Argon2id core is plain JavaScript plus a 1.4 KB WebAssembly module that `build` assembles from the readable [`scripts/build/argon2.wat`](scripts/build/argon2.wat) with the dependency-free [`scripts/wat.mjs`](scripts/wat.mjs); `build` writes the same block into the recovery tool, so both files carry identical code and CI proves the embedded bytes come from that source. `test:crypto` proves the assembled files decrypt every historical ciphertext, round-trip against the frozen reference implementation in [`src/lib/crypto.ts`](src/lib/crypto.ts) for the older formats, and, for format v2, agree with an independent implementation built on Node's own Argon2id and the RFC 9106 test vector — in both directions, with and without key files.
 
-> **After editing anything under `scripts/build/`, run `npm run build` before committing; after editing `site/ittybitz-recovery.html` by hand, `npm run update-csp-hashes` is enough.** `update-csp-hashes` (which `build` also runs) recomputes the inline-script hashes, rewrites both files' CSP meta tags in place, and regenerates `SHA256SUMS.txt`. CI rebuilds everything from source and fails if the committed files differ. It is idempotent — a second run with unchanged scripts writes nothing. Skipping it after a change would leave a stale hash in the CSP and the browser would refuse to run the edited script.
+> **After editing anything under `scripts/build/`, run `npm run build` before committing; after editing `site/ittybitz-recovery.html` by hand, `npm run update-csp-hashes` is enough.** (The recovery tool's `ittybitz-argon2` block is generated: change `scripts/build/argon2*` and run `npm run build` instead of editing it in place.) `update-csp-hashes` (which `build` also runs) recomputes the inline-script hashes, rewrites both files' CSP meta tags in place, and regenerates `SHA256SUMS.txt`. CI rebuilds everything from source and fails if the committed files differ. It is idempotent — a second run with unchanged scripts writes nothing. Skipping it after a change would leave a stale hash in the CSP and the browser would refuse to run the edited script.
 
 There are **no runtime or build dependencies**: `node` (24.7+, for native TypeScript stripping and the built-in `crypto.argon2` the test suite checks against) and Python 3 (only for `npm run dev`'s static server) are all that is used.
 

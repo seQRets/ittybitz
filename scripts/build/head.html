@@ -245,6 +245,7 @@
   .feat .fi svg { width: 16px; height: 16px; }
   .feat b { font-size: 14px; font-weight: 600; }
   .feat p { margin: .25rem 0 0; font-size: 12px; line-height: 1.5; color: var(--muted-foreground); }
+  .feat .new { display: inline-block; margin: 0 .35rem 0 0; padding: 0 .4rem; border-radius: 999px; font-size: 10.5px; font-weight: 600; letter-spacing: .02em; color: var(--success); background: rgba(44,221,150,.10); border: 1px solid rgba(44,221,150,.30); vertical-align: 1px; }
   .feat a { display: inline-block; margin-top: .5rem; font-size: 12px; font-weight: 600; color: var(--accent); text-decoration: none; }
   .feat a:hover { text-decoration: underline; }
 
@@ -282,12 +283,16 @@
   #pwa-notice.show { display: block; }
   #offline-tip { display: none; background: rgba(245,158,11,.08); border-bottom: 1px solid rgba(245,158,11,.22); }
   #offline-tip.show { display: block; }
+  /* What's new: shown until dismissed, ahead of the offline tip. */
+  #whatsnew { display: none; background: linear-gradient(90deg, rgba(44,221,150,.10), rgba(245,158,11,.10)); border-bottom: 1px solid rgba(44,221,150,.30); }
+  #whatsnew.show { display: block; }
+  #whatsnew b { color: var(--success); font-weight: 600; }
   .pwa-inner { max-width: 680px; margin: 0 auto; padding: .6rem 1rem; display: flex; align-items: center; gap: .75rem; font-size: 13px; color: var(--foreground); }
   .pwa-inner span { flex: 1; text-align: center; }
   .pwa-inner a { color: var(--accent); font-weight: 600; text-decoration: none; white-space: nowrap; }
   .pwa-inner a:hover { text-decoration: underline; }
-  #pwa-x, #offline-x { background: none; border: 0; color: var(--muted-foreground); font-size: 20px; line-height: 1; cursor: pointer; padding: 0 .25rem; }
-  #pwa-x:hover, #offline-x:hover { color: var(--foreground); }
+  #pwa-x, #offline-x, #whatsnew-x { background: none; border: 0; color: var(--muted-foreground); font-size: 20px; line-height: 1; cursor: pointer; padding: 0 .25rem; }
+  #pwa-x:hover, #offline-x:hover, #whatsnew-x:hover { color: var(--foreground); }
   @media (max-width: 640px) { .pwa-inner { flex-wrap: wrap; justify-content: center; text-align: center; } .pwa-inner span { flex-basis: 100%; } }
   /* Printing (or "Save as PDF") writes whatever is on screen to paper or a
      file — a revealed secret, the password while shown, a QR. None of that
@@ -347,6 +352,13 @@
     <span>You're using the installed app. For offline use, download IttyBitz as a single HTML file — double-click it and it opens right here in your browser, no install.</span>
     <a href="https://github.com/seQRets/ittybitz/releases/latest/download/ittybitz.html">Download it</a>
     <button id="pwa-x" aria-label="Dismiss" title="Dismiss">&times;</button>
+  </div>
+</div>
+<div id="whatsnew" role="region" aria-label="What's new">
+  <div class="pwa-inner">
+    <span><b>New in 3.1:</b> IttyBitz now protects your password with Argon2id, a stronger, memory-hard key derivation. Files you encrypt from now on open with the 3.1 Recovery tool or later, so download it and keep it with them.</span>
+    <a href="https://github.com/seQRets/ittybitz/releases/latest/download/ittybitz-recovery.html">Download the Recovery tool</a>
+    <button id="whatsnew-x" aria-label="Dismiss" title="Dismiss">&times;</button>
   </div>
 </div>
 <div id="offline-tip">
@@ -487,7 +499,7 @@
   <div class="features">
     <div class="feat">
       <div class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></svg></div>
-      <b>AES-256-GCM</b><p>Authenticated encryption, with a key derived from your password by Argon2id, which needs 64 MB of memory for every guess.</p>
+      <b>Argon2id + AES-256</b><p><span class="new">New in 3.1</span>Your password becomes a key through Argon2id, which needs 64 MB of memory for every guess, so large-scale password guessing costs far more. Your data is sealed with AES-256-GCM.</p>
     </div>
     <div class="feat">
       <div class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg></div>
@@ -495,7 +507,7 @@
     </div>
     <div class="feat">
       <div class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24"/><path d="m14.83 9.17 4.24-4.24"/><path d="m14.83 14.83 4.24 4.24"/><path d="m9.17 14.83-4.24 4.24"/><circle cx="12" cy="12" r="4"/></svg></div>
-      <b>Recoverable without us</b><p>A 43 KB decrypt-only file opens your data even if this site, this project and its author are gone. Save it next to your encrypted files.</p>
+      <b>Recoverable without us</b><p>A 44 KB decrypt-only file opens your data with no network and no need for this site. Save it next to your encrypted files.</p>
       <a href="https://github.com/seQRets/ittybitz/releases/latest/download/ittybitz-recovery.html" title="Download the standalone recovery tool">Download the recovery tool</a>
     </div>
   </div>
@@ -518,7 +530,7 @@
            "Recoverable without us" card; this is the way to open the tool. -->
       <a class="accent" href="./ittybitz-recovery.html" title="Open the standalone recovery tool">Recovery tool</a>
       <a class="accent" href="https://github.com/seQRets/ittybitz" target="_blank" rel="noopener noreferrer">GitHub</a>
-      <span id="version">v3.1.0 🦕 Stegosaurus</span>
+      <span id="version">v3.1.1 🦕 Stegosaurus</span>
     </div>
   </footer>
 </div>
