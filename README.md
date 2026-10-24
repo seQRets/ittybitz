@@ -10,7 +10,7 @@ Whether you’re protecting confidential work documents before sharing them, or 
 IttyBitz offers a secure and private way to encrypt sensitive information directly in your browser without ever sending it to a server.
 
 <p align=center>
-<img width="800" alt="IttyBitz" src="docs/hero.svg" />
+<img width="800" alt="The IttyBitz page: Encrypt and Decrypt tabs, a file drop zone, the password field, and the feature cards" src="docs/hero.png" />
 </p>
 
 <br/>
