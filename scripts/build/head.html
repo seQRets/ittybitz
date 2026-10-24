@@ -62,10 +62,6 @@
   body {
     margin: 0; padding: 0 1rem 4rem; min-height: 100vh;
     background-color: var(--background);
-    background-image:
-      radial-gradient(ellipse 80% 60% at 50% -10%, rgba(245, 158, 11, 0.12), transparent 60%),
-      radial-gradient(ellipse 60% 50% at 100% 100%, rgba(239, 68, 68, 0.06), transparent 60%);
-    background-attachment: fixed;
     color: var(--foreground);
     font: 15px/1.55 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
           "Helvetica Neue", Arial, sans-serif;
@@ -76,7 +72,7 @@
   /* Hero: logo, then the app name as the headline, then the tagline. */
   .hero { text-align: center; margin: 3rem 0 2.5rem; }
   .brand { display: flex; justify-content: center; margin-bottom: 1.25rem; }
-  .brand svg { width: 72px; height: 72px; filter: drop-shadow(0 12px 28px rgba(245,158,11,.35)); }
+  .brand svg { width: 72px; height: 72px; }
   .tagline { margin: .75rem 0 0; font-size: 22px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.2; color: var(--foreground); }
   @media (min-width: 640px) { .tagline { font-size: 26px; } }
 
@@ -94,7 +90,6 @@
   .modetabs button:hover { color: var(--foreground); }
   .modetabs button[aria-selected="true"] {
     background: linear-gradient(to bottom right, #fbbf24, #f97316 50%, #ef4444); color: #000;
-    box-shadow: 0 6px 18px -6px rgba(245,158,11,0.55);
   }
   h1 {
     margin: 0; font-size: 44px; line-height: 1.05; font-weight: 700; letter-spacing: -0.04em;
@@ -215,10 +210,10 @@
     margin-top: .5rem; width: 100%; border: 0; border-radius: 12px; cursor: pointer;
     background: linear-gradient(to bottom right, #fbbf24, #f97316 50%, #ef4444);
     color: #000; font: inherit; font-size: 15px; font-weight: 600; padding: .875rem;
-    box-shadow: 0 8px 24px -8px rgba(245,158,11,0.5); transition: all .2s;
+    transition: filter .15s;
     display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
   }
-  .go:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 12px 32px -8px rgba(245,158,11,0.65); }
+  .go:hover:not(:disabled) { filter: brightness(1.06); }
   .go:disabled { opacity: .4; cursor: not-allowed; transform: none; }
   .go svg { width: 20px; height: 20px; }
   .spin { animation: spin 1s linear infinite; } @keyframes spin { to { transform: rotate(360deg); } }
@@ -543,7 +538,7 @@
            "Recoverable without us" card; this is the way to open the tool. -->
       <a class="accent" href="./ittybitz-recovery.html" title="Open the standalone recovery tool">Recovery tool</a>
       <a class="accent" href="https://github.com/seQRets/ittybitz" target="_blank" rel="noopener noreferrer">GitHub</a>
-      <span id="version">v3.1.3 🦕 Stegosaurus</span>
+      <span id="version">v3.1.4 🦕 Stegosaurus</span>
     </div>
   </footer>
 </div>
