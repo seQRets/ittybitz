@@ -18,7 +18,7 @@
      canvas and downloads use blob:/data:, none of which are network fetches.
      Nothing here can phone home. -->
 <meta http-equiv="Content-Security-Policy"
-      content="default-src 'none'; script-src 'wasm-unsafe-eval' 'sha256-4GSOHG1PWgpqNwON0DpmpOBDoMdMXoBzQI2KhDuK9js=' 'sha256-wfGbzEkL8W9ulC9Qqr9WMZOqlGGIX0xIm+QIlvPIwWc=' 'sha256-6956cg7x+IZEj+uYHjP5OJy7fvgqVWPXi8SwIiATHbg=' 'sha256-LmNDEoOi6zamJph5/+Sc7qHHUc15GL56bcfPhkELvOo=' 'sha256-XlgOklfvkE1YTG+BSxN2kJFwnn+L4EhXLVb01Ma4YsM=' 'sha256-/uBNbxNUWgjkvqyvwP1Xdjdx2qe9DOkTmhro9Nho9AI='; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; font-src 'none'; form-action 'none'; base-uri 'none'">
+      content="default-src 'none'; script-src 'wasm-unsafe-eval' 'sha256-4GSOHG1PWgpqNwON0DpmpOBDoMdMXoBzQI2KhDuK9js=' 'sha256-wfGbzEkL8W9ulC9Qqr9WMZOqlGGIX0xIm+QIlvPIwWc=' 'sha256-6956cg7x+IZEj+uYHjP5OJy7fvgqVWPXi8SwIiATHbg=' 'sha256-LmNDEoOi6zamJph5/+Sc7qHHUc15GL56bcfPhkELvOo=' 'sha256-XlgOklfvkE1YTG+BSxN2kJFwnn+L4EhXLVb01Ma4YsM=' 'sha256-NoG7UAihRV5XQ/Jr/fDHy0Ls9CQf7eoXac5RULqYfag='; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; font-src 'none'; form-action 'none'; base-uri 'none'">
 <!--
   ═══════════════════════════════════════════════════════════════════════
   IttyBitz — single-file client-side encryption
@@ -162,6 +162,19 @@
   .dropwrap .clear { position: absolute; right: .75rem; bottom: .55rem; margin: 0; }
   #pane-text .field { flex: 1; min-height: 0; }
   #pane-text textarea { height: 100%; min-height: 0; resize: none; }
+  /* The key-file zone is one slim row (Generate beside it in the app), so a
+     key file adds little height to the form. The Clear link sits at its
+     right end. */
+  .kfrow { display: flex; gap: .5rem; }
+  .kfrow .dropwrap { flex: 1; min-width: 0; }
+  .drop.drop-row { flex-direction: row; justify-content: flex-start; gap: .7rem; height: 100%; min-height: 3.25rem; padding: .55rem 3.75rem .55rem .75rem; text-align: left; }
+  .drop.drop-row .tile { flex: none; margin: 0; width: 2rem; height: 2rem; border-radius: 8px; }
+  .drop.drop-row .txt { flex: 1; min-width: 0; }
+  .drop.drop-row h3 { font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .drop.drop-row p { margin-top: .05rem; font-size: 12px; }
+  .kfrow .dropwrap .clear { top: 50%; bottom: auto; transform: translateY(-50%); }
+  .kfrow .btn { flex: none; padding: .45rem .85rem; }
+  @media (max-width: 479px) { .kfrow { flex-wrap: wrap; } .kfrow .dropwrap, .kfrow .btn { flex: 1 1 100%; } }
   .clear button { background: none; border: 0; color: var(--destructive); font: inherit; font-size: 12px; cursor: pointer; padding: 0; }
   .hidden-input { display: none; }
 
@@ -235,6 +248,8 @@
   .go:hover:not(:disabled) { filter: brightness(1.06); }
   .go:disabled { opacity: .4; cursor: not-allowed; transform: none; }
   .go svg { width: 20px; height: 20px; }
+  /* A moment of confirmation after a file is encrypted or decrypted. */
+  .go.done, .go.done:disabled { background: rgba(44,221,150,.12); color: var(--success); box-shadow: inset 0 0 0 1px rgba(44,221,150,.45); opacity: 1; cursor: default; }
   .spin { animation: spin 1s linear infinite; } @keyframes spin { to { transform: rotate(360deg); } }
 
   /* Result + status */
@@ -277,15 +292,14 @@
   .fp code, #qr-fp code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 600; font-size: 13px; letter-spacing: .06em; color: var(--success); background: rgba(44,221,150,.10); border: 1px solid rgba(44,221,150,.30); border-radius: 6px; padding: .1rem .45rem; }
   #qr-fp code { font-size: 12.5px; padding: .05rem .4rem; }
 
-  /* Feature cards */
-  .features { margin-top: 2rem; display: grid; gap: .75rem; }
-  @media (min-width: 640px) { .features { grid-template-columns: repeat(3, 1fr); } }
-  .feat { display: flex; align-items: center; gap: .625rem; border: 1px solid hsla(0,0%,100%,0.06); background: hsla(0,0%,100%,0.02); border-radius: 14px; padding: .875rem 1rem; }
+  /* Feature cards: on wide screens only, three across with the icon above
+     the headline. On a phone they would only lengthen the page. */
+  .features { display: none; }
+  @media (min-width: 640px) { .features { display: grid; grid-template-columns: repeat(3, 1fr); gap: .75rem; margin-top: 2rem; } }
+  .feat { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: .5rem; border: 1px solid hsla(0,0%,100%,0.06); background: hsla(0,0%,100%,0.02); border-radius: 14px; padding: 1rem .75rem; }
   .feat .fi { flex: none; display: grid; place-items: center; height: 2rem; width: 2rem; border-radius: 8px; background: rgba(245,158,11,0.10); color: var(--accent); }
   .feat .fi svg { width: 16px; height: 16px; }
   .feat b { font-size: 14px; font-weight: 600; }
-  /* Three across: icon above the headline, centred, so no headline wraps. */
-  @media (min-width: 640px) { .feat { flex-direction: column; justify-content: center; text-align: center; gap: .5rem; padding: 1rem .75rem; } }
 
   /* Footer */
   footer { max-width: 680px; margin: 2rem auto 0; padding-top: 1.25rem; border-top: 1px solid hsla(0,0%,100%,0.06); display: flex; flex-wrap: wrap; gap: .75rem 1.25rem; align-items: center; justify-content: space-between; font-size: 12px; color: var(--muted-foreground); }
@@ -527,21 +541,21 @@
       </div>
     </div>
     <div class="row" id="kf-pane" style="display:none">
-      <div class="dropwrap">
-        <div class="drop" id="drop-key" role="button" tabindex="0" style="padding:1.75rem 1.5rem">
-          <div class="tile" style="height:2.5rem;width:2.5rem">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <div class="kfrow">
+        <div class="dropwrap">
+          <div class="drop drop-row" id="drop-key" role="button" tabindex="0">
+            <div class="tile">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/>
             </svg>
+            </div>
+            <div class="txt"><h3 id="key-title">Select key file</h3><p id="key-desc">drop an existing file or click to choose</p></div>
           </div>
-          <h3 style="font-size:14px">Select key file</h3>
-          <p id="key-desc">drag &amp; drop or click to select an existing file</p>
+          <div class="clear" id="key-clear" style="display:none"><button type="button">Clear</button></div>
         </div>
-        <div class="clear" id="key-clear" style="display:none"><button type="button">Clear</button></div>
+        <button class="btn" id="k-gen" title="Generate and download a new random key file"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="m7 10 5 5 5-5"/><path d="M21 21H3"/></svg>Generate</button>
       </div>
       <input class="hidden-input" type="file" id="k">
-      <div class="divider"><hr><span>or</span><hr></div>
-      <button class="btn wfull" id="k-gen" style="flex:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="m7 10 5 5 5-5"/><path d="M21 21H3"/></svg>Generate &amp; download new key file</button>
     </div>
 
     <button class="go" id="go">
@@ -571,8 +585,8 @@
 
   </section>
 
-  <!-- What IttyBitz is, at a glance: an icon and a headline each. The
-       downloads live in the hero and the footer. -->
+  <!-- What IttyBitz is, at a glance: an icon and a headline each, shown on
+       wide screens only. The downloads live in the hero and the footer. -->
   <div class="features">
     <div class="feat">
       <div class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></svg></div>
@@ -611,7 +625,7 @@
            tampered copy would simply show the expected one. So the version
            links to its release, where SHA256SUMS.txt lists the checksums to
            compare a download against. -->
-      <a id="version" href="https://github.com/seQRets/ittybitz/releases/tag/v3.1.8" target="_blank" rel="noopener noreferrer" title="Release notes and SHA-256 checksums for this version">v3.1.8 🦕 Stegosaurus</a>
+      <a id="version" href="https://github.com/seQRets/ittybitz/releases/tag/v3.1.9" target="_blank" rel="noopener noreferrer" title="Release notes and SHA-256 checksums for this version">v3.1.9 🦕 Stegosaurus</a>
     </div>
   </footer>
 </div>
@@ -3885,6 +3899,7 @@ async function masterFingerprint(words) { return fingerprintOfSeed(await bip39Se
   function wireDrop(zoneId, inputId, descId, clearId, onPick, multiple) {
     var zone = $(zoneId), input = $(inputId), desc = $(descId), clear = $(clearId);
     var defaultText = desc.textContent;
+    var title = zoneId === 'drop-key' ? $('key-title') : null, defaultTitle = title && title.textContent;
 
     function pick(fileList) {
       var files = [];
@@ -3906,17 +3921,20 @@ async function masterFingerprint(words) { return fingerprintOfSeed(await bip39Se
       desc.className = 'picked';
       clear.style.display = '';
       // The key zone also shows the file's fingerprint, so the same file can be
-      // recognised later (and the generated one matched to its download notice).
-      if (zoneId === 'drop-key') {
+      // recognised later (and a generated one matched to its file name). The
+      // name takes the zone's first line and the fingerprint the second, so a
+      // narrow screen never cuts the fingerprint off.
+      if (title) {
         var name = files[0].name;
+        title.textContent = name; desc.textContent = 'fingerprint \u2026';
         readBytes(files[0]).then(function (b) {
           // The bytes read for the fingerprint are key material too: wipe them
           // once hashed, whether or not hashing succeeded.
           return keyFingerprint(b).then(function (fp) { b.fill(0); return fp; },
                                         function (e) { b.fill(0); throw e; });
         }).then(function (fp) {
-          if (desc.textContent === name) desc.textContent = name + ' \u00b7 fingerprint [' + fp + ']';
-        }).catch(function () {});
+          if (title.textContent === name) desc.textContent = 'fingerprint [' + fp + ']';
+        }).catch(function () { if (title.textContent === name) desc.textContent = 'key file selected'; });
       }
     }
 
@@ -3936,6 +3954,7 @@ async function masterFingerprint(words) { return fingerprintOfSeed(await bip39Se
     function resetZone() {
       onPick(multiple ? [] : null); input.value = '';
       desc.textContent = defaultText; desc.className = '';
+      if (title) title.textContent = defaultTitle;
       clear.style.display = 'none';
     }
     clear.querySelector('button').addEventListener('click', function (e) { e.stopPropagation(); resetZone(); });
@@ -4002,6 +4021,7 @@ async function masterFingerprint(words) { return fingerprintOfSeed(await bip39Se
     // one); decrypting enters an existing one, where "new-password" would make
     // a manager offer to generate a fresh password that cannot decrypt.
     $('p').setAttribute('autocomplete', enc ? 'new-password' : 'off');
+    clearTimeout(doneTimer); $('go').classList.remove('done');
     $('go-icon').innerHTML = enc ? ICON_LOCK : ICON_UNLOCK;
     $('go-label').textContent = enc ? 'Encrypt' : 'Decrypt';
     // Encrypt-side secret text is a human passphrase (sans font, blur toggle);
@@ -4141,7 +4161,27 @@ async function masterFingerprint(words) { return fingerprintOfSeed(await bip39Se
   $('pw-saved').addEventListener('change', updateGoButton);
 
   function startNextJob() {
+    endDone();
     if (jobDone) { jobDone = false; showSavedAck(); resetResult(); }
+  }
+
+  // A file's result is a download, which the browser already shows, so the
+  // app confirms it quietly: the button turns green with a check for a
+  // moment. Screen readers still hear the full message.
+  var doneTimer = 0;
+  function flashDone() {
+    clearTimeout(doneTimer);
+    $('go').classList.add('done');
+    $('go-icon').innerHTML = ICON_CHECK;
+    $('go-label').textContent = mode === 'encrypt' ? 'Encrypted' : 'Decrypted';
+    doneTimer = setTimeout(endDone, 1600);
+  }
+  function endDone() {
+    clearTimeout(doneTimer);
+    if (!$('go').classList.contains('done')) return;
+    $('go').classList.remove('done');
+    $('go-icon').innerHTML = mode === 'encrypt' ? ICON_LOCK : ICON_UNLOCK;
+    $('go-label').textContent = mode === 'encrypt' ? 'Encrypt' : 'Decrypt';
   }
 
   function refreshPasswordButtons() {
@@ -4189,8 +4229,9 @@ async function masterFingerprint(words) { return fingerprintOfSeed(await bip39Se
     var keyName = 'ittybitz-key-[' + fp + '].bin';
     download(key, keyName);
     key.fill(0); // the Blob made its own copy; this one is no longer needed
-    status('ok', 'Key file downloaded as "' + keyName + '". Whenever you select it, IttyBitz shows its fingerprint, ['
-      + fp + '], even if the file has been renamed. You need both this key file and your password to decrypt.');
+    // Said for screen readers only: the browser's own download already shows
+    // the file, and its name carries the fingerprint.
+    status('ok', 'Key file downloaded as "' + keyName + '". Select it to use it; you need both the key file and your password to decrypt.', true);
   };
 
   // ---- Output actions ----
@@ -4355,6 +4396,7 @@ async function masterFingerprint(words) { return fingerprintOfSeed(await bip39Se
   // ---- The action ----
   $('go').onclick = async function () {
     var btn = this;
+    endDone();
     clearStatus();
 
     var hasInput = inputType === 'file' ? mainFiles.length > 0 : !!$('t').value.trim();
@@ -4381,7 +4423,7 @@ async function masterFingerprint(words) { return fingerprintOfSeed(await bip39Se
     var what = inputType === 'text' ? 'secret' : nFiles > 1 ? 'files' : 'file';
     status('ok', (mode === 'encrypt' ? 'Securing your ' : 'Unlocking your ') + what + '…');
 
-    var plain = null, kfBytes = null;
+    var plain = null, kfBytes = null, ok = false;
     try {
       // Let the message paint before the key derivation keeps the page busy.
       await new Promise(function (r) { setTimeout(r, 30); });
@@ -4412,11 +4454,12 @@ async function masterFingerprint(words) { return fingerprintOfSeed(await bip39Se
         }
         mainFiles = []; clearMainZone();
         if (done.length) jobDone = true;
+        ok = done.length > 0 && !failed.length;
         var verb = mode === 'encrypt' ? 'encrypted' : 'decrypted';
         var summary = done.length + ' of ' + nFiles + ' files ' + verb + (done.length ? ' — downloaded as: ' + done.join(', ') : '') + '.';
         if (failed.length) summary += '\nNot ' + verb + ': ' + failed.join('; ') + '.';
         if (done.length > 1) summary += '\nIf your browser asked whether to allow several downloads from this page, allow it; nothing is downloaded from anywhere else.';
-        status(failed.length ? 'err' : 'ok', summary);
+        status(failed.length ? 'err' : 'ok', summary, !failed.length);
         return;
       }
 
@@ -4428,8 +4471,8 @@ async function masterFingerprint(words) { return fingerprintOfSeed(await bip39Se
           var encName = mainFile.name + '.ibitz';
           download(ct, encName);
           mainFiles = []; clearMainZone();
-          jobDone = true;
-          status('ok', 'File encrypted — downloaded as "' + encName + '".');
+          jobDone = ok = true;
+          status('ok', 'File encrypted — downloaded as "' + encName + '".', true);
         } else {
           var b64 = bytesToB64(ct);
           showResult(b64, false);
@@ -4440,7 +4483,7 @@ async function masterFingerprint(words) { return fingerprintOfSeed(await bip39Se
             qrState = { getValue: function () { return b64; }, numeric: false, kind: 'plain', keyFp: usedKeyFp };
             $('out-qr').style.display = '';
           }
-          jobDone = true;
+          jobDone = ok = true;
           // Too long for a QR code: the QR button is hidden, so do not offer one.
           status('ok', fitsQR(b64) ? 'Text encrypted. Copy the Base64 result, or show it as a QR.'
                                    : 'Text encrypted. Copy the Base64 result.', true);
@@ -4463,8 +4506,8 @@ async function masterFingerprint(words) { return fingerprintOfSeed(await bip39Se
           var outName = /\.ibitz$/i.test(mainFile.name) ? mainFile.name.replace(/\.ibitz$/i, '') : 'decrypted-' + mainFile.name;
           if (!outName) outName = 'decrypted';
           download(plain, outName);
-          jobDone = true;
-          status('ok', 'Decrypted successfully — downloaded as "' + outName + '".');
+          jobDone = ok = true;
+          status('ok', 'Decrypted successfully — downloaded as "' + outName + '".', true);
         } else {
           // Decrypted bytes that are not UTF-8 are a file, not text — someone
           // pasted a file's ciphertext into the text box. Showing them as text
@@ -4480,7 +4523,7 @@ async function masterFingerprint(words) { return fingerprintOfSeed(await bip39Se
             return;
           }
           showResult(text, true);
-          jobDone = true;
+          jobDone = ok = true;
           // Seed detection for border + SeedQR
           try {
             var res = await ittybitzValidateBip39(text);
@@ -4520,6 +4563,15 @@ async function masterFingerprint(words) { return fingerprintOfSeed(await bip39Se
       busy = false;
       $('go-icon').innerHTML = mode === 'encrypt' ? ICON_LOCK : ICON_UNLOCK;
       $('p').value = ''; refreshPasswordButtons(); // never leave the password in the field
+      // After a success the form starts over: the key file is cleared with
+      // the password. Its box stays open (so the button does not jump), and
+      // the next job asks for a key file until one is chosen or the switch is
+      // turned off. After a failure it stays, so only the password needs
+      // retyping.
+      if (ok) {
+        keyFile = null; clearKeyZone();
+        if (inputType === 'file') flashDone();
+      }
       showOutcome();
     }
   };

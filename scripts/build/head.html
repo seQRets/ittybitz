@@ -162,6 +162,19 @@
   .dropwrap .clear { position: absolute; right: .75rem; bottom: .55rem; margin: 0; }
   #pane-text .field { flex: 1; min-height: 0; }
   #pane-text textarea { height: 100%; min-height: 0; resize: none; }
+  /* The key-file zone is one slim row (Generate beside it in the app), so a
+     key file adds little height to the form. The Clear link sits at its
+     right end. */
+  .kfrow { display: flex; gap: .5rem; }
+  .kfrow .dropwrap { flex: 1; min-width: 0; }
+  .drop.drop-row { flex-direction: row; justify-content: flex-start; gap: .7rem; height: 100%; min-height: 3.25rem; padding: .55rem 3.75rem .55rem .75rem; text-align: left; }
+  .drop.drop-row .tile { flex: none; margin: 0; width: 2rem; height: 2rem; border-radius: 8px; }
+  .drop.drop-row .txt { flex: 1; min-width: 0; }
+  .drop.drop-row h3 { font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .drop.drop-row p { margin-top: .05rem; font-size: 12px; }
+  .kfrow .dropwrap .clear { top: 50%; bottom: auto; transform: translateY(-50%); }
+  .kfrow .btn { flex: none; padding: .45rem .85rem; }
+  @media (max-width: 479px) { .kfrow { flex-wrap: wrap; } .kfrow .dropwrap, .kfrow .btn { flex: 1 1 100%; } }
   .clear button { background: none; border: 0; color: var(--destructive); font: inherit; font-size: 12px; cursor: pointer; padding: 0; }
   .hidden-input { display: none; }
 
@@ -235,6 +248,8 @@
   .go:hover:not(:disabled) { filter: brightness(1.06); }
   .go:disabled { opacity: .4; cursor: not-allowed; transform: none; }
   .go svg { width: 20px; height: 20px; }
+  /* A moment of confirmation after a file is encrypted or decrypted. */
+  .go.done, .go.done:disabled { background: rgba(44,221,150,.12); color: var(--success); box-shadow: inset 0 0 0 1px rgba(44,221,150,.45); opacity: 1; cursor: default; }
   .spin { animation: spin 1s linear infinite; } @keyframes spin { to { transform: rotate(360deg); } }
 
   /* Result + status */
@@ -277,15 +292,14 @@
   .fp code, #qr-fp code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 600; font-size: 13px; letter-spacing: .06em; color: var(--success); background: rgba(44,221,150,.10); border: 1px solid rgba(44,221,150,.30); border-radius: 6px; padding: .1rem .45rem; }
   #qr-fp code { font-size: 12.5px; padding: .05rem .4rem; }
 
-  /* Feature cards */
-  .features { margin-top: 2rem; display: grid; gap: .75rem; }
-  @media (min-width: 640px) { .features { grid-template-columns: repeat(3, 1fr); } }
-  .feat { display: flex; align-items: center; gap: .625rem; border: 1px solid hsla(0,0%,100%,0.06); background: hsla(0,0%,100%,0.02); border-radius: 14px; padding: .875rem 1rem; }
+  /* Feature cards: on wide screens only, three across with the icon above
+     the headline. On a phone they would only lengthen the page. */
+  .features { display: none; }
+  @media (min-width: 640px) { .features { display: grid; grid-template-columns: repeat(3, 1fr); gap: .75rem; margin-top: 2rem; } }
+  .feat { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: .5rem; border: 1px solid hsla(0,0%,100%,0.06); background: hsla(0,0%,100%,0.02); border-radius: 14px; padding: 1rem .75rem; }
   .feat .fi { flex: none; display: grid; place-items: center; height: 2rem; width: 2rem; border-radius: 8px; background: rgba(245,158,11,0.10); color: var(--accent); }
   .feat .fi svg { width: 16px; height: 16px; }
   .feat b { font-size: 14px; font-weight: 600; }
-  /* Three across: icon above the headline, centred, so no headline wraps. */
-  @media (min-width: 640px) { .feat { flex-direction: column; justify-content: center; text-align: center; gap: .5rem; padding: 1rem .75rem; } }
 
   /* Footer */
   footer { max-width: 680px; margin: 2rem auto 0; padding-top: 1.25rem; border-top: 1px solid hsla(0,0%,100%,0.06); display: flex; flex-wrap: wrap; gap: .75rem 1.25rem; align-items: center; justify-content: space-between; font-size: 12px; color: var(--muted-foreground); }
@@ -527,21 +541,21 @@
       </div>
     </div>
     <div class="row" id="kf-pane" style="display:none">
-      <div class="dropwrap">
-        <div class="drop" id="drop-key" role="button" tabindex="0" style="padding:1.75rem 1.5rem">
-          <div class="tile" style="height:2.5rem;width:2.5rem">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <div class="kfrow">
+        <div class="dropwrap">
+          <div class="drop drop-row" id="drop-key" role="button" tabindex="0">
+            <div class="tile">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/>
             </svg>
+            </div>
+            <div class="txt"><h3 id="key-title">Select key file</h3><p id="key-desc">drop an existing file or click to choose</p></div>
           </div>
-          <h3 style="font-size:14px">Select key file</h3>
-          <p id="key-desc">drag &amp; drop or click to select an existing file</p>
+          <div class="clear" id="key-clear" style="display:none"><button type="button">Clear</button></div>
         </div>
-        <div class="clear" id="key-clear" style="display:none"><button type="button">Clear</button></div>
+        <button class="btn" id="k-gen" title="Generate and download a new random key file"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="m7 10 5 5 5-5"/><path d="M21 21H3"/></svg>Generate</button>
       </div>
       <input class="hidden-input" type="file" id="k">
-      <div class="divider"><hr><span>or</span><hr></div>
-      <button class="btn wfull" id="k-gen" style="flex:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="m7 10 5 5 5-5"/><path d="M21 21H3"/></svg>Generate &amp; download new key file</button>
     </div>
 
     <button class="go" id="go">
@@ -571,8 +585,8 @@
 
   </section>
 
-  <!-- What IttyBitz is, at a glance: an icon and a headline each. The
-       downloads live in the hero and the footer. -->
+  <!-- What IttyBitz is, at a glance: an icon and a headline each, shown on
+       wide screens only. The downloads live in the hero and the footer. -->
   <div class="features">
     <div class="feat">
       <div class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></svg></div>
@@ -611,7 +625,7 @@
            tampered copy would simply show the expected one. So the version
            links to its release, where SHA256SUMS.txt lists the checksums to
            compare a download against. -->
-      <a id="version" href="https://github.com/seQRets/ittybitz/releases/tag/v3.1.8" target="_blank" rel="noopener noreferrer" title="Release notes and SHA-256 checksums for this version">v3.1.8 🦕 Stegosaurus</a>
+      <a id="version" href="https://github.com/seQRets/ittybitz/releases/tag/v3.1.9" target="_blank" rel="noopener noreferrer" title="Release notes and SHA-256 checksums for this version">v3.1.9 🦕 Stegosaurus</a>
     </div>
   </footer>
 </div>

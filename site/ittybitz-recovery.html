@@ -19,7 +19,7 @@
      the browser's download mechanism as a blob: URL, which never touches
      the network. -->
 <meta http-equiv="Content-Security-Policy"
-      content="default-src 'none'; script-src 'wasm-unsafe-eval' 'sha256-wfGbzEkL8W9ulC9Qqr9WMZOqlGGIX0xIm+QIlvPIwWc=' 'sha256-xKENdgu07hYbXZHNW6fLS4EzJC9zD3lg9Uguz3+OPgg=' 'sha256-wbmyiFrTfj3K9VLgHyKM43KkiC2BN1gFBVQ9WibQrzc='; style-src 'unsafe-inline'; connect-src 'none'; img-src data:; form-action 'none'; base-uri 'none'">
+      content="default-src 'none'; script-src 'wasm-unsafe-eval' 'sha256-wfGbzEkL8W9ulC9Qqr9WMZOqlGGIX0xIm+QIlvPIwWc=' 'sha256-xKENdgu07hYbXZHNW6fLS4EzJC9zD3lg9Uguz3+OPgg=' 'sha256-af/qPCQtnYvte3eERG94XRYqLzmD/xlcdj8z0GxKZZA='; style-src 'unsafe-inline'; connect-src 'none'; img-src data:; form-action 'none'; base-uri 'none'">
 <!--
   ═══════════════════════════════════════════════════════════════════════
   IttyBitz Recovery Tool — standalone offline decryption
@@ -155,6 +155,16 @@
   .dropwrap { position: relative; }
   .dropwrap .clear { position: absolute; right: .75rem; bottom: .55rem; margin: 0; }
   #pane-text textarea { flex: 1; min-height: 0; resize: none; }
+  /* The key-file zone is one slim row, so it adds little height to the
+     form. The Clear link sits at its right end. */
+  .kfrow { display: flex; gap: .5rem; }
+  .kfrow .dropwrap { flex: 1; min-width: 0; }
+  .drop.drop-row { flex-direction: row; justify-content: flex-start; gap: .7rem; height: 100%; min-height: 3.25rem; padding: .55rem 3.75rem .55rem .75rem; text-align: left; }
+  .drop.drop-row .tile { flex: none; margin: 0; width: 2rem; height: 2rem; border-radius: 8px; }
+  .drop.drop-row .txt { flex: 1; min-width: 0; }
+  .drop.drop-row h3 { font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .drop.drop-row p { margin-top: .05rem; font-size: 12px; }
+  .kfrow .dropwrap .clear { top: 50%; bottom: auto; transform: translateY(-50%); }
   .clear button { background: none; border: 0; color: var(--destructive); font: inherit; font-size: 12px; cursor: pointer; padding: 0; }
   .hidden-input { display: none; }
 
@@ -180,6 +190,8 @@
   }
   .go:hover:not(:disabled) { filter: brightness(1.06); }
   .go:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+  /* A moment of confirmation after a file is decrypted, as in the app. */
+  .go.done, .go.done:disabled { background: rgba(44,221,150,.12); color: var(--success); box-shadow: inset 0 0 0 1px rgba(44,221,150,.45); opacity: 1; cursor: default; }
   #go-icon { display: inline-flex; }
   .spin { animation: spin 1s linear infinite; } @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -195,6 +207,8 @@
      decrypted text for a moment before it is hidden. */
   .out.blur { filter: blur(4px); cursor: pointer; }
   .hint { font-size: 12px; color: #838391; margin-top: .625rem; }
+  /* Read by screen readers, not shown. */
+  .hint.sr { position: absolute; width: 1px; height: 1px; margin: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .note { font-size: 13px; color: var(--muted-foreground); text-align: center; margin-top: 2rem; line-height: 1.7; }
   .note code { color: var(--foreground); font-size: 12px; }
   .note a { color: var(--accent); text-decoration: none; }
@@ -273,18 +287,18 @@
 
     <div class="row">
       <label>Key file <span style="color:#838391">(only if one was used)</span></label>
-      <div class="dropwrap">
-        <div class="drop" id="drop-key" role="button" tabindex="0" style="padding:1.75rem 1.5rem">
-          <div class="tile" style="height:2.5rem;width:2.5rem">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/>
-              <circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/>
+      <div class="kfrow">
+        <div class="dropwrap">
+          <div class="drop drop-row" id="drop-key" role="button" tabindex="0">
+            <div class="tile">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/>
             </svg>
+            </div>
+            <div class="txt"><h3 id="key-title">Drop your key file here</h3><p id="key-desc">or click to browse</p></div>
           </div>
-          <h3 style="font-size:14px">Drop your key file here</h3>
-          <p id="key-desc">or click to browse</p>
+          <div class="clear" id="key-clear" style="display:none"><button type="button">Clear</button></div>
         </div>
-        <div class="clear" id="key-clear" style="display:none"><button type="button">Clear</button></div>
       </div>
       <input class="hidden-input" type="file" id="k">
     </div>
@@ -293,7 +307,7 @@
       <span id="go-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/>
       </svg></span>
-      <span>Decrypt</span>
+      <span id="go-label">Decrypt</span>
     </button>
 
     <div class="out" id="out"></div>
@@ -314,7 +328,7 @@
     <!-- Tracks the IttyBitz release, so this page and the app always show the
          same number. Every release re-stamps this file; SHA256SUMS.txt for
          the release named here is the checksum to verify a copy against. -->
-    <a id="recovery-version" href="https://github.com/seQRets/ittybitz/releases/tag/v3.1.8" target="_blank" rel="noopener noreferrer" title="Release notes and SHA-256 checksums for this version">IttyBitz Recovery v3.1.8</a>
+    <a id="recovery-version" href="https://github.com/seQRets/ittybitz/releases/tag/v3.1.9" target="_blank" rel="noopener noreferrer" title="Release notes and SHA-256 checksums for this version">IttyBitz Recovery v3.1.9</a>
   </p>
 </div>
 <script id="ittybitz-argon2">
@@ -691,6 +705,7 @@ async function ittybitzDecrypt(bytes, password, keyFileBytes) {
   function wireDrop(zoneId, inputId, descId, clearId, onPick) {
     var zone = $(zoneId), input = $(inputId), desc = $(descId), clear = $(clearId);
     var defaultText = desc.textContent;
+    var title = zoneId === 'drop-key' ? $('key-title') : null, defaultTitle = title && title.textContent;
 
     function pick(file) {
       if (!file) return;
@@ -711,16 +726,18 @@ async function ittybitzDecrypt(bytes, password, keyFileBytes) {
       // A key file shows its fingerprint (first 8 hex of its SHA-256), the
       // same one IttyBitz shows and prints on an emergency card, so the right
       // file can be recognised without its name. The bytes read for it are
-      // wiped once hashed.
-      if (zoneId === 'drop-key') {
+      // wiped once hashed. The name takes the zone's first line and the
+      // fingerprint the second, so a narrow screen never cuts it off.
+      if (title) {
+        title.textContent = file.name; desc.textContent = 'fingerprint \u2026';
         readBytes(file).then(function (b) {
           return crypto.subtle.digest('SHA-256', b).then(function (d) {
             b.fill(0);
             var h = new Uint8Array(d), fp = '';
             for (var i = 0; i < 4; i++) fp += (h[i] < 16 ? '0' : '') + h[i].toString(16);
-            if (desc.textContent === file.name) desc.textContent = file.name + ' \u00b7 fingerprint [' + fp + ']';
-          }, function () { b.fill(0); });
-        }).catch(function () {});
+            if (title.textContent === file.name) desc.textContent = 'fingerprint [' + fp + ']';
+          }, function () { b.fill(0); throw new Error('hash'); });
+        }).catch(function () { if (title.textContent === file.name) desc.textContent = 'key file selected'; });
       }
     }
 
@@ -749,6 +766,7 @@ async function ittybitzDecrypt(bytes, password, keyFileBytes) {
     function resetZone() {
       onPick(null); input.value = '';
       desc.textContent = defaultText; desc.className = '';
+      if (title) title.textContent = defaultTitle;
       clear.style.display = 'none';
     }
     clear.querySelector('button').addEventListener('click', function (e) {
@@ -766,7 +784,7 @@ async function ittybitzDecrypt(bytes, password, keyFileBytes) {
   $('t').addEventListener('input', function () { if (this.value) startNextJob(); });
   $('p').addEventListener('input', function () { if (this.value) startNextJob(); });
 
-  wireDrop('drop-main', 'f', 'main-desc', 'main-clear', function (f) { mainFile = f; if (f) startNextJob(); });
+  var clearMainZone = wireDrop('drop-main', 'f', 'main-desc', 'main-clear', function (f) { mainFile = f; if (f) startNextJob(); });
   var clearKeyZone = wireDrop('drop-key', 'k', 'key-desc', 'key-clear', function (f) { keyFile = f; });
 
   // Swallow drops on the rest of the window so a near-miss does not make the
@@ -796,7 +814,26 @@ async function ittybitzDecrypt(bytes, password, keyFileBytes) {
   function reset() {
     var o = $('out');
     o.className = 'out'; o.textContent = ''; o.title = ''; o.onclick = null;
-    $('hint').textContent = '';
+    $('hint').textContent = ''; $('hint').classList.remove('sr');
+    endDone();
+  }
+
+  // A decrypted file is a download, which the browser already shows, so the
+  // tool confirms it quietly: the button turns green with a check for a
+  // moment, and screen readers hear the full message.
+  var ICON_CHECK = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>';
+  var doneTimer = 0;
+  function flashDone() {
+    clearTimeout(doneTimer);
+    $('go').classList.add('done');
+    $('go-icon').innerHTML = ICON_CHECK; $('go-label').textContent = 'Decrypted';
+    doneTimer = setTimeout(endDone, 1600);
+  }
+  function endDone() {
+    clearTimeout(doneTimer);
+    if (!$('go').classList.contains('done')) return;
+    $('go').classList.remove('done');
+    $('go-icon').innerHTML = ICON_UNLOCK; $('go-label').textContent = 'Decrypt';
   }
 
   // While a key is being derived the lock icon becomes a spinner, as in the
@@ -811,6 +848,7 @@ async function ittybitzDecrypt(bytes, password, keyFileBytes) {
     $('go-icon').innerHTML = ICON_SPIN;
     reset();
     jobDone = false;
+    var ok = false, fileDone = false;
 
     try {
       var input = null, outName = 'decrypted';
@@ -875,14 +913,19 @@ async function ittybitzDecrypt(bytes, password, keyFileBytes) {
         // Revoke on a delay: Safari can cancel a download whose object URL is
         // revoked before the download has actually started.
         setTimeout(function () { URL.revokeObjectURL(url); }, 10000);
-        show('ok', binaryAsText
-          ? 'Decrypted successfully, but the result is not text \u2014 it looks like an encrypted file. Downloaded as "decrypted.bin"; rename it to what it was.'
-          : 'Decrypted successfully \u2014 downloaded as "' + outName + '".');
+        if (binaryAsText) {
+          show('ok', 'Decrypted successfully, but the result is not text \u2014 it looks like an encrypted file. Downloaded as "decrypted.bin"; rename it to what it was.');
+        } else {
+          $('out').className = 'out'; $('out').textContent = ''; // the "Unlocking…" line goes
+          $('hint').classList.add('sr');
+          $('hint').textContent = 'Decrypted successfully \u2014 downloaded as "' + outName + '".';
+          fileDone = true;
+        }
       }
       // Best-effort erase now that the plaintext has been handed off (the
       // Blob and TextDecoder both copy). Same posture as the main app.
       plain.fill(0);
-      jobDone = true;
+      jobDone = ok = true;
     } catch (err) {
       show('err', err && err.message ? err.message : String(err));
     } finally {
@@ -891,6 +934,14 @@ async function ittybitzDecrypt(bytes, password, keyFileBytes) {
       // Never leave the password sitting in the field. This tool is meant for
       // borrowed and air-gapped machines — exactly where that matters most.
       $('p').value = '';
+      // After a success the form starts over: the file and the key file are
+      // put away with the password. After a failure they stay, so only the
+      // password needs retyping.
+      if (ok) {
+        clearKeyZone();
+        if (mode === 'file') clearMainZone();
+        if (fileDone) flashDone();
+      }
     }
   };
 })();

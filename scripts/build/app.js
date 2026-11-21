@@ -325,6 +325,7 @@
   function wireDrop(zoneId, inputId, descId, clearId, onPick, multiple) {
     var zone = $(zoneId), input = $(inputId), desc = $(descId), clear = $(clearId);
     var defaultText = desc.textContent;
+    var title = zoneId === 'drop-key' ? $('key-title') : null, defaultTitle = title && title.textContent;
 
     function pick(fileList) {
       var files = [];
@@ -346,17 +347,20 @@
       desc.className = 'picked';
       clear.style.display = '';
       // The key zone also shows the file's fingerprint, so the same file can be
-      // recognised later (and the generated one matched to its download notice).
-      if (zoneId === 'drop-key') {
+      // recognised later (and a generated one matched to its file name). The
+      // name takes the zone's first line and the fingerprint the second, so a
+      // narrow screen never cuts the fingerprint off.
+      if (title) {
         var name = files[0].name;
+        title.textContent = name; desc.textContent = 'fingerprint \u2026';
         readBytes(files[0]).then(function (b) {
           // The bytes read for the fingerprint are key material too: wipe them
           // once hashed, whether or not hashing succeeded.
           return keyFingerprint(b).then(function (fp) { b.fill(0); return fp; },
                                         function (e) { b.fill(0); throw e; });
         }).then(function (fp) {
-          if (desc.textContent === name) desc.textContent = name + ' \u00b7 fingerprint [' + fp + ']';
-        }).catch(function () {});
+          if (title.textContent === name) desc.textContent = 'fingerprint [' + fp + ']';
+        }).catch(function () { if (title.textContent === name) desc.textContent = 'key file selected'; });
       }
     }
 
@@ -376,6 +380,7 @@
     function resetZone() {
       onPick(multiple ? [] : null); input.value = '';
       desc.textContent = defaultText; desc.className = '';
+      if (title) title.textContent = defaultTitle;
       clear.style.display = 'none';
     }
     clear.querySelector('button').addEventListener('click', function (e) { e.stopPropagation(); resetZone(); });
@@ -442,6 +447,7 @@
     // one); decrypting enters an existing one, where "new-password" would make
     // a manager offer to generate a fresh password that cannot decrypt.
     $('p').setAttribute('autocomplete', enc ? 'new-password' : 'off');
+    clearTimeout(doneTimer); $('go').classList.remove('done');
     $('go-icon').innerHTML = enc ? ICON_LOCK : ICON_UNLOCK;
     $('go-label').textContent = enc ? 'Encrypt' : 'Decrypt';
     // Encrypt-side secret text is a human passphrase (sans font, blur toggle);
@@ -581,7 +587,27 @@
   $('pw-saved').addEventListener('change', updateGoButton);
 
   function startNextJob() {
+    endDone();
     if (jobDone) { jobDone = false; showSavedAck(); resetResult(); }
+  }
+
+  // A file's result is a download, which the browser already shows, so the
+  // app confirms it quietly: the button turns green with a check for a
+  // moment. Screen readers still hear the full message.
+  var doneTimer = 0;
+  function flashDone() {
+    clearTimeout(doneTimer);
+    $('go').classList.add('done');
+    $('go-icon').innerHTML = ICON_CHECK;
+    $('go-label').textContent = mode === 'encrypt' ? 'Encrypted' : 'Decrypted';
+    doneTimer = setTimeout(endDone, 1600);
+  }
+  function endDone() {
+    clearTimeout(doneTimer);
+    if (!$('go').classList.contains('done')) return;
+    $('go').classList.remove('done');
+    $('go-icon').innerHTML = mode === 'encrypt' ? ICON_LOCK : ICON_UNLOCK;
+    $('go-label').textContent = mode === 'encrypt' ? 'Encrypt' : 'Decrypt';
   }
 
   function refreshPasswordButtons() {
@@ -629,8 +655,9 @@
     var keyName = 'ittybitz-key-[' + fp + '].bin';
     download(key, keyName);
     key.fill(0); // the Blob made its own copy; this one is no longer needed
-    status('ok', 'Key file downloaded as "' + keyName + '". Whenever you select it, IttyBitz shows its fingerprint, ['
-      + fp + '], even if the file has been renamed. You need both this key file and your password to decrypt.');
+    // Said for screen readers only: the browser's own download already shows
+    // the file, and its name carries the fingerprint.
+    status('ok', 'Key file downloaded as "' + keyName + '". Select it to use it; you need both the key file and your password to decrypt.', true);
   };
 
   // ---- Output actions ----
@@ -795,6 +822,7 @@
   // ---- The action ----
   $('go').onclick = async function () {
     var btn = this;
+    endDone();
     clearStatus();
 
     var hasInput = inputType === 'file' ? mainFiles.length > 0 : !!$('t').value.trim();
@@ -821,7 +849,7 @@
     var what = inputType === 'text' ? 'secret' : nFiles > 1 ? 'files' : 'file';
     status('ok', (mode === 'encrypt' ? 'Securing your ' : 'Unlocking your ') + what + '…');
 
-    var plain = null, kfBytes = null;
+    var plain = null, kfBytes = null, ok = false;
     try {
       // Let the message paint before the key derivation keeps the page busy.
       await new Promise(function (r) { setTimeout(r, 30); });
@@ -852,11 +880,12 @@
         }
         mainFiles = []; clearMainZone();
         if (done.length) jobDone = true;
+        ok = done.length > 0 && !failed.length;
         var verb = mode === 'encrypt' ? 'encrypted' : 'decrypted';
         var summary = done.length + ' of ' + nFiles + ' files ' + verb + (done.length ? ' — downloaded as: ' + done.join(', ') : '') + '.';
         if (failed.length) summary += '\nNot ' + verb + ': ' + failed.join('; ') + '.';
         if (done.length > 1) summary += '\nIf your browser asked whether to allow several downloads from this page, allow it; nothing is downloaded from anywhere else.';
-        status(failed.length ? 'err' : 'ok', summary);
+        status(failed.length ? 'err' : 'ok', summary, !failed.length);
         return;
       }
 
@@ -868,8 +897,8 @@
           var encName = mainFile.name + '.ibitz';
           download(ct, encName);
           mainFiles = []; clearMainZone();
-          jobDone = true;
-          status('ok', 'File encrypted — downloaded as "' + encName + '".');
+          jobDone = ok = true;
+          status('ok', 'File encrypted — downloaded as "' + encName + '".', true);
         } else {
           var b64 = bytesToB64(ct);
           showResult(b64, false);
@@ -880,7 +909,7 @@
             qrState = { getValue: function () { return b64; }, numeric: false, kind: 'plain', keyFp: usedKeyFp };
             $('out-qr').style.display = '';
           }
-          jobDone = true;
+          jobDone = ok = true;
           // Too long for a QR code: the QR button is hidden, so do not offer one.
           status('ok', fitsQR(b64) ? 'Text encrypted. Copy the Base64 result, or show it as a QR.'
                                    : 'Text encrypted. Copy the Base64 result.', true);
@@ -903,8 +932,8 @@
           var outName = /\.ibitz$/i.test(mainFile.name) ? mainFile.name.replace(/\.ibitz$/i, '') : 'decrypted-' + mainFile.name;
           if (!outName) outName = 'decrypted';
           download(plain, outName);
-          jobDone = true;
-          status('ok', 'Decrypted successfully — downloaded as "' + outName + '".');
+          jobDone = ok = true;
+          status('ok', 'Decrypted successfully — downloaded as "' + outName + '".', true);
         } else {
           // Decrypted bytes that are not UTF-8 are a file, not text — someone
           // pasted a file's ciphertext into the text box. Showing them as text
@@ -920,7 +949,7 @@
             return;
           }
           showResult(text, true);
-          jobDone = true;
+          jobDone = ok = true;
           // Seed detection for border + SeedQR
           try {
             var res = await ittybitzValidateBip39(text);
@@ -960,6 +989,15 @@
       busy = false;
       $('go-icon').innerHTML = mode === 'encrypt' ? ICON_LOCK : ICON_UNLOCK;
       $('p').value = ''; refreshPasswordButtons(); // never leave the password in the field
+      // After a success the form starts over: the key file is cleared with
+      // the password. Its box stays open (so the button does not jump), and
+      // the next job asks for a key file until one is chosen or the switch is
+      // turned off. After a failure it stays, so only the password needs
+      // retyping.
+      if (ok) {
+        keyFile = null; clearKeyZone();
+        if (inputType === 'file') flashDone();
+      }
       showOutcome();
     }
   };
