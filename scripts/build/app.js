@@ -51,20 +51,30 @@
     };
   })();
 
-  // ---- What's new in 3.1 ----
-  // Tells everyone, once, that the key derivation changed and that new files
-  // need the 3.1 Recovery tool or later. Shown until dismissed; while it is
-  // up, the offline tip waits, so the page never stacks two banners.
+  // ---- Download banners: What's new in 3.1, then the offline tip ----
+  // Both suggest a download, so closing either one closes both for good: the
+  // choice is kept in this browser's storage and only clearing the site's data
+  // brings them back. What's new tells everyone, once, that the key derivation
+  // changed and that new files need the 3.1 Recovery tool or later; while it
+  // is up, the offline tip waits, so the page never stacks two banners.
+  function dismissDownloadBanners() {
+    ['whatsnew', 'offline-tip'].forEach(function (id) {
+      var b = document.getElementById(id);
+      if (b) b.classList.remove('show');
+    });
+    try {
+      localStorage.setItem('ib-whatsnew-3.1', '1');
+      localStorage.setItem('ib-offline-tip', '1');
+    } catch (e) {}
+  }
+
   var whatsNewShown = (function () {
     try { if (localStorage.getItem('ib-whatsnew-3.1') === '1') return false; } catch (e) {}
     var n = document.getElementById('whatsnew');
     if (!n) return false;
     n.classList.add('show');
     var x = document.getElementById('whatsnew-x');
-    if (x) x.onclick = function () {
-      n.classList.remove('show');
-      try { localStorage.setItem('ib-whatsnew-3.1', '1'); } catch (e) {}
-    };
+    if (x) x.onclick = dismissDownloadBanners;
     return true;
   })();
 
@@ -79,15 +89,17 @@
       (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
       window.navigator.standalone === true;
     if (isFile || standalone || whatsNewShown) return;
-    try { if (localStorage.getItem('ib-offline-tip') === '1') return; } catch (e) {}
+    // Either key counts: someone who closed What's new before this rule
+    // existed has only that key and has already said no to downloads.
+    try {
+      if (localStorage.getItem('ib-offline-tip') === '1' ||
+          localStorage.getItem('ib-whatsnew-3.1') === '1') return;
+    } catch (e) {}
     var n = document.getElementById('offline-tip');
     if (!n) return;
     n.classList.add('show');
     var x = document.getElementById('offline-x');
-    if (x) x.onclick = function () {
-      n.classList.remove('show');
-      try { localStorage.setItem('ib-offline-tip', '1'); } catch (e) {}
-    };
+    if (x) x.onclick = dismissDownloadBanners;
   })();
 
   // ---- Hero download button ----

@@ -283,22 +283,29 @@
   .modal .closebtn:hover { background: hsla(0,0%,100%,0.10); }
   .donate-link { font-size: 13px; color: var(--accent); text-decoration: none; word-break: break-all; }
 
-  /* One-time migration nudge shown only when opened as the retired installed app. */
-  #pwa-notice { display: none; background: linear-gradient(90deg, rgba(245,158,11,.16), rgba(239,68,68,.10)); border-bottom: 1px solid rgba(245,158,11,.35); }
-  #pwa-notice.show { display: block; }
-  #offline-tip { display: none; background: rgba(245,158,11,.08); border-bottom: 1px solid rgba(245,158,11,.22); }
-  #offline-tip.show { display: block; }
-  /* What's new: shown until dismissed, ahead of the offline tip. */
-  #whatsnew { display: none; background: linear-gradient(90deg, rgba(44,221,150,.10), rgba(245,158,11,.10)); border-bottom: 1px solid rgba(44,221,150,.30); }
-  #whatsnew.show { display: block; }
-  #whatsnew b { color: var(--success); font-weight: 600; }
-  .pwa-inner { max-width: 680px; margin: 0 auto; padding: .6rem 1rem; display: flex; align-items: center; gap: .75rem; font-size: 13px; color: var(--foreground); }
-  .pwa-inner span { flex: 1; text-align: center; }
-  .pwa-inner a { color: var(--accent); font-weight: 600; text-decoration: none; white-space: nowrap; }
-  .pwa-inner a:hover { text-decoration: underline; }
-  #pwa-x, #offline-x, #whatsnew-x { background: none; border: 0; color: var(--muted-foreground); font-size: 20px; line-height: 1; cursor: pointer; padding: 0 .25rem; }
-  #pwa-x:hover, #offline-x:hover, #whatsnew-x:hover { color: var(--foreground); }
-  @media (max-width: 640px) { .pwa-inner { flex-wrap: wrap; justify-content: center; text-align: center; } .pwa-inner span { flex-basis: 100%; } }
+  /* Banners: the one-time migration nudge (installed app only), What's new,
+     and the offline tip. Text reads left to right in the same column as the
+     page, the link sits on its own line beneath it, and the close button is
+     a boxed X in the banner's top-right corner. */
+  .banner { display: none; position: relative; border-bottom: 1px solid var(--border); }
+  .banner.show { display: block; }
+  #pwa-notice { background: rgba(245,158,11,.07); border-bottom-color: rgba(245,158,11,.30); }
+  #whatsnew { background: rgba(44,221,150,.05); border-bottom-color: rgba(44,221,150,.25); }
+  #offline-tip { background: rgba(245,158,11,.05); border-bottom-color: rgba(245,158,11,.22); }
+  .banner-inner { max-width: 680px; margin: 0 auto; padding: .9rem 3.75rem .9rem 1rem; font-size: 14px; line-height: 1.5; color: var(--foreground); text-align: left; }
+  .banner-inner p { margin: 0; }
+  .banner-inner b { font-weight: 600; }
+  #whatsnew b { color: var(--success); }
+  .banner-inner a { display: inline-flex; align-items: center; gap: .4rem; margin-top: .5rem; color: var(--accent); font-weight: 600; text-decoration: none; }
+  .banner-inner a:hover { text-decoration: underline; }
+  .banner-x {
+    position: absolute; top: .75rem; right: .75rem;
+    display: grid; place-items: center; width: 2rem; height: 2rem; padding: 0;
+    background: hsla(0,0%,100%,0.04); border: 1px solid hsla(0,0%,100%,0.18); border-radius: 8px;
+    color: var(--muted-foreground); cursor: pointer;
+  }
+  .banner-x:hover { color: var(--foreground); background: hsla(0,0%,100%,0.10); border-color: hsla(0,0%,100%,0.30); }
+  .banner-x:focus-visible { outline: 2px solid rgba(245,158,11,.6); outline-offset: 2px; }
   /* Printing (or "Save as PDF") writes whatever is on screen to paper or a
      file — a revealed secret, the password while shown, a QR. None of that
      belongs in a print: blank every field that can hold a secret. */
@@ -352,26 +359,26 @@
 <style id="card-page" media="not all">@page { size: letter; margin: 0.5in; }</style>
 </head>
 <body>
-<div id="pwa-notice">
-  <div class="pwa-inner">
-    <span>You're using the installed app. For offline use, download IttyBitz as a single HTML file — double-click it and it opens right here in your browser, no install.</span>
-    <a href="https://github.com/seQRets/ittybitz/releases/latest/download/ittybitz.html">Download it</a>
-    <button id="pwa-x" aria-label="Dismiss" title="Dismiss">&times;</button>
+<div id="pwa-notice" class="banner">
+  <div class="banner-inner">
+    <p>You're using the installed app. For offline use, download IttyBitz as a single HTML file — double-click it and it opens right here in your browser, no install.</p>
+    <a href="https://github.com/seQRets/ittybitz/releases/latest/download/ittybitz.html"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>Download IttyBitz</a>
   </div>
+  <button class="banner-x" id="pwa-x" aria-label="Dismiss" title="Dismiss"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
 </div>
-<div id="whatsnew" role="region" aria-label="What's new">
-  <div class="pwa-inner">
-    <span><b>New in 3.1:</b> IttyBitz now protects your password with Argon2id, a stronger, memory-hard key derivation. Files you encrypt from now on open with the 3.1 Recovery tool or later, so download it and keep it with them.</span>
-    <a href="https://github.com/seQRets/ittybitz/releases/latest/download/ittybitz-recovery.html">Download the Recovery tool</a>
-    <button id="whatsnew-x" aria-label="Dismiss" title="Dismiss">&times;</button>
+<div id="whatsnew" class="banner" role="region" aria-label="What's new">
+  <div class="banner-inner">
+    <p><b>New in 3.1:</b> IttyBitz now protects your password with Argon2id, a stronger, memory-hard key derivation. Files you encrypt from now on open with the 3.1 Recovery tool or later, so download it and keep it with them.</p>
+    <a href="https://github.com/seQRets/ittybitz/releases/latest/download/ittybitz-recovery.html"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>Download the Recovery tool</a>
   </div>
+  <button class="banner-x" id="whatsnew-x" aria-label="Dismiss" title="Dismiss"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
 </div>
-<div id="offline-tip">
-  <div class="pwa-inner">
-    <span>Want to run IttyBitz offline? Download it and open the file — it runs right here in your browser, no install.</span>
-    <a href="https://github.com/seQRets/ittybitz/releases/latest/download/ittybitz.html">Download</a>
-    <button id="offline-x" aria-label="Dismiss" title="Dismiss">&times;</button>
+<div id="offline-tip" class="banner">
+  <div class="banner-inner">
+    <p>Want to run IttyBitz offline? Download it and open the file — it runs right here in your browser, no install.</p>
+    <a href="https://github.com/seQRets/ittybitz/releases/latest/download/ittybitz.html"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>Download IttyBitz</a>
   </div>
+  <button class="banner-x" id="offline-x" aria-label="Dismiss" title="Dismiss"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
 </div>
 <div class="wrap">
   <div class="hero">
@@ -538,7 +545,7 @@
            "Recoverable without us" card; this is the way to open the tool. -->
       <a class="accent" href="./ittybitz-recovery.html" title="Open the standalone recovery tool">Recovery tool</a>
       <a class="accent" href="https://github.com/seQRets/ittybitz" target="_blank" rel="noopener noreferrer">GitHub</a>
-      <span id="version">v3.1.4 🦕 Stegosaurus</span>
+      <span id="version">v3.1.5 🦕 Stegosaurus</span>
     </div>
   </footer>
 </div>

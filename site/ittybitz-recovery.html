@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>IttyBitz Recovery — offline decryption</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20512%20512%27%3E%3Cdefs%3E%3ClinearGradient%20id%3D%27g%27%20x1%3D%270%27%20y1%3D%270%27%20x2%3D%271%27%20y2%3D%271%27%3E%3Cstop%20offset%3D%270%25%27%20stop-color%3D%27%23fbbf24%27%2F%3E%3Cstop%20offset%3D%2720%25%27%20stop-color%3D%27%23f59e0b%27%2F%3E%3Cstop%20offset%3D%27100%25%27%20stop-color%3D%27%23ef4444%27%2F%3E%3C%2FlinearGradient%3E%3Cmask%20id%3D%27k%27%3E%3Crect%20width%3D%27512%27%20height%3D%27512%27%20fill%3D%27%23fff%27%2F%3E%3Ccircle%20cx%3D%27256%27%20cy%3D%27205%27%20r%3D%2751%27%2F%3E%3Cpath%20d%3D%27M230%20205%20L282%20205%20L297%20369%20L215%20369%20Z%27%2F%3E%3C%2Fmask%3E%3C%2Fdefs%3E%3Crect%20width%3D%27512%27%20height%3D%27512%27%20rx%3D%2796%27%20fill%3D%27url%28%23g%29%27%20mask%3D%27url%28%23k%29%27%2F%3E%3C%2Fsvg%3E">
 <!-- Enforces the "no network" promise rather than merely asserting it: this
      page cannot fetch, load, or send anything anywhere. default-src 'none'
      blocks every network destination. script-src lists the SHA-256 hash of
@@ -13,10 +14,12 @@
      page compile its own embedded WebAssembly (the Argon2id core) and
      nothing else: it does not permit eval() or any other script. style-src
      'unsafe-inline' covers only this file's own stylesheet and inline style
-     attributes. A decrypted file is handed to the browser's download
-     mechanism as a blob: URL, which never touches the network. -->
+     attributes. img-src data: is for the inline tab icon, which is part of
+     this file; it permits no network fetch. A decrypted file is handed to
+     the browser's download mechanism as a blob: URL, which never touches
+     the network. -->
 <meta http-equiv="Content-Security-Policy"
-      content="default-src 'none'; script-src 'wasm-unsafe-eval' 'sha256-wfGbzEkL8W9ulC9Qqr9WMZOqlGGIX0xIm+QIlvPIwWc=' 'sha256-xKENdgu07hYbXZHNW6fLS4EzJC9zD3lg9Uguz3+OPgg=' 'sha256-unk2VAhQyz3JhnIC4ebg8PbIFW2I0uFm5p2bW+1urNA='; style-src 'unsafe-inline'; connect-src 'none'; img-src 'none'; form-action 'none'; base-uri 'none'">
+      content="default-src 'none'; script-src 'wasm-unsafe-eval' 'sha256-wfGbzEkL8W9ulC9Qqr9WMZOqlGGIX0xIm+QIlvPIwWc=' 'sha256-xKENdgu07hYbXZHNW6fLS4EzJC9zD3lg9Uguz3+OPgg=' 'sha256-unk2VAhQyz3JhnIC4ebg8PbIFW2I0uFm5p2bW+1urNA='; style-src 'unsafe-inline'; connect-src 'none'; img-src data:; form-action 'none'; base-uri 'none'">
 <!--
   ═══════════════════════════════════════════════════════════════════════
   IttyBitz Recovery Tool — standalone offline decryption
@@ -291,7 +294,7 @@
     <!-- Tracks the IttyBitz release, so this page and the app always show the
          same number. Every release re-stamps this file; SHA256SUMS.txt for
          the release named here is the checksum to verify a copy against. -->
-    <span id="recovery-version">IttyBitz Recovery v3.1.4</span>
+    <span id="recovery-version">IttyBitz Recovery v3.1.5</span>
   </p>
 </div>
 <script id="ittybitz-argon2">
