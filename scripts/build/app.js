@@ -208,10 +208,21 @@
     setTimeout(function () { URL.revokeObjectURL(url); }, 10000);
   }
 
-  function status(cls, text) {
+  // quiet: the message is for screen readers only (the role="status" box
+  // still announces it, but it takes no room on screen). Used when the result
+  // box's own buttons are highlighted instead.
+  function status(cls, text, quiet) {
     var s = $('status');
-    s.className = 'status show ' + cls;
+    s.className = 'status show ' + cls + (quiet ? ' quiet' : '');
     s.textContent = text;
+  }
+  // Draw the eye to the result box's buttons (copy, QR, reveal): a green
+  // outline that pulses twice and then stays until the result is cleared.
+  function highlightResultActions() {
+    var a = document.querySelector('#result .out-actions');
+    a.classList.remove('attn');
+    void a.offsetWidth; // restart the pulse for a new result
+    a.classList.add('attn');
   }
   function clearStatus() { var s = $('status'); s.className = 'status'; s.textContent = ''; }
 
@@ -225,11 +236,27 @@
   window.addEventListener('blur', function () { clipboardStale = true; });
   document.addEventListener('copy', function () { clipboardStale = true; });
   document.addEventListener('cut', function () { clipboardStale = true; });
-  function copyText(text) {
+  // Confirmation is on the button itself: a green check (plus "Copied" on a
+  // labelled button) for a moment. The 60-second auto-clear is documented in
+  // the README rather than spelled out here every time.
+  var ICON_CHECK = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>';
+  function flashCopied(btn) {
+    if (!btn) return;
+    if (btn._copiedTimer) clearTimeout(btn._copiedTimer);
+    else btn._copiedHtml = btn.innerHTML;
+    btn.innerHTML = btn.classList.contains('icon') ? ICON_CHECK : ICON_CHECK + 'Copied';
+    btn.classList.add('copied');
+    btn._copiedTimer = setTimeout(function () {
+      btn.innerHTML = btn._copiedHtml; btn.classList.remove('copied');
+      btn._copiedTimer = null;
+    }, 1500);
+  }
+  function copyText(text, btn) {
     if (!text) return;
     navigator.clipboard.writeText(text).then(function () {
       clipboardStale = false;
-      status('ok', 'Copied to clipboard. It will be cleared in 60 seconds if you stay on this page. (The clipboard is never read.)');
+      flashCopied(btn);
+      status('ok', 'Copied to clipboard.', true); // for screen readers
       if (clipboardTimer) clearTimeout(clipboardTimer);
       clipboardTimer = setTimeout(function () {
         clipboardTimer = null;
@@ -344,7 +371,7 @@
     return resetZone;
   }
 
-  var clearMainZone = wireDrop('drop-main', 'f', 'main-desc', 'main-clear', function (fs) { mainFiles = fs; }, true);
+  var clearMainZone = wireDrop('drop-main', 'f', 'main-desc', 'main-clear', function (fs) { mainFiles = fs; if (fs && fs.length) startNextJob(); }, true);
   var clearKeyZone = wireDrop('drop-key', 'k', 'key-desc', 'key-clear', function (f) { keyFile = f; }, false);
 
   // Swallow stray drops so the browser never navigates away and loses input.
@@ -358,6 +385,7 @@
     $('out-reveal').style.display = 'none';
     hideFp('dec');
     qrState = null;
+    document.querySelector('#result .out-actions').classList.remove('attn');
     clearStatus();
   }
 
@@ -374,6 +402,7 @@
   }
 
   function fullReset() {
+    jobDone = false;
     mainFiles = []; keyFile = null;
     clearMainZone(); clearKeyZone();
     $('p').value = '';
@@ -398,7 +427,6 @@
     $('pw-hint').style.display = enc ? '' : 'none';
     $('t-actions').style.display = enc ? '' : 'none';
     $('p-gen').style.display = enc ? '' : 'none';
-    $('pw-saved-row').style.display = enc ? '' : 'none';
     // Encrypting sets a new password (a manager may offer to generate or save
     // one); decrypting enters an existing one, where "new-password" would make
     // a manager offer to generate a fresh password that cannot decrypt.
@@ -481,10 +509,11 @@
     updateSecretToggle();
     updateTextBlur();
   };
-  $('t-copy').onclick = function () { copyText($('t').value); };
+  $('t-copy').onclick = function () { copyText($('t').value, this); };
 
   $('t').addEventListener('input', function () {
     var val = $('t').value;
+    if (val) startNextJob();
     // Every secret starts hidden: once the field is emptied, the next thing
     // typed or pasted is blurred again even if the last one was revealed.
     if (!val) { showTextSecret = false; updateSecretToggle(); }
@@ -511,44 +540,64 @@
   });
 
   // ---- Password field ----
-  // The moment a password is accepted for encryption (the border turns green)
-  // is the moment to tell people to save it: the field is cleared after a
-  // successful encrypt, and the password is the only way back in. Warning
-  // afterwards would be too late. The notice fires once per password, not on
-  // every keystroke.
-  var SAVE_PW_NOTICE = 'Save this password somewhere secure now. It is the only way to decrypt the result, and it will be cleared from this field after you encrypt.';
-  var pwNoticed = false;
+  // Saving the password is asked for by the checkbox directly under the
+  // field, which Encrypt requires; no separate notice repeats it.
+
+  // "I have saved this password" is shown while encrypting, and greyed out
+  // (disabled, but left in place so nothing on the page moves) once an
+  // encryption has finished: the password has been wiped by then, so a live,
+  // unticked box beside the result would only confuse. It comes back as soon
+  // as the next job starts (a file chosen, a secret or password typed) and on
+  // switching between Encrypt and Decrypt. The previous result, encrypted or
+  // decrypted, goes at the same moment: it sits under the action button,
+  // where it would read as the result of the new input.
+  var jobDone = false;
+  function showSavedAck() {
+    $('pw-saved-row').style.display = mode === 'encrypt' ? '' : 'none';
+    $('pw-saved-row').classList.toggle('spent', jobDone);
+    $('pw-saved').disabled = jobDone;
+  }
+  // Encrypt stays disabled (greyed) until "I have saved this password" is
+  // ticked; the box unticks whenever the password changes, so the button
+  // follows. Decrypt is never held back by it. busy covers a running job.
+  var busy = false;
+  function updateGoButton() {
+    var needsAck = mode === 'encrypt' && !$('pw-saved').checked;
+    $('go').disabled = busy || needsAck;
+    $('go').title = !busy && needsAck ? 'Tick "I have saved this password somewhere safe" first' : '';
+  }
+  $('pw-saved').addEventListener('change', updateGoButton);
+
+  function startNextJob() {
+    if (jobDone) { jobDone = false; showSavedAck(); resetResult(); }
+  }
+
   function refreshPasswordButtons() {
     // The saved-password confirmation belongs to one password: any change to
     // the field (typing, Clear, Generate, the wipe after encrypting) unticks it.
     $('pw-saved').checked = false;
+    updateGoButton();
     var pw = $('p').value;
     $('p-copy').disabled = !pw;
     $('p-clear').disabled = !pw;
     $('p').classList.remove('ok-border', 'bad-border');
     var strong = !!pw && mode === 'encrypt' && isPasswordStrong(pw);
+    showSavedAck();
     if (pw && mode === 'encrypt') $('p').classList.add(strong ? 'ok-border' : 'bad-border');
-    if (strong && !pwNoticed) { pwNoticed = true; status('ok', 'Password accepted. ' + SAVE_PW_NOTICE); }
-    else if (!strong && pwNoticed) {
-      // No longer accepted (edited below the bar, or cleared): withdraw the
-      // notice — but only if it is still what the status box is showing.
-      pwNoticed = false;
-      if ($('status').textContent.indexOf(SAVE_PW_NOTICE) >= 0) clearStatus();
-    }
   }
-  $('p').addEventListener('input', refreshPasswordButtons);
+  $('p').addEventListener('input', function () { if ($('p').value) startNextJob(); refreshPasswordButtons(); });
   $('p-toggle').onclick = function () {
     var f = $('p');
     if (f.type === 'password') { f.type = 'text'; this.textContent = 'Hide'; }
     else { f.type = 'password'; this.textContent = 'Show'; }
   };
-  $('p-copy').onclick = function () { copyText($('p').value); };
+  $('p-copy').onclick = function () { copyText($('p').value, this); };
   $('p-clear').onclick = function () { $('p').value = ''; refreshPasswordButtons(); };
   $('p-gen').onclick = function () {
     $('p').value = generatePassword();
-    pwNoticed = true; // this handler shows the notice itself
+    startNextJob();
     refreshPasswordButtons();
-    status('ok', 'A new secure password has been generated. ' + SAVE_PW_NOTICE);
+    clearStatus(); // a stale "weak password" error no longer applies
   };
 
   // ---- Key file toggle ----
@@ -573,7 +622,7 @@
   };
 
   // ---- Output actions ----
-  $('out-copy').onclick = function () { copyText($('out').value); };
+  $('out-copy').onclick = function () { copyText($('out').value, this); };
   $('out-reveal').onclick = function () {
     showDecrypted = !showDecrypted;
     $('out').classList.toggle('blurred', !showDecrypted);
@@ -722,11 +771,12 @@
     // The password is cleared the moment encryption runs, so make sure it has
     // been recorded first: otherwise the result is locked for good.
     if (mode === 'encrypt' && !$('pw-saved').checked) {
+      startNextJob(); // never ask for a tick on a box that is greyed out
       status('err', 'Tick "I have saved this password" first. The password is cleared as soon as you encrypt, and nothing can recover it.');
       $('pw-saved').focus(); return;
     }
 
-    btn.disabled = true;
+    busy = true; btn.disabled = true; btn.title = '';
     $('go-icon').innerHTML = ICON_SPIN;
     resetResult();
     var nFiles = inputType === 'file' ? mainFiles.length : 0;
@@ -763,6 +813,7 @@
           } catch (eOne) { failed.push(f.name + ' (' + (eOne && eOne.message ? eOne.message : String(eOne)) + ')'); }
         }
         mainFiles = []; clearMainZone();
+        if (done.length) jobDone = true;
         var verb = mode === 'encrypt' ? 'encrypted' : 'decrypted';
         var summary = done.length + ' of ' + nFiles + ' files ' + verb + (done.length ? ' — downloaded as: ' + done.join(', ') : '') + '.';
         if (failed.length) summary += '\nNot ' + verb + ': ' + failed.join('; ') + '.';
@@ -779,6 +830,7 @@
           var encName = mainFile.name + '.ibitz';
           download(ct, encName);
           mainFiles = []; clearMainZone();
+          jobDone = true;
           status('ok', 'File encrypted — downloaded as "' + encName + '".');
         } else {
           var b64 = bytesToB64(ct);
@@ -790,7 +842,11 @@
             qrState = { getValue: function () { return b64; }, numeric: false, kind: 'plain', keyFp: usedKeyFp };
             $('out-qr').style.display = '';
           }
-          status('ok', 'Text encrypted. Copy the Base64 result, or show it as a QR.');
+          jobDone = true;
+          // Too long for a QR code: the QR button is hidden, so do not offer one.
+          status('ok', fitsQR(b64) ? 'Text encrypted. Copy the Base64 result, or show it as a QR.'
+                                   : 'Text encrypted. Copy the Base64 result.', true);
+          highlightResultActions();
         }
       } else {
         var encBytes;
@@ -809,6 +865,7 @@
           var outName = /\.ibitz$/i.test(mainFile.name) ? mainFile.name.replace(/\.ibitz$/i, '') : 'decrypted-' + mainFile.name;
           if (!outName) outName = 'decrypted';
           download(plain, outName);
+          jobDone = true;
           status('ok', 'Decrypted successfully — downloaded as "' + outName + '".');
         } else {
           // Decrypted bytes that are not UTF-8 are a file, not text — someone
@@ -819,11 +876,13 @@
           try { text = new TextDecoder('utf-8', { fatal: true }).decode(plain); }
           catch (eNotText) {
             download(plain, 'decrypted.bin');
+            jobDone = true;
             status('ok', 'Decrypted successfully, but the result is not text — it looks like an encrypted file. Downloaded as "decrypted.bin"; rename it to what it was. Next time, use "Decrypt a File".');
             plain.fill(0);
             return;
           }
           showResult(text, true);
+          jobDone = true;
           // Seed detection for border + SeedQR
           try {
             var res = await ittybitzValidateBip39(text);
@@ -850,7 +909,8 @@
               $('out-qr').style.display = '';
             }
           }
-          status('ok', 'Decrypted successfully. Click the eye to reveal the result.');
+          status('ok', 'Decrypted successfully. Click the eye to reveal the result.', true);
+          highlightResultActions();
         }
       }
       if (plain) plain.fill(0); // best-effort erase after handoff
@@ -860,7 +920,7 @@
     } finally {
       // The key file is key material: same best-effort erase as the plaintext.
       if (kfBytes) kfBytes.fill(0);
-      btn.disabled = false;
+      busy = false;
       $('go-icon').innerHTML = mode === 'encrypt' ? ICON_LOCK : ICON_UNLOCK;
       $('p').value = ''; refreshPasswordButtons(); // never leave the password in the field
     }

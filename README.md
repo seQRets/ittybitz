@@ -74,7 +74,7 @@ The security of your data is the highest priority. Here is a summary of the secu
 - **Strong encryption standard:** IttyBitz uses **AES-256-GCM**, a modern authenticated encryption cipher that provides both confidentiality and data integrity.
 - **Memory-hard key derivation:** your password is not used directly as the encryption key. Since 3.1.0 it is run through **Argon2id** (RFC 9106, winner of the Password Hashing Competition) with **64 MiB of memory and 3 passes**, so every guess an attacker makes costs 64 MiB of memory as well as time, which blunts the GPU and custom-hardware attacks that make simpler functions cheap to brute-force. A key file, if used, enters Argon2id as a secret input (its SHA-256). Files made before 3.1.0 used **PBKDF2** with **1,000,000 iterations**, and still decrypt exactly as before. Argon2id runs as a small WebAssembly module built from readable source in this repository; it needs a browser from 2022 or later (Chrome 97, Firefox 102, Safari 16).
 - **Cryptographically secure randomness:** the application uses `window.crypto.getRandomValues()` to generate the salt for key derivation, the Initialization Vector (IV) for AES-GCM, the random characters for the password generator, and the data for the key file generator. This is a cryptographically secure pseudo-random number generator (CSPRNG) that is suitable for security-sensitive applications.
-- **Enforced password strength:** IttyBitz refuses to encrypt unless the password is at least 24 characters long and mixes uppercase, lowercase, numbers and symbols. The password field turns green as soon as it qualifies. Because the password is cleared from the page the moment you encrypt, you must first tick **I have saved this password somewhere safe**; the box unticks itself whenever the password changes.
+- **Enforced password strength:** IttyBitz refuses to encrypt unless the password is at least 24 characters long and mixes uppercase, lowercase, numbers and symbols. The password field turns green as soon as it qualifies. Because the password is cleared from the page the moment you encrypt, you must first tick **I have saved this password somewhere safe** (the Encrypt button stays greyed out until you do); the box unticks itself whenever the password changes.
 - **Best-effort memory clearing:** once a result has been handed over, the application overwrites the decrypted data, the key file's bytes and the 64 MiB of Argon2id working memory. The derived encryption key is created as non-extractable, so the browser never exposes it to the page at all. Note: JavaScript's garbage collector may retain copies of data elsewhere in the heap, so this is a best-effort mitigation rather than a guarantee.
 - **No user tracking:** the application does not use cookies, analytics, or trackers. Your activity is your own.
 
@@ -99,7 +99,7 @@ An in-repo audit of v2.8.1, the last version before the v3.0.0 single-file rewri
 
 ## 🪶 Recovery tool — decrypt without IttyBitz
 
-**[⬇️ Download it](https://github.com/seQRets/ittybitz/releases/download/v3.1.5/ittybitz-recovery.html)** (44 KB, one file) · [open it in your browser](https://ittybitz.app/ittybitz-recovery.html) · [how to save and use it](Recover/)
+**[⬇️ Download it](https://github.com/seQRets/ittybitz/releases/download/v3.1.6/ittybitz-recovery.html)** (44 KB, one file) · [open it in your browser](https://ittybitz.app/ittybitz-recovery.html) · [how to save and use it](Recover/)
 
 A standalone page that decrypts your IttyBitz files with **no dependencies, no network, no installation and no build step**. Save it alongside your encrypted data — on the same USB stick, the same backup drive, the same safe.
 
@@ -175,7 +175,7 @@ You never need to do this to *use* IttyBitz. It is for anyone who wants to check
 
 **Step 1 — Install Node.js.** Go to [nodejs.org](https://nodejs.org), download the version marked **LTS**, and install it like any other program. That is the only thing you need to install.
 
-**Step 2 — Download the source code.** Open the [latest release](https://github.com/seQRets/ittybitz/releases/latest), scroll down to **Assets**, and click **Source code (zip)**. Double-click the downloaded file to unzip it. You now have a folder with a name like `ittybitz-3.1.5`.
+**Step 2 — Download the source code.** Open the [latest release](https://github.com/seQRets/ittybitz/releases/latest), scroll down to **Assets**, and click **Source code (zip)**. Double-click the downloaded file to unzip it. You now have a folder with a name like `ittybitz-3.1.6`.
 
 **Step 3 — Open a terminal in that folder.**
 - **Mac:** open **Terminal** (in Applications → Utilities). Type `cd` and a space, drag the folder onto the Terminal window, and press Return.

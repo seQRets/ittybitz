@@ -19,7 +19,7 @@
      the browser's download mechanism as a blob: URL, which never touches
      the network. -->
 <meta http-equiv="Content-Security-Policy"
-      content="default-src 'none'; script-src 'wasm-unsafe-eval' 'sha256-wfGbzEkL8W9ulC9Qqr9WMZOqlGGIX0xIm+QIlvPIwWc=' 'sha256-xKENdgu07hYbXZHNW6fLS4EzJC9zD3lg9Uguz3+OPgg=' 'sha256-unk2VAhQyz3JhnIC4ebg8PbIFW2I0uFm5p2bW+1urNA='; style-src 'unsafe-inline'; connect-src 'none'; img-src data:; form-action 'none'; base-uri 'none'">
+      content="default-src 'none'; script-src 'wasm-unsafe-eval' 'sha256-wfGbzEkL8W9ulC9Qqr9WMZOqlGGIX0xIm+QIlvPIwWc=' 'sha256-xKENdgu07hYbXZHNW6fLS4EzJC9zD3lg9Uguz3+OPgg=' 'sha256-wbmyiFrTfj3K9VLgHyKM43KkiC2BN1gFBVQ9WibQrzc='; style-src 'unsafe-inline'; connect-src 'none'; img-src data:; form-action 'none'; base-uri 'none'">
 <!--
   ═══════════════════════════════════════════════════════════════════════
   IttyBitz Recovery Tool — standalone offline decryption
@@ -64,6 +64,8 @@
     --accent: #f59e0b;
     --success: rgb(44, 221, 150);
     --destructive: rgb(220, 40, 40);
+    --motion: 175ms; /* every transition and appear animation, as in the app */
+    --pane-h: 10.5rem; /* the File and Text panes, so switching keeps the height */
   }
   * { box-sizing: border-box; }
   html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
@@ -114,7 +116,7 @@
   .pills button {
     flex: 1; cursor: pointer; border: 0; background: none; border-radius: 8px;
     padding: .5rem .75rem; text-align: center; font: inherit; font-size: 13px; font-weight: 500;
-    color: var(--muted-foreground); transition: all .15s;
+    color: var(--muted-foreground); transition: all var(--motion);
   }
   .pills button[aria-selected="true"] {
     background: hsla(0,0%,100%,0.10); color: var(--foreground);
@@ -128,7 +130,7 @@
     flex-direction: column; align-items: center; justify-content: center;
     border-radius: 12px; border: 1px dashed hsla(0,0%,100%,0.15);
     background: hsla(0,0%,100%,0.02);
-    padding: 2.5rem 1.5rem; text-align: center; transition: all .2s;
+    padding: 2.5rem 1.5rem; text-align: center; transition: all var(--motion);
   }
   .drop:hover { border-color: rgba(245,158,11,.5); background: rgba(245,158,11,.03); }
   .drop.dragging { border-color: rgba(245,158,11,.6); background: rgba(245,158,11,.05); }
@@ -145,6 +147,14 @@
   }
   .drop p.picked { color: var(--accent); font-weight: 500; }
   .clear { text-align: right; margin-top: .5rem; }
+  /* File and Text panes are the same height, so switching between them
+     never moves the rest of the form; the drop zone's Clear link sits inside
+     its bottom-right corner for the same reason. */
+  #pane-file .drop { height: var(--pane-h); padding-top: 1.5rem; padding-bottom: 1.5rem; }
+  #pane-text { display: flex; flex-direction: column; height: var(--pane-h); }
+  .dropwrap { position: relative; }
+  .dropwrap .clear { position: absolute; right: .75rem; bottom: .55rem; margin: 0; }
+  #pane-text textarea { flex: 1; min-height: 0; resize: none; }
   .clear button { background: none; border: 0; color: var(--destructive); font: inherit; font-size: 12px; cursor: pointer; padding: 0; }
   .hidden-input { display: none; }
 
@@ -165,7 +175,7 @@
     margin-top: .5rem; width: 100%; border: 0; border-radius: 12px; cursor: pointer;
     background: linear-gradient(to bottom right, #fbbf24, #f97316 50%, #ef4444);
     color: #000; font: inherit; font-size: 15px; font-weight: 600; padding: .875rem;
-    transition: filter .15s;
+    transition: filter var(--motion), opacity var(--motion);
     display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
   }
   .go:hover:not(:disabled) { filter: brightness(1.06); }
@@ -181,7 +191,9 @@
   }
   .out.ok  { display: block; background: rgba(44,221,150,.06); border: 1px solid rgba(44,221,150,.35); color: var(--success); }
   .out.err { display: block; background: rgba(220,40,40,.07); border: 1px solid rgba(220,40,40,.4); color: #fca5a5; }
-  .out.blur { filter: blur(4px); cursor: pointer; transition: filter .15s; }
+  /* Instant on purpose, unlike everything else: a fading blur would show the
+     decrypted text for a moment before it is hidden. */
+  .out.blur { filter: blur(4px); cursor: pointer; }
   .hint { font-size: 12px; color: #838391; margin-top: .625rem; }
   .note { font-size: 13px; color: var(--muted-foreground); text-align: center; margin-top: 2rem; line-height: 1.7; }
   .note code { color: var(--foreground); font-size: 12px; }
@@ -189,6 +201,10 @@
   .note a:hover { text-decoration: underline; }
   /* Printing or "Save as PDF" writes the screen to a file: blank anything that can hold a secret. */
   @media print { #t, #out, #p { visibility: hidden !important; } }
+  /* Whatever appears (a pane, the result, a message) eases in over --motion;
+     the animation replays each time an element goes from hidden to shown. */
+  @keyframes ib-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  #pane-file, #pane-text, .out.ok, .out.err, .clear { animation: ib-in var(--motion) ease-out; }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
   }
@@ -229,17 +245,19 @@
     </div>
 
     <div class="row" id="pane-file">
-      <div class="drop" id="drop-main" role="button" tabindex="0">
-        <div class="tile">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/>
-            <path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/>
-          </svg>
+      <div class="dropwrap">
+        <div class="drop" id="drop-main" role="button" tabindex="0">
+          <div class="tile">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/>
+              <path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/>
+            </svg>
+          </div>
+          <h3>Drop your encrypted file here</h3>
+          <p id="main-desc">or click to browse &#183; .ibitz</p>
         </div>
-        <h3>Drop your encrypted file here</h3>
-        <p id="main-desc">or click to browse &#183; .ibitz</p>
+        <div class="clear" id="main-clear" style="display:none"><button type="button">Clear</button></div>
       </div>
-      <div class="clear" id="main-clear" style="display:none"><button type="button">Clear</button></div>
       <input class="hidden-input" type="file" id="f">
     </div>
 
@@ -255,17 +273,19 @@
 
     <div class="row">
       <label>Key file <span style="color:#838391">(only if one was used)</span></label>
-      <div class="drop" id="drop-key" role="button" tabindex="0" style="padding:1.75rem 1.5rem">
-        <div class="tile" style="height:2.5rem;width:2.5rem">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/>
-            <circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/>
-          </svg>
+      <div class="dropwrap">
+        <div class="drop" id="drop-key" role="button" tabindex="0" style="padding:1.75rem 1.5rem">
+          <div class="tile" style="height:2.5rem;width:2.5rem">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/>
+              <circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/>
+            </svg>
+          </div>
+          <h3 style="font-size:14px">Drop your key file here</h3>
+          <p id="key-desc">or click to browse</p>
         </div>
-        <h3 style="font-size:14px">Drop your key file here</h3>
-        <p id="key-desc">or click to browse</p>
+        <div class="clear" id="key-clear" style="display:none"><button type="button">Clear</button></div>
       </div>
-      <div class="clear" id="key-clear" style="display:none"><button type="button">Clear</button></div>
       <input class="hidden-input" type="file" id="k">
     </div>
 
@@ -294,7 +314,7 @@
     <!-- Tracks the IttyBitz release, so this page and the app always show the
          same number. Every release re-stamps this file; SHA256SUMS.txt for
          the release named here is the checksum to verify a copy against. -->
-    <span id="recovery-version">IttyBitz Recovery v3.1.5</span>
+    <span id="recovery-version">IttyBitz Recovery v3.1.6</span>
   </p>
 </div>
 <script id="ittybitz-argon2">
@@ -738,7 +758,15 @@ async function ittybitzDecrypt(bytes, password, keyFileBytes) {
     return resetZone;
   }
 
-  wireDrop('drop-main', 'f', 'main-desc', 'main-clear', function (f) { mainFile = f; });
+  // A finished result sits under the Decrypt button, where it would read as
+  // the result of whatever is entered next: it goes as soon as new input
+  // starts (a file chosen, encrypted text or a password typed), as in the app.
+  var jobDone = false;
+  function startNextJob() { if (jobDone) { jobDone = false; reset(); } }
+  $('t').addEventListener('input', function () { if (this.value) startNextJob(); });
+  $('p').addEventListener('input', function () { if (this.value) startNextJob(); });
+
+  wireDrop('drop-main', 'f', 'main-desc', 'main-clear', function (f) { mainFile = f; if (f) startNextJob(); });
   var clearKeyZone = wireDrop('drop-key', 'k', 'key-desc', 'key-clear', function (f) { keyFile = f; });
 
   // Swallow drops on the rest of the window so a near-miss does not make the
@@ -782,6 +810,7 @@ async function ittybitzDecrypt(bytes, password, keyFileBytes) {
     btn.disabled = true;
     $('go-icon').innerHTML = ICON_SPIN;
     reset();
+    jobDone = false;
 
     try {
       var input = null, outName = 'decrypted';
@@ -853,6 +882,7 @@ async function ittybitzDecrypt(bytes, password, keyFileBytes) {
       // Best-effort erase now that the plaintext has been handed off (the
       // Blob and TextDecoder both copy). Same posture as the main app.
       plain.fill(0);
+      jobDone = true;
     } catch (err) {
       show('err', err && err.message ? err.message : String(err));
     } finally {

@@ -56,6 +56,8 @@
     --success: rgb(44, 221, 150);
     --destructive: rgb(220, 40, 40);
     --border: hsla(0,0%,100%,0.10);
+    --motion: 175ms; /* every transition and appear animation */
+    --pane-h: 10.5rem; /* the File and Text panes, so switching keeps the height */
   }
   * { box-sizing: border-box; }
   html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
@@ -83,7 +85,7 @@
   }
   .modetabs button {
     flex: 1; border: 0; background: none; cursor: pointer; font: inherit; font-size: 15px; font-weight: 600;
-    color: var(--muted-foreground); padding: .7rem 1rem; border-radius: 10px; transition: all .15s;
+    color: var(--muted-foreground); padding: .7rem 1rem; border-radius: 10px; transition: all var(--motion);
     display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
   }
   .modetabs button svg { width: 16px; height: 16px; }
@@ -106,7 +108,7 @@
     display: inline-flex; align-items: center; gap: .45rem; margin-top: 1.25rem;
     padding: .55rem 1.05rem; border-radius: 999px; text-decoration: none;
     font-size: 14px; font-weight: 600; color: var(--accent);
-    background: rgba(245,158,11,.10); border: 1px solid rgba(245,158,11,.45); transition: background .15s;
+    background: rgba(245,158,11,.10); border: 1px solid rgba(245,158,11,.45); transition: background var(--motion);
   }
   .hero-dl:hover { background: rgba(245,158,11,.18); }
   .hero-dl svg { width: 16px; height: 16px; }
@@ -128,7 +130,7 @@
   .pills button {
     flex: 1; cursor: pointer; border: 0; background: none; border-radius: 8px;
     padding: .5rem .75rem; text-align: center; font: inherit; font-size: 13px; font-weight: 500;
-    color: var(--muted-foreground); transition: all .15s;
+    color: var(--muted-foreground); transition: all var(--motion);
   }
   .pills button[aria-selected="true"] { background: hsla(0,0%,100%,0.10); color: var(--foreground); box-shadow: 0 1px 2px rgba(0,0,0,.15); }
   .pills button:hover { color: var(--foreground); }
@@ -139,7 +141,7 @@
     flex-direction: column; align-items: center; justify-content: center;
     border-radius: 12px; border: 1px dashed hsla(0,0%,100%,0.15);
     background: hsla(0,0%,100%,0.02);
-    padding: 2.5rem 1.5rem; text-align: center; transition: all .2s;
+    padding: 2.5rem 1.5rem; text-align: center; transition: all var(--motion);
   }
   .drop:hover { border-color: rgba(245,158,11,.5); background: rgba(245,158,11,.03); }
   .drop.dragging { border-color: rgba(245,158,11,.6); background: rgba(245,158,11,.05); }
@@ -149,6 +151,15 @@
   .drop p { margin: .25rem 0 0; font-size: 13px; color: var(--muted-foreground); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
   .drop p.picked { color: var(--accent); font-weight: 500; }
   .clear { text-align: right; margin-top: .5rem; }
+  /* File and Text panes are the same height, so switching between them
+     never moves the rest of the form; the drop zone's Clear link sits inside
+     its bottom-right corner for the same reason. */
+  #pane-file .drop { height: var(--pane-h); padding-top: 1.5rem; padding-bottom: 1.5rem; }
+  #pane-text { display: flex; flex-direction: column; height: var(--pane-h); }
+  .dropwrap { position: relative; }
+  .dropwrap .clear { position: absolute; right: .75rem; bottom: .55rem; margin: 0; }
+  #pane-text .field { flex: 1; min-height: 0; }
+  #pane-text textarea { height: 100%; min-height: 0; resize: none; }
   .clear button { background: none; border: 0; color: var(--destructive); font: inherit; font-size: 12px; cursor: pointer; padding: 0; }
   .hidden-input { display: none; }
 
@@ -158,7 +169,7 @@
   textarea, input[type=password], input[type=text] {
     width: 100%; padding: .7rem .75rem; border-radius: 12px; font: inherit;
     background: hsla(0,0%,100%,0.04); border: 1px solid var(--border); color: var(--foreground);
-    transition: border-color .15s;
+    transition: border-color var(--motion);
   }
   textarea { min-height: 116px; resize: vertical; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
   /* The secret-text field holds a human passphrase/seed, so it reads better in
@@ -175,10 +186,11 @@
   .toggle-btn {
     position: absolute; right: .5rem; top: 50%; transform: translateY(-50%);
     border: 1px solid var(--border); background: hsla(0,0%,100%,0.05); color: var(--muted-foreground);
-    border-radius: 8px; padding: .2rem .55rem; font: inherit; font-size: 12px; font-weight: 500; cursor: pointer; transition: all .15s;
+    border-radius: 8px; padding: .2rem .55rem; font: inherit; font-size: 12px; font-weight: 500; cursor: pointer; transition: all var(--motion);
   }
   .toggle-btn:hover { background: hsla(0,0%,100%,0.10); color: var(--foreground); }
   .toggle-btn.icon { top: .5rem; transform: none; padding: .3rem; }
+  .toggle-btn.copied, .btn.copied { color: var(--success); }
   textarea.blurred { filter: blur(5px); }
 
   /* Small helper buttons row */
@@ -186,7 +198,7 @@
   .btn {
     flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: .35rem;
     border: 1px solid var(--border); background: hsla(0,0%,100%,0.04); color: var(--muted-foreground);
-    border-radius: 8px; padding: .45rem .5rem; font: inherit; font-size: 13px; font-weight: 500; cursor: pointer; transition: all .15s;
+    border-radius: 8px; padding: .45rem .5rem; font: inherit; font-size: 13px; font-weight: 500; cursor: pointer; transition: all var(--motion);
   }
   .btn:hover:not(:disabled) { background: hsla(0,0%,100%,0.08); color: var(--foreground); }
   .btn:disabled { opacity: .4; cursor: not-allowed; }
@@ -194,9 +206,14 @@
 
   /* Key file toggle */
   .switchrow { display: flex; align-items: center; gap: .75rem; margin-bottom: 1.25rem; }
-  .switch { position: relative; width: 40px; height: 22px; border-radius: 999px; border: 0; background: hsla(0,0%,100%,0.15); cursor: pointer; transition: background .15s; flex: none; padding: 0; }
+  .optrow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem 1.5rem; margin-bottom: 1.25rem; }
+  .optrow .ack, .optrow .switchrow { margin: 0; }
+  .optrow .switchrow { margin-left: auto; }
+  .optrow label { margin-bottom: 0; }
+  @media (max-width: 640px) { .optrow .switchrow { margin-left: 0; } }
+  .switch { position: relative; width: 40px; height: 22px; border-radius: 999px; border: 0; background: hsla(0,0%,100%,0.15); cursor: pointer; transition: background var(--motion); flex: none; padding: 0; }
   .switch[aria-checked="true"] { background: var(--success); }
-  .switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: transform .15s; }
+  .switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: transform var(--motion); }
   .switch[aria-checked="true"]::after { transform: translateX(18px); }
   .switchrow label { margin: 0; color: var(--foreground); font-size: 14px; cursor: pointer; }
   .switchrow .muted { color: var(--muted-foreground); }
@@ -210,7 +227,7 @@
     margin-top: .5rem; width: 100%; border: 0; border-radius: 12px; cursor: pointer;
     background: linear-gradient(to bottom right, #fbbf24, #f97316 50%, #ef4444);
     color: #000; font: inherit; font-size: 15px; font-weight: 600; padding: .875rem;
-    transition: filter .15s;
+    transition: filter var(--motion), opacity var(--motion);
     display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
   }
   .go:hover:not(:disabled) { filter: brightness(1.06); }
@@ -221,20 +238,38 @@
   /* Result + status */
   .result { margin-top: 1.25rem; }
   .result .field textarea { padding-right: 6rem; }
-  .ack { display: flex; gap: .5rem; align-items: flex-start; margin: 1rem 0 0; color: var(--foreground); font-weight: 400; cursor: pointer; }
-  .ack input { accent-color: var(--accent); margin: .15rem 0 0; flex: none; }
+  .ack { display: flex; gap: .5rem; align-items: center; margin: 0 0 1.25rem; color: var(--foreground); font-weight: 400; cursor: pointer; }
+  .ack input { accent-color: var(--accent); margin: 0; flex: none; }
+  .ack { transition: opacity var(--motion); }
+  .ack.spent { opacity: .35; cursor: default; }
   .status { margin-top: 1rem; padding: .75rem .875rem; border-radius: 10px; font-size: 13px; display: none; white-space: pre-wrap; word-break: break-word; }
   .status.show { display: block; }
   .status.ok { background: rgba(44,221,150,.06); border: 1px solid rgba(44,221,150,.35); color: var(--success); }
   .status.err { background: rgba(220,40,40,.07); border: 1px solid rgba(220,40,40,.4); color: #fca5a5; }
+  /* Announced to screen readers, invisible on screen. */
+  .status.quiet { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .out-actions { position: absolute; right: .35rem; top: .35rem; display: flex; flex-direction: row; gap: .15rem; }
   /* The result-box buttons are flex items stacked in .out-actions, so they must
      NOT inherit .toggle-btn's absolute positioning (which piled them all in one
      spot, hiding the reveal eye behind the QR button). */
   .out-actions .toggle-btn { position: static; top: auto; right: auto; transform: none; }
+  /* A fresh result: a thin green outline pulses twice around the buttons,
+     then they return to their normal look. No glow. */
+  #result .out-actions.attn .toggle-btn { outline: 2px solid transparent; animation: attn-pulse .9s ease-in-out 2; }
+  @keyframes attn-pulse {
+    0%, 100% { border-color: var(--border); outline-color: rgba(44,221,150,0); outline-offset: 0; }
+    50% { border-color: rgba(44,221,150,.65); outline-color: rgba(44,221,150,.7); outline-offset: 3px; }
+  }
 
   /* Master-fingerprint line, shown when a valid BIP-39 seed is detected. */
   .fp { display: none; align-items: center; flex-wrap: wrap; gap: .4rem .5rem; margin-top: .6rem; font-size: 13px; }
+  /* A field label with room on its right for the seed fingerprint: a fixed
+     height, so the fingerprint appearing changes nothing around it. */
+  .labelrow { display: flex; align-items: center; justify-content: space-between; gap: .5rem; height: 1.25rem; margin-bottom: .5rem; }
+  .labelrow label { margin: 0; }
+  .labelrow .fp { margin: 0; flex-wrap: nowrap; gap: .4rem; font-size: 12px; white-space: nowrap; }
+  .labelrow .fp code { font-size: 12px; line-height: 1.3; padding: 0 .35rem; }
+  @media (max-width: 480px) { .fp-long { display: none; } }
   .fp.show { display: flex; }
   .fp .fp-label { color: var(--success); }
   .fp code, #qr-fp code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 600; font-size: 13px; letter-spacing: .06em; color: var(--success); background: rgba(44,221,150,.10); border: 1px solid rgba(44,221,150,.30); border-radius: 6px; padding: .1rem .45rem; }
@@ -245,14 +280,12 @@
   /* Feature cards */
   .features { margin-top: 2rem; display: grid; gap: .75rem; }
   @media (min-width: 640px) { .features { grid-template-columns: repeat(3, 1fr); } }
-  .feat { border: 1px solid hsla(0,0%,100%,0.06); background: hsla(0,0%,100%,0.02); border-radius: 16px; padding: 1.25rem; }
-  .feat .fi { margin-bottom: .625rem; display: grid; place-items: center; height: 2rem; width: 2rem; border-radius: 8px; background: rgba(245,158,11,0.10); color: var(--accent); }
+  .feat { display: flex; align-items: center; gap: .625rem; border: 1px solid hsla(0,0%,100%,0.06); background: hsla(0,0%,100%,0.02); border-radius: 14px; padding: .875rem 1rem; }
+  .feat .fi { flex: none; display: grid; place-items: center; height: 2rem; width: 2rem; border-radius: 8px; background: rgba(245,158,11,0.10); color: var(--accent); }
   .feat .fi svg { width: 16px; height: 16px; }
   .feat b { font-size: 14px; font-weight: 600; }
-  .feat p { margin: .25rem 0 0; font-size: 12px; line-height: 1.5; color: var(--muted-foreground); }
-  .feat .new { display: inline-block; margin: 0 .35rem 0 0; padding: 0 .4rem; border-radius: 999px; font-size: 10.5px; font-weight: 600; letter-spacing: .02em; color: var(--success); background: rgba(44,221,150,.10); border: 1px solid rgba(44,221,150,.30); vertical-align: 1px; }
-  .feat a { display: inline-block; margin-top: .5rem; font-size: 12px; font-weight: 600; color: var(--accent); text-decoration: none; }
-  .feat a:hover { text-decoration: underline; }
+  /* Three across: icon above the headline, centred, so no headline wraps. */
+  @media (min-width: 640px) { .feat { flex-direction: column; justify-content: center; text-align: center; gap: .5rem; padding: 1rem .75rem; } }
 
   /* Footer */
   footer { max-width: 680px; margin: 2rem auto 0; padding-top: 1.25rem; border-top: 1px solid hsla(0,0%,100%,0.06); display: flex; flex-wrap: wrap; gap: .75rem 1.25rem; align-items: center; justify-content: space-between; font-size: 12px; color: var(--muted-foreground); }
@@ -344,6 +377,15 @@
   #card[data-tier="1"]        { --qr: 7cm; --pre: 9pt;   --pre-lh: 1.35; --steps: 14pt; --gap: 6mm; }
   #card[data-tier="2"]        { --qr: 7cm; --pre: 7.5pt; --pre-lh: 1.3;  --steps: 13pt; --gap: 5mm; }
   #card[data-tier="3"]        { --qr: 7cm; --pre: 6.5pt; --pre-lh: 1.2;  --steps: 12pt; --gap: 4mm; }
+  /* Anything that appears (a pane, a result, a message, a banner, the QR
+     window) eases in over --motion instead of popping. A CSS animation
+     replays each time an element goes from display:none to shown, so this
+     covers every toggle without any script. The secret field's blur is left
+     instant on purpose: typed text must never show, even for a moment. */
+  @keyframes ib-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  @keyframes ib-fade { from { opacity: 0; } to { opacity: 1; } }
+  #pane-file, #pane-text, #kf-pane, #result, .status.show, .fp.show, .clear, .banner.show, .modal { animation: ib-in var(--motion) ease-out; }
+  .overlay.show { animation: ib-fade var(--motion) ease-out; }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
   }
@@ -419,33 +461,39 @@
 
     <!-- File input -->
     <div class="row" id="pane-file" role="tabpanel" aria-labelledby="pill-file">
-      <div class="drop" id="drop-main" role="button" tabindex="0">
-        <div class="tile">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/>
-            <path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/>
-          </svg>
+      <div class="dropwrap">
+        <div class="drop" id="drop-main" role="button" tabindex="0">
+          <div class="tile">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/>
+              <path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/>
+            </svg>
+          </div>
+          <h3>Drop a file here</h3>
+          <p id="main-desc">or click to browse &#183; several at once &#183; 100 MB each</p>
         </div>
-        <h3>Drop a file here</h3>
-        <p id="main-desc">or click to browse &#183; several at once &#183; 100 MB each</p>
+        <div class="clear" id="main-clear" style="display:none"><button type="button">Clear</button></div>
       </div>
-      <div class="clear" id="main-clear" style="display:none"><button type="button">Clear</button></div>
       <input class="hidden-input" type="file" id="f" multiple>
     </div>
 
     <!-- Text input -->
     <div class="row" id="pane-text" role="tabpanel" aria-labelledby="pill-text" style="display:none">
-      <label for="t" id="text-label">Secret text</label>
+      <!-- The seed-phrase fingerprint shares the label's line, so showing it
+           never moves anything below. -->
+      <div class="labelrow">
+        <label for="t" id="text-label">Secret text</label>
+        <div class="fp" id="enc-fp">
+        <span class="fp-label">✓ Valid seed phrase<span class="fp-long"> · master fingerprint</span></span>
+        <code id="enc-fp-code">—</code>
+      </div>
+      </div>
       <div class="field">
         <textarea id="t" placeholder="Enter text to encrypt&#8230;" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off"></textarea>
         <div class="out-actions" id="t-actions">
           <button type="button" class="toggle-btn icon" id="t-toggle" aria-label="Hide secret text" title="Hide secret text"></button>
           <button type="button" class="toggle-btn icon" id="t-copy" title="Copy"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></button>
         </div>
-      </div>
-      <div class="fp" id="enc-fp">
-        <span class="fp-label">✓ Valid seed phrase · master fingerprint</span>
-        <code id="enc-fp-code">—</code>
       </div>
     </div>
 
@@ -463,30 +511,49 @@
       </div>
     </div>
 
-    <!-- Key file -->
-    <div class="switchrow">
-      <button class="switch" id="kf-switch" role="switch" aria-checked="false" aria-label="Use key file"></button>
-      <label id="kf-label">Use key file <span class="muted">(optional)</span></label>
+    <!-- One line under the password: the confirmation that it is saved on the
+         left (Encrypt stays disabled until it is ticked), the key-file switch
+         on the right. -->
+    <div class="optrow">
+      <label class="ack" id="pw-saved-row"><input type="checkbox" id="pw-saved"> I have saved this password somewhere safe.</label>
+      <div class="switchrow">
+        <button class="switch" id="kf-switch" role="switch" aria-checked="false" aria-label="Use key file"></button>
+        <label id="kf-label">Use key file <span class="muted">(optional)</span></label>
+      </div>
     </div>
     <div class="row" id="kf-pane" style="display:none">
-      <div class="drop" id="drop-key" role="button" tabindex="0" style="padding:1.75rem 1.5rem">
-        <div class="tile" style="height:2.5rem;width:2.5rem">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/>
-          </svg>
+      <div class="dropwrap">
+        <div class="drop" id="drop-key" role="button" tabindex="0" style="padding:1.75rem 1.5rem">
+          <div class="tile" style="height:2.5rem;width:2.5rem">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/>
+            </svg>
+          </div>
+          <h3 style="font-size:14px">Select key file</h3>
+          <p id="key-desc">drag &amp; drop or click to select an existing file</p>
         </div>
-        <h3 style="font-size:14px">Select key file</h3>
-        <p id="key-desc">drag &amp; drop or click to select an existing file</p>
+        <div class="clear" id="key-clear" style="display:none"><button type="button">Clear</button></div>
       </div>
-      <div class="clear" id="key-clear" style="display:none"><button type="button">Clear</button></div>
       <input class="hidden-input" type="file" id="k">
       <div class="divider"><hr><span>or</span><hr></div>
       <button class="btn wfull" id="k-gen" style="flex:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="m7 10 5 5 5-5"/><path d="M21 21H3"/></svg>Generate &amp; download new key file</button>
     </div>
 
+    <button class="go" id="go">
+      <span id="go-icon"></span><span id="go-label">Encrypt</span>
+    </button>
+
+    <div class="status" id="status" role="status" aria-live="polite"></div>
+
     <!-- Result -->
     <div class="result" id="result" style="display:none">
-      <label id="out-label">Result</label>
+      <div class="labelrow">
+        <label id="out-label">Result</label>
+        <div class="fp" id="dec-fp">
+        <span class="fp-label">✓ Valid seed phrase<span class="fp-long"> · master fingerprint</span></span>
+        <code id="dec-fp-code">—</code>
+      </div>
+      </div>
       <div class="field">
         <textarea id="out" readonly rows="5"></textarea>
         <div class="out-actions">
@@ -495,35 +562,24 @@
           <button type="button" class="toggle-btn icon" id="out-qr" style="display:none" title="Show QR"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/><path d="M3 12h.01"/><path d="M12 3h.01"/><path d="M12 16v.01"/><path d="M16 12h1"/><path d="M21 12v.01"/><path d="M12 21v-1"/></svg></button>
         </div>
       </div>
-      <div class="fp" id="dec-fp">
-        <span class="fp-label">✓ Valid seed phrase · master fingerprint</span>
-        <code id="dec-fp-code">—</code>
-      </div>
     </div>
 
-    <label class="ack" id="pw-saved-row"><input type="checkbox" id="pw-saved"> I have saved this password somewhere safe.</label>
-
-    <div class="status" id="status" role="status" aria-live="polite"></div>
-
-    <button class="go" id="go">
-      <span id="go-icon"></span><span id="go-label">Encrypt</span>
-    </button>
   </section>
 
+  <!-- What IttyBitz is, at a glance: an icon and a headline each. The
+       downloads live in the hero and the footer. -->
   <div class="features">
     <div class="feat">
       <div class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></svg></div>
-      <b>Argon2id + AES-256</b><p><span class="new">New in 3.1</span>Your password becomes a key through Argon2id, which needs 64 MB of memory for every guess, so large-scale password guessing costs far more. Your data is sealed with AES-256-GCM.</p>
+      <b>Argon2id + AES-256</b>
     </div>
     <div class="feat">
       <div class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg></div>
-      <b>100% Client-Side</b><p>Nothing leaves your browser. No servers, no uploads, no tracking. Download it once and it runs offline, too.</p>
-      <a href="https://github.com/seQRets/ittybitz/releases/latest/download/ittybitz.html" title="Download IttyBitz as one file">Download IttyBitz app</a>
+      <b>100% Client-Side</b>
     </div>
     <div class="feat">
       <div class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24"/><path d="m14.83 9.17 4.24-4.24"/><path d="m14.83 14.83 4.24 4.24"/><path d="m9.17 14.83-4.24 4.24"/><circle cx="12" cy="12" r="4"/></svg></div>
-      <b>Recoverable without us</b><p>A 44 KB decrypt-only file opens your data with no network and no need for this site. Save it next to your encrypted files.</p>
-      <a href="https://github.com/seQRets/ittybitz/releases/latest/download/ittybitz-recovery.html" title="Download the standalone recovery tool">Download the recovery tool</a>
+      <b>Recoverable without us</b>
     </div>
   </div>
 
@@ -545,7 +601,7 @@
            "Recoverable without us" card; this is the way to open the tool. -->
       <a class="accent" href="./ittybitz-recovery.html" title="Open the standalone recovery tool">Recovery tool</a>
       <a class="accent" href="https://github.com/seQRets/ittybitz" target="_blank" rel="noopener noreferrer">GitHub</a>
-      <span id="version">v3.1.5 🦕 Stegosaurus</span>
+      <span id="version">v3.1.6 🦕 Stegosaurus</span>
     </div>
   </footer>
 </div>
