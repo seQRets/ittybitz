@@ -540,6 +540,64 @@ async function main() {
         );
       }
 
+      // 7e-2. Compact SeedQR: the raw BIP-39 entropy, checksum dropped. A wrong
+      // byte here also scans cleanly into the WRONG wallet, so the payload is
+      // gated against the canonical BIP-39 test vectors (entropy <-> mnemonic,
+      // trezor/python-mnemonic vectors.json).
+      const appCompact = box.ittybitzToCompactSeedQR;
+      check(typeof appCompact === "function", "app exposes ittybitzToCompactSeedQR()");
+      const compactVectors: Array<[string, string]> = [
+        [A12, "00".repeat(16)],
+        ["legal winner thank year wave sausage worth useful legal winner thank yellow", "7f".repeat(16)],
+        ["letter advice cage absurd amount doctor acoustic avoid letter advice cage above", "80".repeat(16)],
+        ["zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo wrong", "ff".repeat(16)],
+        ["jelly better achieve collect unaware mountain thought cargo oxygen act hood bridge", "77c2b00716cec7213839159e404db50d"],
+        [A24, "00".repeat(32)],
+        ["legal winner thank year wave sausage worth useful legal winner thank year wave sausage worth useful legal winner thank year wave sausage worth title", "7f".repeat(32)],
+        ["zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo vote", "ff".repeat(32)],
+        ["beyond stage sleep clip because twist token leaf atom beauty genius food business side grid unable middle armed observe pair crouch tonight away coconut",
+         "15da872c95a13dd738fbf50e427583ad61f18fd99f628c417a61cf8343c90419"],
+      ];
+      if (typeof appCompact === "function") {
+        for (const [mnemonic, hex] of compactVectors) {
+          const r = await appValidate(mnemonic);
+          const got = r.valid ? Buffer.from(appCompact(r.words)).toString("hex") : "(invalid)";
+          check(got === hex, `app Compact SeedQR (${mnemonic.split(" ").length}-word, ${hex.slice(0, 8)}…) = BIP-39 entropy`);
+          if (got !== hex) { console.error(`        expected: ${hex}`); console.error(`        actual:   ${got}`); }
+        }
+        const r18 = await appValidate(V18);
+        await rejects("Compact SeedQR refuses an 18-word seed (spec covers 12 and 24)", async () => appCompact(r18.words));
+      }
+
+      // 7e-3. The vendored QR library in byte mode: the app hands it raw bytes
+      // by swapping qrcode.stringToBytes for one call. The result must be the
+      // identical symbol to encoding the same bytes as a Latin-1 string with
+      // the library's own byte path, and the expected size.
+      const appQrMatch = appHtml.match(/<script id="ittybitz-vendor-qrcode">([\s\S]*?)<\/script>/);
+      check(!!appQrMatch, "QR library block found in ittybitz.html");
+      if (appQrMatch && typeof appCompact === "function") {
+        runInContext(appQrMatch[1]!, box);
+        const qrcode = box.qrcode;
+        const matrix = (qr: any) => { const n = qr.getModuleCount(), rows: string[] = []; for (let y = 0; y < n; y++) { let row = ""; for (let x = 0; x < n; x++) row += qr.isDark(y, x) ? "1" : "0"; rows.push(row); } return rows.join("/"); };
+        for (const [mnemonic, size, stdSize] of [[compactVectors[4]![0], 21, 25], [compactVectors[8]![0], 25, 29]] as Array<[string, number, number]>) {
+          const words = (await appValidate(mnemonic)).words;
+          const bytes = Array.from(appCompact(words) as Uint8Array);
+          const keep = qrcode.stringToBytes;
+          const a = qrcode(0, "L");
+          qrcode.stringToBytes = () => bytes.slice();
+          try { a.addData("", "Byte"); } finally { qrcode.stringToBytes = keep; }
+          a.make();
+          const b = qrcode(0, "L");
+          qrcode.stringToBytes = qrcode.stringToBytesFuncs["default"];
+          try { b.addData(String.fromCharCode(...bytes), "Byte"); } finally { qrcode.stringToBytes = keep; }
+          b.make();
+          check(a.getModuleCount() === size && matrix(a) === matrix(b),
+            `${words.length}-word Compact SeedQR is a ${size}x${size} byte-mode QR of exactly the entropy`);
+          const std = qrcode(0, "L"); std.addData(appSeedQr(words), "Numeric"); std.make();
+          check(std.getModuleCount() === stdSize, `${words.length}-word Standard SeedQR is ${stdSize}x${stdSize}`);
+        }
+      }
+
       // 7f. BIP-32 master fingerprint (vendored from myseedphrase.app). A wrong
       // fingerprint would point the user at the wrong wallet, so it is gated
       // against the canonical test-vector seeds.

@@ -73,8 +73,10 @@
 
   /* Hero: logo, then the app name as the headline, then the tagline. */
   .hero { text-align: center; margin: 3rem 0 2.5rem; }
-  .brand { display: flex; justify-content: center; margin-bottom: 1.25rem; }
-  .brand svg { width: 72px; height: 72px; }
+  /* Logo beside the title, on one line, to keep the work area high on the page. */
+  .brand { display: flex; align-items: center; justify-content: center; gap: .75rem; }
+  .brand svg { flex: none; width: 40px; height: 40px; }
+  @media (min-width: 640px) { .brand svg { width: 48px; height: 48px; } }
   .tagline { margin: .75rem 0 0; font-size: 22px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.2; color: var(--foreground); }
   @media (min-width: 640px) { .tagline { font-size: 26px; } }
 
@@ -273,9 +275,7 @@
   .fp.show { display: flex; }
   .fp .fp-label { color: var(--success); }
   .fp code, #qr-fp code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 600; font-size: 13px; letter-spacing: .06em; color: var(--success); background: rgba(44,221,150,.10); border: 1px solid rgba(44,221,150,.30); border-radius: 6px; padding: .1rem .45rem; }
-  #qr-fp { display: none; margin: .15rem 0 .1rem; text-align: center; }
-  #qr-fp .qr-fp-label { color: var(--muted-foreground); font-size: 12px; }
-  #qr-fp code { font-size: 14px; }
+  #qr-fp code { font-size: 12.5px; padding: .05rem .4rem; }
 
   /* Feature cards */
   .features { margin-top: 2rem; display: grid; gap: .75rem; }
@@ -310,10 +310,15 @@
   .qr-blur canvas { filter: blur(9px); }
   .warn { width: 100%; text-align: center; font-size: 11.5px; line-height: 1.35; color: #facc15; background: rgba(120,90,10,.2); border-radius: 8px; padding: .4rem .65rem; }
   .caption { font-size: 12px; color: var(--muted-foreground); text-align: center; }
+  .qr-format { margin: 0 0 .75rem; }
   .modal-actions { display: flex; gap: .5rem; width: 100%; }
   .modal-actions .btn { flex: 1; }
-  .modal .closebtn { margin-top: .6rem; width: 100%; background: hsla(0,0%,100%,0.06); border: 1px solid var(--border); color: var(--foreground); border-radius: 10px; padding: .55rem; font: inherit; font-size: 14px; cursor: pointer; }
-  .modal .closebtn:hover { background: hsla(0,0%,100%,0.10); }
+  /* Title and a close box share the top row (the same box as the banners'). */
+  .modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: .75rem; margin: 0 0 .25rem; }
+  .modal-head h2 { margin: 0; line-height: 2rem; }
+  .modal-x { flex: none; display: grid; place-items: center; width: 2rem; height: 2rem; padding: 0; margin: 0 -.25rem 0 0; background: hsla(0,0%,100%,0.04); border: 1px solid hsla(0,0%,100%,0.18); border-radius: 8px; color: var(--muted-foreground); cursor: pointer; }
+  .modal-x:hover { color: var(--foreground); background: hsla(0,0%,100%,0.10); border-color: hsla(0,0%,100%,0.30); }
+  .modal-x:focus-visible { outline: 2px solid rgba(245,158,11,.6); outline-offset: 2px; }
   .donate-link { font-size: 13px; color: var(--accent); text-decoration: none; word-break: break-all; }
 
   /* Banners: the one-time migration nudge (installed app only), What's new,
@@ -425,7 +430,7 @@
 <div class="wrap">
   <div class="hero">
     <div class="brand">
-      <svg viewBox="0 0 512 512" width="72" height="72" aria-label="IttyBitz Logo" role="img" xmlns="http://www.w3.org/2000/svg">
+      <svg viewBox="0 0 512 512" width="48" height="48" aria-label="IttyBitz Logo" role="img" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <linearGradient id="ibHdrGrad" x1="0" y1="0" x2="1" y2="1">
             <stop offset="0%" stop-color="#fbbf24" /><stop offset="20%" stop-color="#f59e0b" /><stop offset="100%" stop-color="#ef4444" />
@@ -438,8 +443,8 @@
         </defs>
         <rect width="512" height="512" rx="48" fill="url(#ibHdrGrad)" mask="url(#ibHdrKey)" />
       </svg>
+      <h1>IttyBitz</h1>
     </div>
-    <h1>IttyBitz</h1>
     <p class="tagline">Encrypt everything. Trust nothing.</p>
     <p class="sub">Client-side encryption that never leaves your browser.
       <a href="https://github.com/seQRets/ittybitz" target="_blank" rel="noopener noreferrer">Open source</a>. No accounts. No servers.
@@ -597,11 +602,16 @@
            artifact, byte-identical to the page being served, and verifiable. The
            dismissible banners link here too; this is the permanent home. -->
       <a class="accent" href="https://github.com/seQRets/ittybitz/releases/latest/download/ittybitz.html" title="Download this app as one file — the exact published build, verifiable by checksum">Download IttyBitz app</a>
-      <!-- The live page. The download lives in the hero line and the
-           "Recoverable without us" card; this is the way to open the tool. -->
+      <!-- The live page, which has its own download link (as does the
+           What's new banner); this is the way to open the tool. -->
       <a class="accent" href="./ittybitz-recovery.html" title="Open the standalone recovery tool">Recovery tool</a>
       <a class="accent" href="https://github.com/seQRets/ittybitz" target="_blank" rel="noopener noreferrer">GitHub</a>
-      <span id="version">v3.1.6 🦕 Stegosaurus</span>
+      <!-- A file cannot carry its own SHA-256 (writing the hash in changes the
+           hash), and a hash a page shows about itself proves nothing: a
+           tampered copy would simply show the expected one. So the version
+           links to its release, where SHA256SUMS.txt lists the checksums to
+           compare a download against. -->
+      <a id="version" href="https://github.com/seQRets/ittybitz/releases/tag/v3.1.7" target="_blank" rel="noopener noreferrer" title="Release notes and SHA-256 checksums for this version">v3.1.7 🦕 Stegosaurus</a>
     </div>
   </footer>
 </div>
@@ -609,20 +619,24 @@
 <!-- QR overlay -->
 <div class="overlay" id="qr-overlay">
   <div class="modal">
-    <h2 id="qr-title">QR Code</h2>
+    <div class="modal-head"><h2 id="qr-title">QR Code</h2><button class="modal-x" id="qr-close" aria-label="Close" title="Close"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></div>
     <p class="desc" id="qr-desc"></p>
+    <!-- Seed phrases only (12 or 24 words): pick the SeedQR format. -->
+    <div class="pills qr-format" id="qr-format" role="tablist" aria-label="SeedQR format" style="display:none">
+      <button type="button" role="tab" id="qr-fmt-standard" aria-selected="true">Standard</button>
+      <button type="button" role="tab" id="qr-fmt-compact" aria-selected="false">Compact</button>
+    </div>
     <div class="center">
       <div class="qrbox qr-blur" id="qr-box"><canvas id="qr-canvas" width="256" height="256"></canvas></div>
-      <p id="qr-fp"><span class="qr-fp-label">Master fingerprint</span> <code id="qr-fp-code">—</code></p>
+      <!-- Seeds only: the master fingerprint, so the QR can be matched to a wallet. -->
+      <p class="caption" id="qr-fp" style="display:none">Master fingerprint <code id="qr-fp-code">—</code></p>
       <p class="warn" id="qr-warn"></p>
-      <p class="caption" id="qr-caption" style="display:none"></p>
       <div class="modal-actions">
         <button class="btn" id="qr-reveal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>Reveal</button>
         <button class="btn" id="qr-download" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="m7 10 5 5 5-5"/><path d="M21 21H3"/></svg>Download PNG</button>
         <button class="btn" id="qr-print" style="display:none" title="Print a one-page card: this QR, the encrypted text, and how to decrypt it — for a safe, a drawer or a notary. The password is not on it."><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6"/><rect x="4" y="9" width="16" height="8" rx="2"/><path d="M6 14h12v7H6z"/></svg>Print card</button>
       </div>
     </div>
-    <button class="closebtn" id="qr-close">Close</button>
   </div>
 </div>
 
@@ -648,12 +662,11 @@
 <!-- Donate overlay -->
 <div class="overlay" id="donate-overlay">
   <div class="modal">
-    <h2>Support IttyBitz</h2>
+    <div class="modal-head"><h2>Support IttyBitz</h2><button class="modal-x" id="donate-close" aria-label="Close" title="Close"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></div>
     <p class="desc">If you find this tool useful, please consider supporting its development. It keeps the project alive and ad-free.</p>
     <div class="center">
       <div class="qrbox"><canvas id="donate-canvas" width="160" height="160" style="width:160px;height:160px"></canvas></div>
       <a class="donate-link" href="https://coinos.io/seQRets/receive" target="_blank" rel="noopener noreferrer">https://coinos.io/seQRets/receive</a>
     </div>
-    <button class="closebtn" id="donate-close">Close</button>
   </div>
 </div>

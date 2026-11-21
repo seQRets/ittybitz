@@ -1,4 +1,4 @@
-/* ── BIP-39 core — validation + Standard SeedQR ───────────────────────────
+/* ── BIP-39 core — validation + Standard and Compact SeedQR ──────────────
    Assembled by scripts/build-app.mjs: the wordlist placeholder below is filled
    with the canonical list extracted verbatim from src/lib/bip39.ts, so it can
    never drift from the reviewed source of truth. DOM-free.
@@ -81,4 +81,32 @@ function ittybitzToSeedQR(words) {
     out += s;
   }
   return out;
+}
+
+/**
+ * Encode a validated 12- or 24-word mnemonic as a Compact SeedQR payload:
+ * the raw BIP-39 entropy (16 or 32 bytes), checksum bits dropped, to be put
+ * in a QR code in byte mode (SeedSigner's CompactSeedQR spec). The QR is
+ * smaller than a Standard SeedQR (21x21 / 25x25 instead of 25x25 / 29x29)
+ * but is binary, so it cannot be read by eye. Other lengths are refused:
+ * the spec, and the devices that read it, cover 12 and 24 words only.
+ */
+function ittybitzToCompactSeedQR(words) {
+  if (words.length !== 12 && words.length !== 24) {
+    throw new Error('toCompactSeedQR: only 12- and 24-word seeds have a Compact SeedQR');
+  }
+  var entropyBytes = words.length === 12 ? 16 : 32;
+  var packed = new Uint8Array(Math.ceil(words.length * 11 / 8));
+  var bitPos = 0;
+  for (var i = 0; i < words.length; i++) {
+    var idx = BIP39_INDEX[words[i]];
+    if (idx === undefined) throw new Error('toCompactSeedQR: word "' + words[i] + '" not in BIP-39 wordlist');
+    for (var b = 10; b >= 0; b--) {
+      if ((idx >> b) & 1) packed[bitPos >> 3] |= 0x80 >> (bitPos & 7);
+      bitPos++;
+    }
+  }
+  var entropy = packed.slice(0, entropyBytes);
+  packed.fill(0);
+  return entropy;
 }

@@ -30,7 +30,7 @@ Here’s what you can do with IttyBitz:
 - **Password & key file protection**: secure your data with a strong password, an optional key file, or both for an added layer of security. You can use any existing file or generate a new, cryptographically secure key file directly within the app.
 - **File & text support**: encrypt and decrypt both files and text snippets. Drop several files at once: each is encrypted (or decrypted) on its own, with its own salt and key derivation, and downloaded under its own name; a file that fails is named in the summary and does not stop the others. A key file shows a short fingerprint (the first 8 hex characters of its SHA-256) next to its name, and a generated key file carries the same fingerprint in its name (`ittybitz-key-[0e64cc39].bin`), so the right file can be recognised months later without revealing anything about it.
 - **QR code sharing**: easily share encrypted text snippets via a downloadable QR code — or **print a one-page emergency card**: the QR, the encrypted text in full, and three steps to decrypt it: open ittybitz.app (or the Recovery tool if the website is not available), enter the encrypted text by pasting, scanning or typing it, and enter the password. The card states whether a key file is needed and, if so, identifies it by fingerprint rather than by name. The password is never on the card, and the QR code and encrypted text reveal nothing about the secret without it. Only encrypted text can be printed this way; decrypted text and seed phrases never reach paper from this page.
-- **Hardware-wallet SeedQR export**: when decrypted text is a valid BIP-39 seed phrase, IttyBitz auto-detects it and can display a **Standard SeedQR** for direct import into hardware wallets (Coldcard, SeedSigner, Sparrow, Specter, Krux, Keystone, Jade). Any other decrypted text can be shown as a plain QR. Both are blurred until you deliberately reveal them.
+- **Hardware-wallet SeedQR export**: when decrypted text is a valid BIP-39 seed phrase, IttyBitz auto-detects it and can display a **Standard SeedQR** for direct import into hardware wallets (Coldcard, SeedSigner, Sparrow, Specter, Krux, Keystone, Jade). For 12- and 24-word seeds a switch offers a **Compact SeedQR** instead: the same seed as a smaller, binary code (21×21 instead of 25×25 for 12 words, 25×25 instead of 29×29 for 24), which fewer devices read; check that yours does. Any other decrypted text can be shown as a plain QR. All are blurred until you deliberately reveal them.
 - **One self-contained file**: the entire app is a single HTML file — no dependencies, no build, no service worker. Save it (or *File → Save Page As…* from [ittybitz.app](https://ittybitz.app)) and it runs offline, on an air-gapped machine, from a USB stick, in twenty years.
 - **Privacy-focused UI**: the secret text field is blurred from the first character you type or paste, to prevent shoulder-surfing; the eye button reveals it. Decrypted output is blurred until you choose to reveal it, and nothing secret appears on a printout.
 - **Clipboard auto-clear**: copied passwords and output are wiped from the clipboard after 60 seconds. The clipboard is never read: if you leave the page or copy something else in the meantime, it is left alone.
@@ -99,7 +99,7 @@ An in-repo audit of v2.8.1, the last version before the v3.0.0 single-file rewri
 
 ## 🪶 Recovery tool — decrypt without IttyBitz
 
-**[⬇️ Download it](https://github.com/seQRets/ittybitz/releases/download/v3.1.6/ittybitz-recovery.html)** (44 KB, one file) · [open it in your browser](https://ittybitz.app/ittybitz-recovery.html) · [how to save and use it](Recover/)
+**[⬇️ Download it](https://github.com/seQRets/ittybitz/releases/download/v3.1.7/ittybitz-recovery.html)** (44 KB, one file) · [open it in your browser](https://ittybitz.app/ittybitz-recovery.html) · [how to save and use it](Recover/)
 
 A standalone page that decrypts your IttyBitz files with **no dependencies, no network, no installation and no build step**. Save it alongside your encrypted data — on the same USB stick, the same backup drive, the same safe.
 
@@ -149,7 +149,7 @@ Once you have the file it works with the network disconnected — Web Crypto run
 
 ### 🔎 Verify your download
 
-Recommended for a security tool. Every [release](https://github.com/seQRets/ittybitz/releases/latest) ships a **`SHA256SUMS.txt`** alongside `ittybitz.html` and `ittybitz-recovery.html`. Put the file(s) you downloaded in the same folder as `SHA256SUMS.txt`, then:
+Recommended for a security tool. Every [release](https://github.com/seQRets/ittybitz/releases/latest) ships a **`SHA256SUMS.txt`** alongside `ittybitz.html` and `ittybitz-recovery.html`; the version number in the app's footer (and at the bottom of the Recovery tool) links to that version's release. The checksum is deliberately not shown inside the app: a file cannot contain its own hash, and a hash a page shows about itself would prove nothing, since a tampered copy would show the expected one. Compare against the release instead. Put the file(s) you downloaded in the same folder as `SHA256SUMS.txt`, then:
 
 **macOS / Linux**
 

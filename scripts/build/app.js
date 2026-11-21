@@ -275,10 +275,21 @@
   // Byte-mode capacity is measured in UTF-8 bytes, not JS string length.
   function fitsQR(text) { return new TextEncoder().encode(text).length <= QR_MAX_BYTES; }
 
+  // numeric: true for digits (Standard SeedQR), 'bytes' for a Uint8Array put
+  // in the QR as-is (Compact SeedQR), otherwise text (UTF-8).
   function drawQR(canvas, text, numeric, targetPx, margin) {
     margin = margin == null ? 4 : margin;
     var qr = qrcode(0, 'L');
-    if (numeric) qr.addData(text, 'Numeric'); else qr.addData(text);
+    if (numeric === 'bytes') {
+      // The library turns its input into bytes with qrcode.stringToBytes, at
+      // addData time. Hand it these exact bytes for this one call; no text
+      // encoding may touch them.
+      var raw = Array.prototype.slice.call(text), keep = qrcode.stringToBytes;
+      qrcode.stringToBytes = function () { return raw; };
+      try { qr.addData('', 'Byte'); } finally { qrcode.stringToBytes = keep; }
+      if (text.fill) text.fill(0); // the entropy is the seed: wipe the copy we were given
+    } else if (numeric) qr.addData(text, 'Numeric');
+    else qr.addData(text);
     qr.make();
     var count = qr.getModuleCount();
     var cell = Math.max(1, Math.floor(targetPx / (count + margin * 2)));
@@ -487,6 +498,7 @@
   }
   wireTablist(['tab-enc', 'tab-dec']);
   wireTablist(['pill-file', 'pill-text']);
+  wireTablist(['qr-fmt-standard', 'qr-fmt-compact']);
 
   // ---- Text secret blur (encrypt) + BIP-39 border ----
   function updateTextBlur() {
@@ -639,22 +651,49 @@
   // the result box and can be printed on the card without revealing. Only a
   // QR of a decrypted text or a seed needs the deliberate Reveal before it
   // can be saved.
+  // A seed's QR comes in two formats. Standard SeedQR (digits) is read by
+  // more devices and can be checked by eye; Compact SeedQR (raw entropy
+  // bytes) is a smaller code, for 12- and 24-word seeds only. Each time the
+  // QR window opens it starts on Standard.
+  function seedQrState(words, fp) {
+    var st = {
+      kind: 'seed', words: words, fp: fp, format: 'standard',
+      compactOk: words.length === 12 || words.length === 24,
+      getValue: function () { return st.format === 'compact' ? ittybitzToCompactSeedQR(words) : ittybitzToSeedQR(words); }
+    };
+    Object.defineProperty(st, 'numeric', { get: function () { return st.format === 'compact' ? 'bytes' : true; } });
+    return st;
+  }
+  function setSeedFormat(fmt) {
+    qrState.format = fmt;
+    $('qr-fmt-standard').setAttribute('aria-selected', String(fmt === 'standard'));
+    $('qr-fmt-compact').setAttribute('aria-selected', String(fmt === 'compact'));
+    $('qr-fmt-standard').setAttribute('tabindex', fmt === 'standard' ? '0' : '-1');
+    $('qr-fmt-compact').setAttribute('tabindex', fmt === 'compact' ? '0' : '-1');
+    $('qr-title').textContent = fmt === 'compact' ? 'Compact SeedQR' : 'Standard SeedQR';
+    $('qr-desc').textContent = fmt === 'compact'
+      ? 'A smaller code. Not every wallet reads it.'
+      : 'Your seed phrase, for hardware-wallet import.';
+    drawQR($('qr-canvas'), qrState.getValue(), qrState.numeric, 512, 4); // the blur state is kept
+  }
+  $('qr-fmt-standard').onclick = function () { if (qrState && qrState.kind === 'seed') setSeedFormat('standard'); };
+  $('qr-fmt-compact').onclick = function () { if (qrState && qrState.kind === 'seed' && qrState.compactOk) setSeedFormat('compact'); };
+
   function qrIsCiphertext() { return !!qrState && qrState.kind === 'plain' && mode === 'encrypt'; }
   function openQr() {
     qrRevealed = false;
     $('qr-box').classList.add('qr-blur');
+    if (qrState.kind === 'seed') qrState.format = 'standard';
+    $('qr-format').style.display = qrState.kind === 'seed' && qrState.compactOk ? '' : 'none';
     // Draw the QR right away but blurred, so it clearly reads as a QR — a blank
     // white box looks broken. The Reveal button below just removes the blur.
     drawQR($('qr-canvas'), qrState.getValue(), qrState.numeric, 512, 4);
     $('qr-download').disabled = !qrIsCiphertext();
     $('qr-reveal').lastChild.textContent = 'Reveal';
     if (qrState.kind === 'seed') {
-      $('qr-title').textContent = 'Standard SeedQR';
-      $('qr-desc').textContent = 'BIP-39 seed phrase, encoded for hardware-wallet import.';
-      $('qr-warn').textContent = 'Anyone who scans this QR can recover your seed. Show only on a trusted device and screen.';
-      $('qr-caption').style.display = '';
-      $('qr-caption').textContent = qrState.caption || '';
-      if (qrState.fp) { $('qr-fp-code').textContent = qrState.fp; $('qr-fp').style.display = 'block'; }
+      setSeedFormat('standard');
+      $('qr-warn').textContent = 'Anyone who scans this QR can recover your seed.';
+      if (qrState.fp) { $('qr-fp-code').textContent = qrState.fp; $('qr-fp').style.display = ''; }
       else { $('qr-fp').style.display = 'none'; }
     } else {
       $('qr-title').textContent = 'QR Code';
@@ -664,7 +703,6 @@
       $('qr-warn').textContent = mode === 'encrypt'
         ? 'This QR contains your encrypted text.'
         : 'This QR contains your decrypted text. Show only on a trusted device and screen.';
-      $('qr-caption').style.display = 'none';
       $('qr-fp').style.display = 'none';
     }
     // The card is for ENCRYPTED text only: a ciphertext is made to be kept on
@@ -735,7 +773,9 @@
     drawQR(off, qrState.getValue(), qrState.numeric, 1024, 4);
     var url = off.toDataURL('image/png').replace('image/png', 'image/octet-stream');
     var a = document.createElement('a');
-    a.href = url; a.download = qrState.kind === 'seed' ? 'ittybitz-seedqr.png' : 'ittybitz-qr.png';
+    a.href = url;
+    a.download = qrState.kind !== 'seed' ? 'ittybitz-qr.png'
+      : qrState.format === 'compact' ? 'ittybitz-compact-seedqr.png' : 'ittybitz-seedqr.png';
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     status('ok', qrIsCiphertext()
       ? '1024×1024 PNG downloaded. It encodes your encrypted text; without the password it opens nothing.'
@@ -892,8 +932,7 @@
               var words = res.words;
               var fp = null;
               try { fp = await masterFingerprint(words); } catch (e3) {}
-              qrState = { getValue: function () { return ittybitzToSeedQR(words); }, numeric: true, kind: 'seed',
-                          caption: 'Standard SeedQR · ' + words.length + ' words · ' + (words.length * 4) + ' digits', fp: fp };
+              qrState = seedQrState(words, fp);
               $('out-qr').style.display = '';
               if (fp) showFp('dec', fp);
             } else {
@@ -923,8 +962,24 @@
       busy = false;
       $('go-icon').innerHTML = mode === 'encrypt' ? ICON_LOCK : ICON_UNLOCK;
       $('p').value = ''; refreshPasswordButtons(); // never leave the password in the field
+      showOutcome();
     }
   };
+
+  // On a short screen the result (or the message below the button) can land
+  // below the bottom edge, and it looks as if nothing happened. Once a job
+  // ends, scroll just far enough to show it; if it is already in view,
+  // nothing moves. Smooth unless the system asks for reduced motion.
+  function showOutcome() {
+    var res = $('result'), st = $('status');
+    var el = res.style.display !== 'none' ? res
+           : st.classList.contains('show') && !st.classList.contains('quiet') ? st : null;
+    if (!el) return;
+    var r = el.getBoundingClientRect();
+    if (r.top >= 0 && r.bottom <= window.innerHeight) return;
+    var still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    el.scrollIntoView({ block: 'nearest', behavior: still ? 'auto' : 'smooth' });
+  }
 
   function showResult(value, isDecryptOutput) {
     $('result').style.display = '';
