@@ -647,10 +647,10 @@
   };
 
   // ---- QR overlay ----
-  // An encrypted-text QR holds only ciphertext, which is already on screen in
-  // the result box and can be printed on the card without revealing. Only a
-  // QR of a decrypted text or a seed needs the deliberate Reveal before it
-  // can be saved.
+  // Every QR opens blurred. Reveal is only for showing it on screen (to scan
+  // it); Download PNG never needs it, because the file is drawn on a separate,
+  // unseen canvas, so a seed can be saved without ever being displayed. Only
+  // an encrypted-text QR can also be printed on the emergency card.
   // A seed's QR comes in two formats. Standard SeedQR (digits) is read by
   // more devices and can be checked by eye; Compact SeedQR (raw entropy
   // bytes) is a smaller code, for 12- and 24-word seeds only. Each time the
@@ -688,7 +688,6 @@
     // Draw the QR right away but blurred, so it clearly reads as a QR — a blank
     // white box looks broken. The Reveal button below just removes the blur.
     drawQR($('qr-canvas'), qrState.getValue(), qrState.numeric, 512, 4);
-    $('qr-download').disabled = !qrIsCiphertext();
     $('qr-reveal').lastChild.textContent = 'Reveal';
     if (qrState.kind === 'seed') {
       setSeedFormat('standard');
@@ -764,11 +763,10 @@
     // The QR is already drawn (blurred); reveal just toggles the blur.
     qrRevealed = !qrRevealed;
     $('qr-box').classList.toggle('qr-blur', !qrRevealed);
-    $('qr-download').disabled = !qrRevealed && !qrIsCiphertext();
     this.lastChild.textContent = qrRevealed ? 'Hide' : 'Reveal';
   };
   $('qr-download').onclick = function () {
-    if (!qrState || (!qrRevealed && !qrIsCiphertext())) return;
+    if (!qrState) return;
     var off = document.createElement('canvas');
     drawQR(off, qrState.getValue(), qrState.numeric, 1024, 4);
     var url = off.toDataURL('image/png').replace('image/png', 'image/octet-stream');
